@@ -124,6 +124,7 @@ interface AppState extends FirstCallState {
   activeSessions: ActiveSession[];
   auditLogs: AuditLog[];
   usageAlerts: UsageAlert[];
+  ipWhitelist: string[];
   
   toggleEnvironment: () => void;
   deductCredits: (amount: number) => void;
@@ -146,6 +147,9 @@ interface AppState extends FirstCallState {
   addUsageAlert: (thresholdPercentage: number, channels: ('email' | 'webhook')[]) => void;
   toggleUsageAlert: (id: string) => void;
   deleteUsageAlert: (id: string) => void;
+  
+  addIpWhitelist: (ip: string) => void;
+  removeIpWhitelist: (ip: string) => void;
   
   addWebhook: (url: string, events: string[]) => void;
   deleteWebhook: (id: string) => void;
@@ -189,6 +193,8 @@ export const useStore = create<AppState>()(
         { id: 'alert_1', thresholdPercentage: 80, channels: ['email'], isActive: true },
         { id: 'alert_2', thresholdPercentage: 100, channels: ['email', 'webhook'], isActive: true }
       ],
+      ipWhitelist: ['192.168.1.1', '10.0.0.0/24'],
+
 
       // First-Call State
       completedOnboardingSteps: ['signup', 'apiKey'],
@@ -315,6 +321,17 @@ export const useStore = create<AppState>()(
         if (state.user?.role !== 'admin' && state.user?.role !== 'billing') throw new Error('Unauthorized');
         const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Deleted Usage Alert', resource: id, timestamp: new Date().toISOString() };
         return { usageAlerts: state.usageAlerts.filter(a => a.id !== id), auditLogs: [log, ...state.auditLogs] };
+      }),
+      
+      addIpWhitelist: (ip) => set((state) => {
+        if (state.user?.role !== 'admin') throw new Error('Unauthorized');
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Added IP to Whitelist', resource: ip, timestamp: new Date().toISOString() };
+        return { ipWhitelist: [...state.ipWhitelist, ip], auditLogs: [log, ...state.auditLogs] };
+      }),
+      removeIpWhitelist: (ip) => set((state) => {
+        if (state.user?.role !== 'admin') throw new Error('Unauthorized');
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Removed IP from Whitelist', resource: ip, timestamp: new Date().toISOString() };
+        return { ipWhitelist: state.ipWhitelist.filter(i => i !== ip), auditLogs: [log, ...state.auditLogs] };
       }),
 
       logout: () => set({

@@ -1,12 +1,14 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { Shield, Key, Smartphone, Laptop, LogOut, CheckCircle2, Copy, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Shield, Key, Smartphone, Laptop, LogOut, CheckCircle2, Copy, Eye, EyeOff, Loader2, Globe, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import RoleGuard from '@/components/RoleGuard';
 
 export default function SecuritySettingsPage() {
-  const { is2faEnabled, enable2fa, disable2fa, activeSessions, revokeSession } = useStore();
+  const { is2faEnabled, enable2fa, disable2fa, activeSessions, revokeSession, ipWhitelist, addIpWhitelist, removeIpWhitelist } = useStore();
+
   
   // Password state
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -18,6 +20,9 @@ export default function SecuritySettingsPage() {
   const [twoFaStep, setTwoFaStep] = useState<'scan' | 'recovery'>('scan');
   const [otp, setOtp] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
+  
+  // IP Whitelist state
+  const [newIp, setNewIp] = useState('');
   
   const recoveryCodes = [
     'a8b9-4kd2-9m1c', '7d2e-1k8f-3p5x', '9j4m-2c6b-1z8t',
@@ -56,6 +61,14 @@ export default function SecuritySettingsPage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     // In a real app, show a toast here
+  };
+
+  const handleAddIp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newIp && !ipWhitelist.includes(newIp)) {
+      addIpWhitelist(newIp);
+      setNewIp('');
+    }
   };
 
   return (
@@ -224,6 +237,59 @@ export default function SecuritySettingsPage() {
           </table>
         </div>
       </div>
+
+      {/* 4. IP Whitelisting */}
+      <RoleGuard allowedRoles={['admin']}>
+        <div className="glass-inner rounded-2xl border border-white/10 shadow-xl overflow-hidden">
+          <div className="p-8 border-b border-white/10">
+            <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+              <Globe className="w-5 h-5 text-teal" />
+              IP Whitelisting
+            </h2>
+            <p className="text-white/60 text-sm">
+              Restrict API access to specific IP addresses or CIDR blocks. When empty, all IPs are allowed.
+            </p>
+          </div>
+          
+          <div className="p-8 space-y-6">
+            <form onSubmit={handleAddIp} className="flex flex-col sm:flex-row gap-4">
+              <input 
+                type="text" 
+                placeholder="e.g., 192.168.1.1 or 10.0.0.0/24" 
+                value={newIp}
+                onChange={e => setNewIp(e.target.value)}
+                className="flex-1 bg-[#09090b] border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/50 transition-all"
+              />
+              <button 
+                type="submit"
+                disabled={!newIp}
+                className="px-6 py-3 bg-white text-ink font-bold rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add IP
+              </button>
+            </form>
+
+            <div className="space-y-3">
+              {ipWhitelist.length === 0 ? (
+                <div className="text-sm text-white/40 italic">No IP restrictions configured. All IPs allowed.</div>
+              ) : (
+                ipWhitelist.map(ip => (
+                  <div key={ip} className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 group transition-colors hover:bg-white/10">
+                    <div className="font-mono text-sm text-white">{ip}</div>
+                    <button 
+                      onClick={() => removeIpWhitelist(ip)}
+                      className="text-white/40 hover:text-semantic-error p-2 transition-colors rounded-lg hover:bg-semantic-error/10"
+                      title="Remove IP"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </RoleGuard>
 
       {/* 2FA Setup Modal */}
       <AnimatePresence>
