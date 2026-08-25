@@ -155,7 +155,7 @@ export default function ApiKeysPage() {
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
       >
         <div>
           <h1 className="text-2xl font-display font-bold text-white">API Keys</h1>
@@ -381,7 +381,7 @@ export default function ApiKeysPage() {
                     <h3 className="font-bold text-white text-lg">Create New Key</h3>
                   </div>
                   <form onSubmit={handleCreate} className="p-6">
-                    <div className="grid grid-cols-2 gap-8 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
                       
                       {/* Left Column: Basic Info */}
                       <div className="space-y-6">

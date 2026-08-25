@@ -113,7 +113,7 @@ export default function OverviewDashboard() {
           </div>
         </div>
         
-        <div className="flex items-center gap-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-10">
           <div className="flex items-center gap-3">
             <div className="w-4 h-4 rounded-full bg-teal shadow-sm shadow-teal/50" />
             <span className="text-sm font-bold text-white">Phone Intel <span className="text-white/50 ml-1 font-medium bg-white/5 px-2 py-0.5 rounded-md text-xs border border-white/5">{creditBurnPhone.toLocaleString()} credits</span></span>

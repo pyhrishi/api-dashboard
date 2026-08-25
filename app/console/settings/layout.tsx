@@ -26,8 +26,8 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Settings Sidebar */}
-        <div className="lg:w-64 flex-shrink-0">
-          <nav className="space-y-1">
+        <div className="lg:w-64 flex-shrink-0 overflow-x-auto no-scrollbar">
+          <nav className="flex lg:flex-col gap-2 lg:gap-0 lg:space-y-1 pb-2 lg:pb-0 min-w-max lg:min-w-0 px-1 lg:px-0">
             {navItems.map((item) => {
               if (item.adminOnly && user?.role !== 'admin') return null;
               
@@ -37,7 +37,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all whitespace-nowrap flex-shrink-0 lg:flex-shrink ${
                     isActive 
                       ? 'bg-teal/10 text-teal font-bold shadow-sm border border-teal/20' 
                       : 'text-white/60 hover:bg-white/5 hover:text-white font-medium border border-transparent'
@@ -45,7 +45,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 >
                   {item.icon}
                   {item.name}
-                  {isActive && <ArrowRight className="w-4 h-4 ml-auto opacity-50" />}
+                  {isActive && <ArrowRight className="w-4 h-4 ml-auto opacity-50 hidden lg:block" />}
                 </Link>
               );
             })}

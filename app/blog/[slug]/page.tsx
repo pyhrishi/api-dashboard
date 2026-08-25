@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ShieldCheck, ArrowLeft, Terminal, Copy, Check } from 'lucide-react';
-import { BLOG_POSTS } from '../page';
+import { BLOG_POSTS } from '../data';
 
 export default function BlogPost({ params }: { params: { slug: string } }) {
   const post = BLOG_POSTS.find((p) => p.slug === params.slug) || BLOG_POSTS[0];

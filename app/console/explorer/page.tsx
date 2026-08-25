@@ -371,7 +371,7 @@ export default function ExplorerPage() {
                       className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 hover:text-white transition-all backdrop-blur-sm shadow-sm"
                       title="Copy response"
                     >
-                      {copiedStates['response'] ? <CheckCircle2 className="w-3.5 h-3.5 text-teal" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedId === 'response' ? <CheckCircle2 className="w-3.5 h-3.5 text-teal" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
                   <pre className="font-mono text-xs p-5 overflow-x-auto whitespace-pre-wrap break-all text-white/70">

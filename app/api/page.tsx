@@ -53,9 +53,9 @@ export default function ApiLandingPage() {
           <div className="flex items-center gap-2 w-fit">
             <img src="/logo.png" alt="Zintlr B2B2B" className="h-8 w-auto" />
           </div>
-          <div className="flex items-center gap-6">
-            <Link href="/docs" className="text-sm font-medium text-white/70 hover:text-white transition-colors">Documentation</Link>
-            <Link href="/console" className="text-sm font-bold bg-teal text-ink px-6 py-2.5 rounded-full hover:bg-teal-ice transition-all shadow-[0_8px_28px_-10px_rgba(70,189,198,0.7)] hover:-translate-y-0.5">
+          <div className="flex items-center gap-4 md:gap-6">
+            <Link href="/docs" className="text-sm font-medium text-white/70 hover:text-white transition-colors hidden sm:block">Documentation</Link>
+            <Link href="/console" className="text-sm font-bold bg-teal text-ink px-4 md:px-6 py-2.5 rounded-full hover:bg-teal-ice transition-all shadow-[0_8px_28px_-10px_rgba(70,189,198,0.7)] hover:-translate-y-0.5">
               Partner Console
             </Link>
           </div>
@@ -79,10 +79,10 @@ export default function ApiLandingPage() {
                 12 Endpoints. 99.99% Uptime.
               </motion.div>
               
-              <motion.h1 variants={fadeUp} className="font-display text-[clamp(2.5rem,4vw,4rem)] leading-[1.1] tracking-[-0.02em] text-white font-extrabold mb-6">
+              <motion.h1 variants={fadeUp} className="font-display text-4xl sm:text-5xl lg:text-[4rem] leading-[1.1] tracking-[-0.02em] text-white font-extrabold mb-6">
                 One API.<br/>
                 <span className="relative text-teal">400M+ B2B Identities.
-                  <svg viewBox="0 0 300 12" className="absolute -bottom-2 left-0 w-full text-teal/40" fill="none" stroke="currentColor" strokeWidth="2" preserveAspectRatio="none" aria-hidden="true">
+                  <svg viewBox="0 0 300 12" className="absolute -bottom-2 left-0 w-full text-teal/40 hidden sm:block" fill="none" stroke="currentColor" strokeWidth="2" preserveAspectRatio="none" aria-hidden="true">
                     <path d="M2 9c60-6 180-8 296-4" strokeLinecap="round" />
                   </svg>
                 </span>
@@ -113,10 +113,10 @@ export default function ApiLandingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-              className="relative w-full h-[500px]"
+              className="relative w-full h-[400px] sm:h-[500px]"
             >
-              <div className="absolute inset-0 rounded-[40px] bg-teal/10 blur-[80px] -z-10 pointer-events-none" />
-              <div className="w-full h-full rounded-2xl glass p-1">
+              <div className="absolute inset-0 rounded-[40px] bg-teal/10 blur-[60px] sm:blur-[80px] -z-10 pointer-events-none" />
+              <div className="w-full h-full rounded-2xl glass p-1 overflow-hidden">
                 <HeroCodeShowcase />
               </div>
             </motion.div>

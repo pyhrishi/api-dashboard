@@ -163,6 +163,8 @@ export const useStore = create<AppState>()(
         name: 'Default Sandbox Key',
         key: 'sk_test_demo_key',
         createdAt: new Date().toISOString(),
+        scopes: ['all'],
+        status: 'active'
       }],
       user: { email: 'demo@example.com', company: 'Acme Corp', role: 'admin' },
       isAuthenticated: true,

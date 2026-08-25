@@ -75,7 +75,7 @@ export default function BillingPage() {
 
       {/* Pricing Tiers Section */}
       <section>
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-teal" />
             Transparent Pricing Tiers
@@ -219,14 +219,14 @@ export default function BillingPage() {
         {/* LEDGER SECTION */}
         <div className="lg:col-span-2 space-y-6">
           <div className="glass-inner rounded-2xl border border-white/10 shadow-sm p-8 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
               <h2 className="text-lg font-bold text-white flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-teal/10 flex items-center justify-center">
                   <Activity className="w-5 h-5 text-teal" />
                 </div>
                 Credit Deduction Ledger
               </h2>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Available Balance</p>
                 <div className="text-2xl font-extrabold text-white tracking-tight">{creditBalance.toLocaleString()} <span className="text-xs text-teal font-bold ml-1 uppercase">Credits</span></div>
               </div>
@@ -272,7 +272,7 @@ export default function BillingPage() {
         </div>
         
         <div className="mt-16 mb-8 relative z-10">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <h2 className="text-lg font-bold text-white flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-teal/10 flex items-center justify-center">
                 <BellRing className="w-5 h-5 text-teal" />
@@ -281,7 +281,7 @@ export default function BillingPage() {
             </h2>
             <button 
               onClick={() => setIsAlertFormOpen(true)}
-              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/10 transition-all"
+              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/10 transition-all w-full sm:w-auto justify-center"
             >
               <Plus className="w-4 h-4" />
               New Alert
