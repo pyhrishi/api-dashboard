@@ -79,17 +79,6 @@ export interface LastRequestDetails {
   timestamp: number;
 }
 
-export interface FeatureRequest {
-  id: string;
-  title: string;
-  description: string;
-  status: 'under_review' | 'planned' | 'in_progress' | 'shipped';
-  upvotes: number;
-  hasUpvoted: boolean;
-  createdAt: string;
-}
-
-
 // First-Call Optimization State
 export interface FirstCallState {
   // Checklist progress
@@ -136,8 +125,6 @@ interface AppState extends FirstCallState {
   auditLogs: AuditLog[];
   usageAlerts: UsageAlert[];
   ipWhitelist: string[];
-  featureRequests: FeatureRequest[];
-
   
   toggleEnvironment: () => void;
   deductCredits: (amount: number) => void;
@@ -163,9 +150,6 @@ interface AppState extends FirstCallState {
   
   addIpWhitelist: (ip: string) => void;
   removeIpWhitelist: (ip: string) => void;
-  
-  submitFeatureRequest: (title: string, description: string) => void;
-  toggleFeatureUpvote: (id: string) => void;
   
   addWebhook: (url: string, events: string[]) => void;
   deleteWebhook: (id: string) => void;
@@ -210,12 +194,6 @@ export const useStore = create<AppState>()(
         { id: 'alert_2', thresholdPercentage: 100, channels: ['email', 'webhook'], isActive: true }
       ],
       ipWhitelist: ['192.168.1.1', '10.0.0.0/24'],
-      featureRequests: [
-        { id: 'feat_1', title: 'GraphQL API Support', description: 'Provide a GraphQL endpoint for more flexible data querying and to reduce over-fetching.', status: 'planned', upvotes: 142, hasUpvoted: false, createdAt: new Date(Date.now() - 86400000 * 5).toISOString() },
-        { id: 'feat_2', title: 'Python SDK v2', description: 'Update the Python SDK to support async/await natively with aiohttp.', status: 'in_progress', upvotes: 89, hasUpvoted: true, createdAt: new Date(Date.now() - 86400000 * 12).toISOString() },
-        { id: 'feat_3', title: 'Export Logs to S3', description: 'Ability to automatically stream or batch export API request logs to an AWS S3 bucket.', status: 'under_review', upvotes: 56, hasUpvoted: false, createdAt: new Date(Date.now() - 86400000 * 2).toISOString() },
-        { id: 'feat_4', title: 'SSO (SAML) Integration', description: 'Allow logging into the developer console using Okta or other SAML providers.', status: 'shipped', upvotes: 215, hasUpvoted: false, createdAt: new Date(Date.now() - 86400000 * 30).toISOString() },
-      ],
 
 
       // First-Call State
@@ -355,34 +333,6 @@ export const useStore = create<AppState>()(
         const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Removed IP from Whitelist', resource: ip, timestamp: new Date().toISOString() };
         return { ipWhitelist: state.ipWhitelist.filter(i => i !== ip), auditLogs: [log, ...state.auditLogs] };
       }),
-      
-      submitFeatureRequest: (title, description) => set((state) => ({
-        featureRequests: [
-          {
-            id: `feat_${Date.now()}`,
-            title,
-            description,
-            status: 'under_review',
-            upvotes: 1,
-            hasUpvoted: true,
-            createdAt: new Date().toISOString()
-          },
-          ...state.featureRequests
-        ]
-      })),
-
-      toggleFeatureUpvote: (id) => set((state) => ({
-        featureRequests: state.featureRequests.map(feat => {
-          if (feat.id === id) {
-            return {
-              ...feat,
-              hasUpvoted: !feat.hasUpvoted,
-              upvotes: feat.hasUpvoted ? feat.upvotes - 1 : feat.upvotes + 1
-            };
-          }
-          return feat;
-        })
-      })),
 
       logout: () => set({
         user: null,
