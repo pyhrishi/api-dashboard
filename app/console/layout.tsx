@@ -15,6 +15,11 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
   const { environment, creditBalance, toggleEnvironment, user, isAuthenticated, logout, switchRole } = useStore();
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close mobile menu on path change
   useEffect(() => {
@@ -43,8 +48,8 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
 
   const navItems = allNavItems.filter(item => item.roles.includes(user?.role || 'admin'));
 
-  if (!isAuthenticated) {
-    return null; // Don't render anything while redirecting
+  if (!mounted || !isAuthenticated) {
+    return null; // Don't render anything while redirecting or hydrating
   }
 
   const handleLogout = () => {
