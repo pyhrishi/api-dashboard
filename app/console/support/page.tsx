@@ -1,13 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { LifeBuoy, AlertCircle, Clock, CheckCircle2, MessageSquare, Send } from 'lucide-react';
+import { useState, useEffect, Suspense } from 'react';
+import { LifeBuoy, AlertCircle, Clock, CheckCircle2, MessageSquare, Send, Loader2 } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
-export default function SupportPage() {
+function SupportForm() {
+  const searchParams = useSearchParams();
   const [subject, setSubject] = useState('');
   const [priority, setPriority] = useState('low');
   const [endpoint, setEndpoint] = useState('general');
   const [description, setDescription] = useState('');
+  const [requestId, setRequestId] = useState('');
+
+  useEffect(() => {
+    const reqId = searchParams.get('requestId');
+    if (reqId) {
+      setRequestId(reqId);
+      // Auto-populate subject if it's a specific request issue
+      setSubject(`Issue with API Request: ${reqId}`);
+      setPriority('high');
+    }
+  }, [searchParams]);
+
 
   const [submitted, setSubmitted] = useState(false);
 
@@ -111,6 +125,17 @@ export default function SupportPage() {
                   </div>
 
                   <div>
+                    <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Request ID (Optional)</label>
+                    <input 
+                      type="text"
+                      value={requestId}
+                      onChange={e => setRequestId(e.target.value)}
+                      placeholder="e.g., req_1a2b3c..."
+                      className="w-full bg-[#09090b] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 font-mono text-sm focus:outline-none focus:border-teal transition-colors"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description</label>
                     <textarea 
                       required
@@ -188,5 +213,17 @@ export default function SupportPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function SupportPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-teal" />
+      </div>
+    }>
+      <SupportForm />
+    </Suspense>
   );
 }

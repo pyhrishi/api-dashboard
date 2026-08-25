@@ -422,7 +422,16 @@ export default function LogsPage() {
 
                                 {/* Meta */}
                                 <div className="lg:col-span-2 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-white/40 font-mono">
-                                  <span>Request ID: {log.id}</span>
+                                  <div className="flex items-center gap-4">
+                                    <span>Request ID: {log.id}</span>
+                                    <a 
+                                      href={`/console/support?requestId=${log.id}`}
+                                      className="text-teal hover:text-teal-ice underline underline-offset-2 transition-colors flex items-center gap-1"
+                                      title="Open support ticket for this request"
+                                    >
+                                      Report Issue ↗
+                                    </a>
+                                  </div>
                                   <span>Processed in {log.duration}ms</span>
                                 </div>
                               </div>
