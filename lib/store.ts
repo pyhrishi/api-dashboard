@@ -538,7 +538,7 @@ export const useStore = create<AppState>()(
       })),
 
       removeUsageAlert: (id) => set((state) => ({ usageAlerts: state.usageAlerts.filter(a => a.id !== id) })),
-      updateBillingDetails: (details) => set({ billingDetails: details }),
+      updateBillingDetails: (details) => set((state) => ({ billingDetails: { ...state.billingDetails, ...details } })),
       addPOCContact: (contact) => set((state) => ({ pocContacts: [...state.pocContacts, contact] })),
       removePOCContact: (id) => set((state) => ({ pocContacts: state.pocContacts.filter(c => c.id !== id) })),
       updatePOCContact: (id, contact) => set((state) => ({
