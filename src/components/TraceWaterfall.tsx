@@ -56,13 +56,13 @@ export function TraceWaterfall({ duration, status, endpoint }: TraceWaterfallPro
 
     if (status >= 500) {
       // Backend crashed
-      spans[spans.length - 1].error = true;
+      spans[spans.length - 1].error = "Internal Server Error";
       return spans;
     }
 
     if (status === 400) {
       // Validation error
-      spans[spans.length - 1].error = true;
+      spans[spans.length - 1].error = "Validation Failed";
       return spans;
     }
 

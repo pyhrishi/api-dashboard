@@ -542,7 +542,7 @@ export const useStore = create<AppState>()(
       addPOCContact: (contact) => set((state) => ({ pocContacts: [...state.pocContacts, { ...contact, id: Math.random().toString(36).substring(2, 11) }] })),
       removePOCContact: (id) => set((state) => ({ pocContacts: state.pocContacts.filter(c => c.id !== id) })),
       updatePOCContact: (id, contact) => set((state) => ({
-        pocContacts: state.pocContacts.map(c => c.id === id ? contact : c)
+        pocContacts: state.pocContacts.map(c => c.id === id ? { ...c, ...contact } : c)
       })),
 
       // First-Call Actions
