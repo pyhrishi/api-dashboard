@@ -47,7 +47,7 @@ export default function SignupPage() {
     signup(email, company);
     
     // Redirect to keys
-    router.push('/console/keys?new=true');
+    router.push('/console?new=true');
   };
 
   return (
