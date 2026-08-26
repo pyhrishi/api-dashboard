@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const scenarios = [
   {
     name: 'Reverse Email Lookup',
-    request: `curl -X POST https://api.zintlr.com/b2b2b/v1/email-to-phone/ \\
+    request: `curl -X POST https://api.zinbit.zintlr.com/b2b2b/v1/email-to-phone/ \\
   -H "Access-Token: sk_live_••••••" \\
   -d '{"emails": ["ceo@example.com"]}'`,
     response: `{
@@ -24,7 +24,7 @@ const scenarios = [
   },
   {
     name: 'Company Verification',
-    request: `curl -X POST https://api.zintlr.com/b2b2b/v1/domain-to-cin/ \\
+    request: `curl -X POST https://api.zinbit.zintlr.com/b2b2b/v1/domain-to-cin/ \\
   -H "Access-Token: sk_live_••••••" \\
   -d '{"domain_list": ["example.in"]}'`,
     response: `{

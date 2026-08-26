@@ -54,7 +54,7 @@ export default function BlogPost({ params }: { params: { slug: string } }) {
               <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-teal to-blue-500" />
               <div>
                 <p className="text-base font-bold text-white">{post.author.name}</p>
-                <p className="text-sm text-white/50 font-medium">{post.author.role} @ Zintlr</p>
+                <p className="text-sm text-white/50 font-medium">{post.author.role} @ zinbit by Zintlr</p>
               </div>
             </div>
           </header>
@@ -68,7 +68,7 @@ export default function BlogPost({ params }: { params: { slug: string } }) {
             </p>
             
             <p>
-              When we first architected the Zintlr Identity Engine, our primary datastore was a vertically scaled PostgreSQL instance. While robust for standard transactional workloads, executing deep relationship queries across hundreds of millions of corporate entities resulted in significant query planner overhead and unacceptable latencies at the edge.
+              When we first architected the zinbit Identity Engine, our primary datastore was a vertically scaled PostgreSQL instance. While robust for standard transactional workloads, executing deep relationship queries across hundreds of millions of corporate entities resulted in significant query planner overhead and unacceptable latencies at the edge.
             </p>
 
             <h2 className="text-2xl font-bold mt-12 mb-6">The Breaking Point</h2>
@@ -134,7 +134,7 @@ impl IdentityGraph {
         <div className="max-w-5xl mx-auto px-6 flex flex-col items-center">
           <ShieldCheck className="w-8 h-8 text-white/20 mb-4" />
           <div className="text-sm font-semibold text-white/30">
-            © {new Date().getFullYear()} Zintlr Engineering.
+            © {new Date().getFullYear()} zinbit by Zintlr.
           </div>
         </div>
       </footer>

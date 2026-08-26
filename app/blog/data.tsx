@@ -31,5 +31,25 @@ export const BLOG_POSTS = [
     category: 'Engineering',
     icon: <Terminal className="w-5 h-5 text-teal" />,
     author: { name: 'David Kim', role: 'Backend Engineer' }
+  },
+  {
+    slug: 'migrating-to-nextjs-14',
+    title: 'Migrating the zinbit Console to Next.js 14 App Router',
+    excerpt: 'Our experience transitioning from a legacy React SPA to the Next.js App Router for better SEO, server components, and performance.',
+    date: 'April 05, 2026',
+    readTime: '12 min read',
+    category: 'Engineering',
+    icon: <Terminal className="w-5 h-5 text-teal" />,
+    author: { name: 'Alex Harper', role: 'Frontend Architect' }
+  },
+  {
+    slug: 'introducing-zero-copy',
+    title: 'Introducing Zero-Copy Data Sharing via Snowflake & BigQuery',
+    excerpt: 'Stop building ETL pipelines for data enrichment. We are rolling out zero-copy integrations for seamless data sharing right in your warehouse.',
+    date: 'March 22, 2026',
+    readTime: '5 min read',
+    category: 'Product',
+    icon: <Database className="w-5 h-5 text-teal" />,
+    author: { name: 'Rachel Singh', role: 'Product Manager' }
   }
 ];

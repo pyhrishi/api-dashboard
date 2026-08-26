@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -58,8 +59,8 @@ export default function SignupPage() {
 
       {/* Top Navigation Logo */}
       <div className="absolute top-0 left-0 w-full p-6">
-        <Link href="/api" className="flex items-center gap-2 w-fit">
-          <img src="/logo.png" alt="Zintlr B2B2B" className="h-8 w-auto" />
+        <Link href="/" className="flex items-center gap-2 w-fit">
+          <Logo />
         </Link>
       </div>
 
@@ -185,7 +186,7 @@ export default function SignupPage() {
         </div>
         
         <p className="text-center text-sm text-white/40 mt-8">
-          By signing up, you agree to our <a href="#" className="text-white hover:text-teal underline decoration-white/20 underline-offset-4">Terms of Service</a> and <a href="#" className="text-white hover:text-teal underline decoration-white/20 underline-offset-4">Privacy Policy</a>.
+          By signing up, you agree to our <Link href="/console/legal" className="text-white hover:text-teal underline decoration-white/20 underline-offset-4">Terms of Service</Link> and <Link href="/console/legal" className="text-white hover:text-teal underline decoration-white/20 underline-offset-4">Privacy Policy</Link>.
         </p>
 
         <p className="text-center text-sm font-semibold text-white mt-6">

@@ -13,10 +13,16 @@ export interface MockKey {
   status: 'active' | 'expiring_soon' | 'expired' | 'revoked';
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  role: 'admin' | 'developer' | 'billing';
+}
+
 export interface User {
   email: string;
-  company: string;
-  role: 'admin' | 'developer' | 'billing';
+  company: string; // Legacy field, keeping for compatibility
+  role: 'admin' | 'developer' | 'billing'; // Active role in current organization
 }
 
 export interface TeamMember {
@@ -52,6 +58,19 @@ export interface UsageAlert {
   isActive: boolean;
 }
 
+export interface POCContact {
+  id: string;
+  role: 'Billing' | 'Technical' | 'Security' | 'Testing';
+  name: string;
+  email: string;
+}
+
+export interface BillingDetails {
+  companyName: string;
+  taxId: string;
+  address: string;
+}
+
 export interface WebhookEndpoint {
   id: string;
   url: string;
@@ -68,6 +87,15 @@ export interface WebhookLog {
   time: string;
   payload: string;
   attempt?: number;
+}
+
+export interface WebhookRetryItem {
+  id: string;
+  endpointId: string;
+  event: string;
+  payload: string;
+  attempt: number;
+  nextRetryAt: number; // timestamp
 }
 
 export interface LastRequestDetails {
@@ -92,6 +120,7 @@ export interface FirstCallState {
   currentWizardStep: 0 | 1 | 2 | 3;
   selectedEndpointId?: string;
   configuredParameters: Record<string, any>;
+  isChecklistDismissed: boolean;
   
   // Last request details (for celebration display)
   lastRequestDetails?: LastRequestDetails;
@@ -116,9 +145,14 @@ interface AppState extends FirstCallState {
   creditBalance: number;
   activeKeys: MockKey[];
   user: User | null;
+  organizations: Organization[];
+  activeOrganizationId: string;
   isAuthenticated: boolean;
   webhooks: WebhookEndpoint[];
   webhookLogs: WebhookLog[];
+  webhookRetryQueue: WebhookRetryItem[];
+  billingDetails: BillingDetails;
+  pocContacts: POCContact[];
   teamMembers: TeamMember[];
   is2faEnabled: boolean;
   activeSessions: ActiveSession[];
@@ -127,14 +161,19 @@ interface AppState extends FirstCallState {
   ipWhitelist: string[];
   
   toggleEnvironment: () => void;
+  dismissChecklist: () => void;
   deductCredits: (amount: number) => void;
+  rechargeCredits: (amount: number) => void;
   addKey: (key: MockKey) => void;
   revokeKey: (id: string) => void;
   rollKey: (id: string, newKey: MockKey) => void;
+  resetPrototypeState: () => void;
   signup: (email: string, company: string) => void;
   login: (email: string) => void;
   logout: () => void;
   switchRole: (role: 'admin' | 'developer' | 'billing') => void;
+  switchOrganization: (id: string) => void;
+  createOrganization: (name: string) => void;
   
   addTeamMember: (email: string, role: 'admin' | 'developer' | 'billing') => void;
   removeTeamMember: (id: string) => void;
@@ -145,8 +184,14 @@ interface AppState extends FirstCallState {
   revokeSession: (id: string) => void;
 
   addUsageAlert: (thresholdPercentage: number, channels: ('email' | 'webhook')[]) => void;
+  removeUsageAlert: (id: string) => void;
   toggleUsageAlert: (id: string) => void;
   deleteUsageAlert: (id: string) => void;
+  
+  updateBillingDetails: (details: Partial<BillingDetails>) => void;
+  addPOCContact: (contact: Omit<POCContact, 'id'>) => void;
+  removePOCContact: (id: string) => void;
+  updatePOCContact: (id: string, contact: Partial<POCContact>) => void;
   
   addIpWhitelist: (ip: string) => void;
   removeIpWhitelist: (ip: string) => void;
@@ -154,6 +199,8 @@ interface AppState extends FirstCallState {
   addWebhook: (url: string, events: string[]) => void;
   deleteWebhook: (id: string) => void;
   logWebhookEvent: (endpointId: string, event: string, status: number, payload: string, attempt?: number) => void;
+  removeWebhookRetry: (id: string) => void;
+  updateWebhookRetry: (id: string, attempt: number, nextRetryAt: number) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -171,9 +218,24 @@ export const useStore = create<AppState>()(
         status: 'active'
       }],
       user: { email: 'demo@example.com', company: 'Acme Corp', role: 'admin' },
+      organizations: [
+        { id: 'org_1', name: 'Acme Corp', role: 'admin' },
+        { id: 'org_2', name: 'Personal Workspace', role: 'developer' }
+      ],
+      activeOrganizationId: 'org_1',
       isAuthenticated: true,
       webhooks: [],
       webhookLogs: [],
+      webhookRetryQueue: [],
+      billingDetails: {
+        companyName: 'Acme Corp',
+        taxId: '',
+        address: ''
+      },
+      pocContacts: [
+        { id: 'poc_1', role: 'Billing', name: 'Jane Doe', email: 'billing@acme.com' },
+        { id: 'poc_2', role: 'Technical', name: 'John Smith', email: 'dev@acme.com' }
+      ],
       teamMembers: [
         { id: 'usr_1', email: 'demo@example.com', role: 'admin', status: 'active', joinedAt: new Date().toISOString() },
         { id: 'usr_2', email: 'developer@example.com', role: 'developer', status: 'active', joinedAt: new Date().toISOString() },
@@ -204,14 +266,21 @@ export const useStore = create<AppState>()(
       selectedEndpointId: undefined,
       configuredParameters: {},
       lastRequestDetails: undefined,
+      isChecklistDismissed: false,
 
       // App Actions
       toggleEnvironment: () => set((state) => ({ 
         environment: state.environment === 'sandbox' ? 'live' : 'sandbox' 
       })),
       
+      dismissChecklist: () => set({ isChecklistDismissed: true }),
+
       deductCredits: (amount) => set((state) => ({ 
         creditBalance: Math.max(0, state.creditBalance - amount) 
+      })),
+      
+      rechargeCredits: (amount) => set((state) => ({
+        creditBalance: state.creditBalance + amount
       })),
       
       addKey: (key) => set((state) => {
@@ -229,11 +298,34 @@ export const useStore = create<AppState>()(
 
       rollKey: (id, newKey) => set((state) => {
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
-        const key = state.activeKeys.find(k => k.id === id);
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Rotated API Key', resource: key?.name || id, timestamp: new Date().toISOString() };
-        const updatedKeys = state.activeKeys.map(k => k.id === id ? { ...k, status: 'expiring_soon' as const } : k);
-        return { activeKeys: [newKey, ...updatedKeys], auditLogs: [log, ...state.auditLogs] };
+        
+        const oldKey = state.activeKeys.find(k => k.id === id);
+        const revokeLog: AuditLog = { id: `aud_${Date.now()}_1`, actorEmail: state.user?.email || 'System', action: 'Rolled API Key (Revoked Old)', resource: oldKey?.name || id, timestamp: new Date().toISOString() };
+        const createLog: AuditLog = { id: `aud_${Date.now()}_2`, actorEmail: state.user?.email || 'System', action: 'Rolled API Key (Created New)', resource: newKey.name, timestamp: new Date().toISOString() };
+        
+        return { 
+          activeKeys: [newKey, ...state.activeKeys.map(k => k.id === id ? { ...k, status: 'revoked' as const } : k)],
+          auditLogs: [createLog, revokeLog, ...state.auditLogs]
+        };
       }),
+
+      resetPrototypeState: () => set((state) => ({
+        isFirstCallMade: false,
+        isChecklistDismissed: false,
+        completedOnboardingSteps: [],
+        creditBalance: 5000,
+        activeKeys: [],
+        webhooks: [],
+        billingDetails: {
+          companyName: 'Acme Corp',
+          taxId: '',
+          address: ''
+        },
+        pocContacts: [
+          { id: 'poc_1', role: 'Billing', name: 'Jane Doe', email: 'billing@acme.com' },
+          { id: 'poc_2', role: 'Technical', name: 'John Smith', email: 'dev@acme.com' }
+        ],
+      })),
 
       signup: (email, company) => set((state) => {
         // Auto-provision a sandbox key on signup
@@ -266,6 +358,34 @@ export const useStore = create<AppState>()(
       switchRole: (role) => set((state) => ({
         user: state.user ? { ...state.user, role } : null
       })),
+
+      switchOrganization: (id) => set((state) => {
+        const org = state.organizations.find(o => o.id === id);
+        if (org && state.user) {
+          // Update user's company and role to reflect the new active organization
+          return { 
+            activeOrganizationId: id,
+            user: { ...state.user, company: org.name, role: org.role }
+          };
+        }
+        return state;
+      }),
+
+      createOrganization: (name) => set((state) => {
+        const newOrg: Organization = {
+          id: `org_${Date.now()}`,
+          name,
+          role: 'admin'
+        };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created Organization', resource: name, timestamp: new Date().toISOString() };
+        
+        return { 
+          organizations: [...state.organizations, newOrg],
+          auditLogs: [log, ...state.auditLogs],
+          activeOrganizationId: newOrg.id,
+          user: state.user ? { ...state.user, company: name, role: 'admin' } : null
+        };
+      }),
 
       addTeamMember: (email, role) => set((state) => {
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
@@ -364,25 +484,58 @@ export const useStore = create<AppState>()(
         return { webhooks: [newEndpoint, ...state.webhooks], auditLogs: [log, ...state.auditLogs] };
       }),
 
-      deleteWebhook: (id) => set((state) => {
-        if (state.user?.role === 'billing') throw new Error('Unauthorized');
-        const endpoint = state.webhooks.find(w => w.id === id);
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Deleted Webhook', resource: endpoint?.url || id, timestamp: new Date().toISOString() };
-        return { webhooks: state.webhooks.filter(w => w.id !== id), auditLogs: [log, ...state.auditLogs] };
-      }),
+      deleteWebhook: (id) => set((state) => ({ 
+        webhooks: state.webhooks.filter(w => w.id !== id),
+        webhookRetryQueue: state.webhookRetryQueue.filter(r => r.endpointId !== id)
+      })),
 
       logWebhookEvent: (endpointId, event, status, payload, attempt = 1) => set((state) => {
         const newLog: WebhookLog = {
-          id: `evt_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
           endpointId,
           event,
           status,
-          time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }),
           payload,
+          time: new Date().toLocaleTimeString(),
           attempt
         };
-        return { webhookLogs: [newLog, ...state.webhookLogs] };
+
+        // Queue logic: if 500 error, add to retry queue
+        let newRetryQueue = [...state.webhookRetryQueue];
+        if (status >= 500) {
+          // Accelerated backoff for prototype: 10s, 20s, 40s...
+          const backoffDelay = attempt === 1 ? 10000 : attempt === 2 ? 20000 : 40000;
+          const nextRetryAt = Date.now() + backoffDelay;
+          
+          const existingRetry = newRetryQueue.find(r => r.endpointId === endpointId && r.event === event && r.payload === payload);
+          if (existingRetry) {
+             existingRetry.attempt = attempt;
+             existingRetry.nextRetryAt = nextRetryAt;
+          } else {
+             newRetryQueue.push({
+               id: `retry_${Date.now()}`,
+               endpointId,
+               event,
+               payload,
+               attempt,
+               nextRetryAt
+             });
+          }
+        }
+
+        return { 
+          webhookLogs: [newLog, ...state.webhookLogs].slice(0, 100),
+          webhookRetryQueue: newRetryQueue
+        };
       }),
+
+      removeWebhookRetry: (id) => set((state) => ({
+        webhookRetryQueue: state.webhookRetryQueue.filter(r => r.id !== id)
+      })),
+
+      updateWebhookRetry: (id, attempt, nextRetryAt) => set((state) => ({
+        webhookRetryQueue: state.webhookRetryQueue.map(r => r.id === id ? { ...r, attempt, nextRetryAt } : r)
+      })),
 
       // First-Call Actions
       markOnboardingStepComplete: (step) => set((state) => {
@@ -427,6 +580,8 @@ export const useStore = create<AppState>()(
         creditBalance: state.creditBalance,
         activeKeys: state.activeKeys,
         user: state.user,
+        organizations: state.organizations,
+        activeOrganizationId: state.activeOrganizationId,
         isAuthenticated: state.isAuthenticated,
         webhooks: state.webhooks,
         teamMembers: state.teamMembers,

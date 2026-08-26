@@ -1,14 +1,17 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { Shield, Key, Smartphone, Laptop, LogOut, CheckCircle2, Copy, Eye, EyeOff, Loader2, Globe, Plus, Trash2 } from 'lucide-react';
+import { Shield, Key, Smartphone, Laptop, LogOut, CheckCircle2, Copy, Eye, EyeOff, Loader2, Globe, Plus, Trash2, Database, AlertTriangle, Download, X } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RoleGuard from '@/components/RoleGuard';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/Toast';
 
 export default function SecuritySettingsPage() {
-  const { is2faEnabled, enable2fa, disable2fa, activeSessions, revokeSession, ipWhitelist, addIpWhitelist, removeIpWhitelist } = useStore();
-
+  const { is2faEnabled, enable2fa, disable2fa, activeSessions, revokeSession, ipWhitelist, addIpWhitelist, removeIpWhitelist, logout, user } = useStore();
+  const router = useRouter();
+  const { toast } = useToast();
   
   // Password state
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -23,6 +26,12 @@ export default function SecuritySettingsPage() {
   
   // IP Whitelist state
   const [newIp, setNewIp] = useState('');
+
+  // Data Export & Deletion State
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const recoveryCodes = [
     'a8b9-4kd2-9m1c', '7d2e-1k8f-3p5x', '9j4m-2c6b-1z8t',
@@ -32,14 +41,14 @@ export default function SecuritySettingsPage() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwords.new !== passwords.confirm) {
-      alert('New passwords do not match');
+      toast({ title: 'Error', description: 'New passwords do not match', variant: 'destructive' });
       return;
     }
     setIsChangingPassword(true);
     await new Promise(r => setTimeout(r, 1000));
     setIsChangingPassword(false);
     setPasswords({ current: '', new: '', confirm: '' });
-    alert('Password updated successfully');
+    toast({ title: 'Success', description: 'Password updated successfully' });
   };
 
   const handleVerify2fa = async (e: React.FormEvent) => {
@@ -60,7 +69,7 @@ export default function SecuritySettingsPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // In a real app, show a toast here
+    toast({ title: 'Copied', description: 'Code copied to clipboard' });
   };
 
   const handleAddIp = (e: React.FormEvent) => {
@@ -71,8 +80,44 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  const handleExportData = async () => {
+    setIsExporting(true);
+    await new Promise(r => setTimeout(r, 2000));
+    
+    const mockData = {
+      account: user,
+      settings: { mfaEnabled: is2faEnabled, activeSessions: activeSessions.length },
+      exportDate: new Date().toISOString()
+    };
+    
+    const blob = new Blob([JSON.stringify(mockData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zintlr-export-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    setIsExporting(false);
+    toast({ title: 'Export complete', description: 'Your data archive has been generated and downloaded.' });
+  };
+
+  const handleDeleteAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (deleteConfirmationText !== 'DELETE') return;
+    
+    setIsDeleting(true);
+    await new Promise(r => setTimeout(r, 1500));
+    setIsDeleting(false);
+    setIsDeleteModalOpen(false);
+    logout();
+    router.push('/');
+  };
+
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
+    <div className="space-y-8 animate-fade-in pb-12 font-sans">
       
       {/* 1. Change Password Panel */}
       <div className="glass-inner rounded-2xl border border-white/10 shadow-xl overflow-hidden p-8">
@@ -125,7 +170,7 @@ export default function SecuritySettingsPage() {
           <button 
             type="submit"
             disabled={isChangingPassword || !passwords.current || !passwords.new}
-            className="mt-2 bg-white text-ink font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-neutral-200 transition-all disabled:opacity-50"
+            className="mt-2 bg-[#09090b] text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-neutral-200 transition-all disabled:opacity-50"
           >
             {isChangingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
             {isChangingPassword ? 'Updating...' : 'Update Password'}
@@ -144,9 +189,9 @@ export default function SecuritySettingsPage() {
         </p>
 
         <div className="flex items-center gap-6">
-          <div className="flex-1 max-w-sm p-4 rounded-xl border border-white/10 bg-white/5 flex items-center justify-between">
+          <div className="flex-1 max-w-sm p-4 rounded-xl border border-white/10 bg-[#09090b]/5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-2 h-2 rounded-full ${is2faEnabled ? 'bg-semantic-success shadow-[0_0_10px_rgba(29,209,161,0.5)] animate-pulse-node' : 'bg-white/20'}`} />
+              <div className={`w-2 h-2 rounded-full ${is2faEnabled ? 'bg-semantic-success shadow-[0_0_10px_rgba(29,209,161,0.5)] animate-pulse-node' : 'bg-[#09090b]/20'}`} />
               <span className="font-bold text-white text-sm">{is2faEnabled ? '2FA is Enabled' : '2FA is Disabled'}</span>
             </div>
             {is2faEnabled && <CheckCircle2 className="w-5 h-5 text-semantic-success" />}
@@ -162,7 +207,7 @@ export default function SecuritySettingsPage() {
           ) : (
             <button 
               onClick={() => setIs2faModalOpen(true)}
-              className="px-6 py-3 rounded-xl font-bold text-ink bg-white hover:bg-neutral-200 transition-all text-sm shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+              className="px-6 py-3 rounded-xl font-bold text-white bg-[#09090b] hover:bg-neutral-200 transition-all text-sm shadow-[0_0_15px_rgba(255,255,255,0.1)]"
             >
               Enable 2FA
             </button>
@@ -196,7 +241,7 @@ export default function SecuritySettingsPage() {
               {activeSessions.length === 0 ? (
                 <tr><td colSpan={4} className="px-8 py-6 text-white/40 text-center">No active sessions.</td></tr>
               ) : activeSessions.map(session => (
-                <tr key={session.id} className="hover:bg-white/5 transition-colors group">
+                <tr key={session.id} className="hover:bg-[#09090b]/5 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
                       {session.device.includes('iPhone') || session.device.includes('Android') ? (
@@ -263,7 +308,7 @@ export default function SecuritySettingsPage() {
               <button 
                 type="submit"
                 disabled={!newIp}
-                className="px-6 py-3 bg-white text-ink font-bold rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="px-6 py-3 bg-[#09090b] text-white font-bold rounded-xl hover:bg-neutral-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Plus className="w-4 h-4" /> Add IP
               </button>
@@ -274,7 +319,7 @@ export default function SecuritySettingsPage() {
                 <div className="text-sm text-white/40 italic">No IP restrictions configured. All IPs allowed.</div>
               ) : (
                 ipWhitelist.map(ip => (
-                  <div key={ip} className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-white/5 group transition-colors hover:bg-white/10">
+                  <div key={ip} className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-[#09090b]/5 group transition-colors hover:bg-[#09090b]/10">
                     <div className="font-mono text-sm text-white">{ip}</div>
                     <button 
                       onClick={() => removeIpWhitelist(ip)}
@@ -291,7 +336,128 @@ export default function SecuritySettingsPage() {
         </div>
       </RoleGuard>
 
-      {/* 2FA Setup Modal */}
+      {/* 5. Data & Privacy (Danger Zone) */}
+      <RoleGuard allowedRoles={['admin']}>
+        <div className="rounded-2xl border border-semantic-error/20 bg-semantic-error/5 shadow-xl overflow-hidden mt-12">
+          <div className="p-8 border-b border-semantic-error/10 bg-[#09090b]/50">
+            <h2 className="text-xl font-bold text-semantic-error mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              Data & Privacy
+            </h2>
+            <p className="text-white/60 text-sm">
+              Manage your personal data or permanently delete your zinbit account.
+            </p>
+          </div>
+          
+          <div className="p-8 space-y-8">
+            {/* Export Data */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <h3 className="text-white font-bold mb-1">Export Account Data</h3>
+                <p className="text-white/50 text-sm">Download a JSON copy of all your account data, configurations, and billing history.</p>
+              </div>
+              <button 
+                onClick={handleExportData}
+                disabled={isExporting}
+                className="px-6 py-3 rounded-xl font-bold bg-[#09090b]/5 border border-white/10 text-white hover:bg-[#09090b]/10 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
+              >
+                {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {isExporting ? 'Generating Archive...' : 'Request Data Export'}
+              </button>
+            </div>
+
+            <div className="w-full h-px bg-semantic-error/10" />
+
+            {/* Delete Account */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <h3 className="text-white font-bold mb-1">Delete Account</h3>
+                <p className="text-white/50 text-sm">Permanently delete your account and all associated data. This action is irreversible.</p>
+              </div>
+              <button 
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="px-6 py-3 rounded-xl font-bold bg-semantic-error/10 text-semantic-error hover:bg-semantic-error hover:text-white transition-colors flex items-center justify-center gap-2 whitespace-nowrap border border-semantic-error/20"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+      </RoleGuard>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setIsDeleteModalOpen(false)}
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-[#09090b] border border-semantic-error/30 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col"
+            >
+              <div className="p-6 border-b border-semantic-error/10 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-semantic-error flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  Delete Account
+                </h3>
+                <button onClick={() => setIsDeleteModalOpen(false)} className="text-white/40 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                <div className="bg-semantic-error/10 border border-semantic-error/20 rounded-xl p-4 text-sm text-semantic-error/90 leading-relaxed">
+                  <strong className="block mb-2 text-semantic-error">Warning: This action is irreversible.</strong>
+                  All your API keys, webhooks, activity logs, and billing history will be permanently destroyed. We recommend exporting your data before proceeding.
+                </div>
+
+                <form onSubmit={handleDeleteAccount} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-white/80 mb-2">
+                      Please type <span className="font-mono bg-[#09090b]/10 px-1.5 py-0.5 rounded text-white font-bold select-none">DELETE</span> to confirm.
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      value={deleteConfirmationText}
+                      onChange={e => setDeleteConfirmationText(e.target.value)}
+                      placeholder="DELETE"
+                      className="w-full bg-black/50 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-semantic-error focus:ring-1 focus:ring-semantic-error transition-all font-mono"
+                    />
+                  </div>
+                  
+                  <div className="pt-4 flex gap-3">
+                    <button 
+                      type="button"
+                      onClick={() => setIsDeleteModalOpen(false)}
+                      className="flex-1 py-3 rounded-xl font-bold bg-[#09090b]/5 text-white/60 hover:text-white hover:bg-[#09090b]/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={deleteConfirmationText !== 'DELETE' || isDeleting}
+                      className="flex-1 py-3 rounded-xl font-bold bg-semantic-error text-white hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,71,87,0.3)]"
+                    >
+                      {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                      {isDeleting ? 'Deleting...' : 'Permanently Delete'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 2FA Setup Modal (existing) */}
       <AnimatePresence>
         {is2faModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -315,7 +481,7 @@ export default function SecuritySettingsPage() {
                   </div>
                   <div className="p-8 flex flex-col items-center">
                     {/* Fake QR Code */}
-                    <div className="w-48 h-48 bg-white rounded-xl p-3 mb-6 relative overflow-hidden group">
+                    <div className="w-48 h-48 bg-[#09090b] rounded-xl p-3 mb-6 relative overflow-hidden group">
                       <div className="absolute inset-0 bg-[url('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=mock2fa')] bg-center bg-no-repeat bg-contain m-3 opacity-90 group-hover:scale-105 transition-transform" />
                     </div>
                     <form onSubmit={handleVerify2fa} className="w-full space-y-4">
@@ -333,7 +499,7 @@ export default function SecuritySettingsPage() {
                       <button 
                         type="submit"
                         disabled={otp.length < 6 || isVerifying}
-                        className="w-full py-3 px-4 rounded-xl font-bold bg-white text-ink hover:bg-neutral-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full py-3 px-4 rounded-xl font-bold bg-[#09090b] text-white hover:bg-neutral-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         {isVerifying ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Continue'}
                       </button>
@@ -352,7 +518,7 @@ export default function SecuritySettingsPage() {
                   <div className="p-8">
                     <div className="grid grid-cols-2 gap-3 mb-6">
                       {recoveryCodes.map(code => (
-                        <div key={code} className="bg-white/5 border border-white/10 rounded-lg py-2 px-3 flex items-center justify-between group">
+                        <div key={code} className="bg-[#09090b]/5 border border-white/10 rounded-lg py-2 px-3 flex items-center justify-between group">
                           <span className="font-mono text-sm tracking-wider text-white/80">{code}</span>
                           <button onClick={() => copyToClipboard(code)} className="text-white/30 hover:text-white opacity-0 group-hover:opacity-100 transition-all">
                             <Copy className="w-3.5 h-3.5" />
@@ -362,7 +528,7 @@ export default function SecuritySettingsPage() {
                     </div>
                     <button 
                       onClick={complete2faSetup}
-                      className="w-full py-3 px-4 rounded-xl font-bold bg-white text-ink hover:bg-neutral-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                      className="w-full py-3 px-4 rounded-xl font-bold bg-[#09090b] text-white hover:bg-neutral-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                     >
                       I have saved my codes
                     </button>

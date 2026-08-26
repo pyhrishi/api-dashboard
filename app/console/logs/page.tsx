@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, Search, Filter, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CodeBlock } from '@/components/CodeBlock';
+import { TraceWaterfall } from '@/components/TraceWaterfall';
 
 // Mock Log Data
 const MOCK_LOGS = [
@@ -172,7 +173,7 @@ export default function LogsPage() {
     if (status >= 200 && status < 300) return 'text-semantic-success bg-semantic-success/10 border-semantic-success/20';
     if (status >= 400 && status < 500) return 'text-semantic-error bg-semantic-error/10 border-semantic-error/20';
     if (status >= 500) return 'text-semantic-error bg-semantic-error/10 border-semantic-error/20';
-    return 'text-white/60 bg-white/5 border-white/10';
+    return 'text-white/60 bg-[#09090b]/5 border-white/10';
   };
 
   const filteredLogs = MOCK_LOGS.filter(log => {
@@ -204,17 +205,17 @@ export default function LogsPage() {
             placeholder="Search by endpoint, status, or request ID..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-white focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/50 transition-all placeholder:text-white/30 shadow-inner"
+            className="w-full pl-9 pr-4 py-2 rounded-xl border border-white/10 bg-[#09090b]/5 text-sm text-white focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/50 transition-all placeholder:text-white/30 shadow-inner"
           />
         </div>
         <div className="relative">
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors shadow-sm whitespace-nowrap text-sm font-bold",
+              "flex items-center gap-2 px-4 py-2 rounded-xl border transition-colors shadow-[0_0_15px_rgba(255,255,255,0.02)] whitespace-nowrap text-sm font-bold",
               activeFiltersCount > 0 
                 ? "bg-teal/10 border-teal/20 text-teal hover:bg-teal/20" 
-                : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+                : "bg-[#09090b]/5 border-white/10 text-white hover:bg-[#09090b]/10"
             )}
           >
             <Filter className="w-4 h-4" />
@@ -237,7 +238,7 @@ export default function LogsPage() {
                       <button 
                         key={m} 
                         onClick={() => setMethodFilter(m)} 
-                        className={cn("px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors", methodFilter === m ? "bg-teal/20 text-teal border-teal/30" : "bg-white/5 text-white/60 border-transparent hover:bg-white/10")}
+                        className={cn("px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors", methodFilter === m ? "bg-teal/20 text-teal border-teal/30" : "bg-[#09090b]/5 text-white/60 border-transparent hover:bg-[#09090b]/10")}
                       >
                         {m === 'all' ? 'All' : m}
                       </button>
@@ -258,7 +259,7 @@ export default function LogsPage() {
                       <button 
                         key={s.id} 
                         onClick={() => setStatusFilter(s.id)} 
-                        className={cn("px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors", statusFilter === s.id ? "bg-teal/20 text-teal border-teal/30" : "bg-white/5 text-white/60 border-transparent hover:bg-white/10")}
+                        className={cn("px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors", statusFilter === s.id ? "bg-teal/20 text-teal border-teal/30" : "bg-[#09090b]/5 text-white/60 border-transparent hover:bg-[#09090b]/10")}
                       >
                         {s.label}
                       </button>
@@ -272,7 +273,7 @@ export default function LogsPage() {
                   <select 
                     value={pathFilter} 
                     onChange={e => setPathFilter(e.target.value)} 
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm font-medium text-white/80 focus:outline-none focus:border-teal/50"
+                    className="w-full bg-[#09090b]/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm font-medium text-white/80 focus:outline-none focus:border-teal/50"
                   >
                     <option value="all" className="bg-[#14131E]">All Endpoints</option>
                     <option value="/v1/people-search" className="bg-[#14131E]">/v1/people-search</option>
@@ -286,7 +287,7 @@ export default function LogsPage() {
                   <div className="pt-4 border-t border-white/10">
                     <button 
                       onClick={() => { setMethodFilter('all'); setStatusFilter('all'); setPathFilter('all'); setSearch(''); }}
-                      className="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white transition-colors border border-white/5"
+                      className="w-full py-2.5 bg-[#09090b]/5 hover:bg-[#09090b]/10 rounded-xl text-xs font-bold text-white transition-colors border border-white/5"
                     >
                       Clear All Filters
                     </button>
@@ -302,7 +303,7 @@ export default function LogsPage() {
       <div className="glass-panel rounded-2xl shadow-xl border border-white/10 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-white/5 border-b border-white/10">
+            <thead className="bg-[#09090b]/5 border-b border-white/10">
               <tr>
                 <th className="px-6 py-4 font-black text-white/40 uppercase tracking-widest text-[10px] w-10"></th>
                 <th className="px-6 py-4 font-black text-white/40 uppercase tracking-widest text-[10px]">Status</th>
@@ -324,14 +325,14 @@ export default function LogsPage() {
                       onClick={() => toggleRow(log.id)}
                       className={cn(
                         "group cursor-pointer transition-colors",
-                        isExpanded ? "bg-white/5" : "hover:bg-white/[0.02]"
+                        isExpanded ? "bg-[#09090b]/5" : "hover:bg-[#09090b]/[0.02]"
                       )}
                     >
                       <td className="px-6 py-4 text-white/40 group-hover:text-white transition-colors">
                         {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={cn("px-2.5 py-1 rounded-md text-[11px] font-black font-mono shadow-sm border", getStatusColor(log.status))}>
+                        <span className={cn("px-2.5 py-1 rounded-md text-[11px] font-black font-mono shadow-[0_0_15px_rgba(255,255,255,0.02)] border", getStatusColor(log.status))}>
                           {log.status}
                         </span>
                       </td>
@@ -424,6 +425,15 @@ export default function LogsPage() {
                                 <div className="lg:col-span-2 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-white/40 font-mono">
                                   <span>Request ID: {log.id}</span>
                                   <span>Processed in {log.duration}ms</span>
+                                </div>
+                                
+                                {/* Distributed Trace Waterfall */}
+                                <div className="lg:col-span-2">
+                                  <TraceWaterfall 
+                                    duration={log.duration} 
+                                    status={log.status} 
+                                    endpoint={log.path} 
+                                  />
                                 </div>
                               </div>
                             </motion.div>

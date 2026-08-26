@@ -64,17 +64,17 @@ export default function AuditLogsPage() {
                   </td>
                 </tr>
               ) : filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-white/5 transition-colors group">
+                <tr key={log.id} className="hover:bg-[#09090b]/5 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center font-bold text-[10px] text-white/70 flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-[#09090b]/10 flex items-center justify-center font-bold text-[10px] text-white/70 flex-shrink-0">
                         {log.actorEmail.charAt(0).toUpperCase()}
                       </div>
                       <span className="font-semibold text-white/90 text-xs">{log.actorEmail}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center bg-white/5 border border-white/10 rounded px-2 py-1 text-xs font-mono">
+                    <span className="inline-flex items-center bg-[#09090b]/5 border border-white/10 rounded px-2 py-1 text-xs font-mono">
                       {log.action}
                     </span>
                   </td>

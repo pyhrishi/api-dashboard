@@ -2,190 +2,37 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PhoneCall, Building2, SearchCheck, Play, CheckCircle2 } from 'lucide-react';
+import { Play, CheckCircle2, ChevronRight, ChevronDown, Terminal, FileCode2, Search, FileJson, FileKey2, Settings, Folder } from 'lucide-react';
+import { API_CATALOG, CATEGORIES, type CodeSnippets } from '@/lib/api-catalog';
 
-const scenarios = [
-  {
-    id: 'email-to-phone',
-    name: 'Resolve Email to Phone',
-    icon: <PhoneCall className="w-4 h-4" />,
-    desc: 'Input a corporate email, get a direct-dial phone number.',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/b2b2b/v1/email-to-phone/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "emails": ["ceo@example.com"]
-  }'`,
-      node: `const response = await fetch('https://api.zintlr.com/b2b2b/v1/email-to-phone/', {
-  method: 'POST',
-  headers: {
-    'Access-Token': 'sk_live_••••••',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    emails: ['ceo@example.com']
-  })
-});
-const data = await response.json();
-console.log(data);`,
-      python: `import requests
-
-url = "https://api.zintlr.com/b2b2b/v1/email-to-phone/"
-headers = {
-    "Access-Token": "sk_live_••••••",
-    "Content-Type": "application/json"
-}
-payload = {
-    "emails": ["ceo@example.com"]
-}
-
-response = requests.post(url, json=payload, headers=headers)
-print(response.json())`
-    },
-    response: `{
-  "status": "success",
-  "data": [
-    {
-      "email": "ceo@example.com",
-      "person_name": "Jane Doe",
-      "direct_dial": "+1 (555) 123-4567",
-      "confidence_score": 0.99
-    }
-  ],
-  "meta": { "credits_used": 1 }
-}`
-  },
-  {
-    id: 'domain-to-cin',
-    name: 'Verify Company (Domain to CIN)',
-    icon: <Building2 className="w-4 h-4" />,
-    desc: 'Input a domain, get verified MCA registry data.',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/b2b2b/v1/domain-to-cin/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "domain_list": ["example.in"]
-  }'`,
-      node: `const response = await fetch('https://api.zintlr.com/b2b2b/v1/domain-to-cin/', {
-  method: 'POST',
-  headers: {
-    'Access-Token': 'sk_live_••••••',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    domain_list: ['example.in']
-  })
-});
-const data = await response.json();`,
-      python: `import requests
-
-url = "https://api.zintlr.com/b2b2b/v1/domain-to-cin/"
-headers = {
-    "Access-Token": "sk_live_••••••",
-    "Content-Type": "application/json"
-}
-payload = {
-    "domain_list": ["example.in"]
-}
-
-response = requests.post(url, json=payload, headers=headers)
-print(response.json())`
-    },
-    response: `{
-  "status": "success",
-  "data": [
-    {
-      "domain": "example.in",
-      "cin": "U72900KA2021PTC142000",
-      "legal_name": "Example India Pvt Ltd",
-      "status": "Active"
-    }
-  ]
-}`
-  },
-  {
-    id: 'person-search',
-    name: 'Graph Search',
-    icon: <SearchCheck className="w-4 h-4" />,
-    desc: 'Query 400M+ profiles using natural criteria.',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/b2b2b/v1/person-search/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "title": "CTO",
-    "location": "Bangalore"
-  }'`,
-      node: `const response = await fetch('https://api.zintlr.com/b2b2b/v1/person-search/', {
-  method: 'POST',
-  headers: {
-    'Access-Token': 'sk_live_••••••',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    title: 'CTO',
-    location: 'Bangalore'
-  })
-});
-const data = await response.json();`,
-      python: `import requests
-
-url = "https://api.zintlr.com/b2b2b/v1/person-search/"
-headers = {
-    "Access-Token": "sk_live_••••••",
-    "Content-Type": "application/json"
-}
-payload = {
-    "title": "CTO",
-    "location": "Bangalore"
-}
-
-response = requests.post(url, json=payload, headers=headers)
-print(response.json())`
-    },
-    response: `{
-  "status": "success",
-  "data": [
-    {
-      "name": "John Smith",
-      "title": "CTO",
-      "company": "TechCorp",
-      "location": "Bangalore, India"
-    }
-  ],
-  "meta": { "total_results": 1450 }
-}`
-  }
-];
-
-type Language = 'curl' | 'node' | 'python';
+type Language = keyof CodeSnippets;
 
 export function IntegrationTerminal() {
   const [mounted, setMounted] = useState(false);
-  const [activeScenarioId, setActiveScenarioId] = useState(scenarios[0].id);
-  const [activeLanguage, setActiveLanguage] = useState<Language>('curl');
+  const [activeScenarioId, setActiveScenarioId] = useState(API_CATALOG[0].id);
+  const [activeLanguage, setActiveLanguage] = useState<Language>('node');
   const [isRunning, setIsRunning] = useState(false);
   const [showResponse, setShowResponse] = useState(false);
+  
+  // Expanded folders in the file explorer
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>(
+    CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), { 'src': true, 'endpoints': true })
+  );
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const activeScenario = scenarios.find(s => s.id === activeScenarioId)!;
+  const activeScenario = API_CATALOG.find(s => s.id === activeScenarioId) || API_CATALOG[0];
 
   const handleRun = () => {
-    if (isRunning || showResponse) {
-      setShowResponse(false);
-      setIsRunning(false);
-      return;
-    }
+    if (isRunning) return;
     setIsRunning(true);
+    setShowResponse(false);
     setTimeout(() => {
       setIsRunning(false);
       setShowResponse(true);
-    }, 800); // simulate network latency
+    }, 1200);
   };
 
   const handleScenarioChange = (id: string) => {
@@ -194,157 +41,239 @@ export function IntegrationTerminal() {
     setIsRunning(false);
   };
 
+  const toggleFolder = (id: string) => {
+    setExpandedFolders(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
   if (!mounted) {
     return (
-      <div className="glass rounded-3xl overflow-hidden border-gradient shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-        <div className="grid lg:grid-cols-[300px_1fr] h-[600px]">
-          <div className="bg-ink/60 border-r border-white/10 flex flex-col">
-            <div className="p-6 border-b border-white/5">
-              <h3 className="text-white font-bold mb-1">Endpoints</h3>
-              <p className="text-white/40 text-sm">Loading endpoints...</p>
-            </div>
-          </div>
-          <div className="bg-[#09090B] flex flex-col relative overflow-hidden" />
+      <div className="rounded-xl overflow-hidden shadow-2xl bg-[#1e1e1e] border border-[#333333] h-[750px]">
+        <div className="h-10 bg-[#252526] border-b border-[#333333] flex items-center px-4">
+           Loading Workspace...
         </div>
       </div>
     );
   }
 
   return (
-    <div className="glass rounded-3xl overflow-hidden border-gradient shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-      <div className="grid lg:grid-cols-[300px_1fr] h-[600px]">
+    <div className="rounded-xl overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.6)] bg-[#1e1e1e] border border-[#333333] flex flex-col h-[800px] text-[#cccccc] font-sans">
+      
+      {/* WINDOW TITLE BAR */}
+      <div className="h-10 bg-[#2d2d2d] border-b border-[#1e1e1e] flex items-center px-4 shrink-0 select-none">
+        <div className="flex gap-2 w-20">
+          <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+          <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+          <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+        </div>
+        <div className="flex-1 text-center text-xs text-[#858585] flex items-center justify-center gap-2">
+          <Search className="w-3 h-3" /> zintlr-integration - Visual Studio Code
+        </div>
+        <div className="w-20" /> {/* Spacer */}
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
         
-        {/* LEFT PANE: Endpoints */}
-        <div className="bg-ink/60 border-r border-white/10 flex flex-col">
-          <div className="p-6 border-b border-white/5">
-            <h3 className="text-white font-bold mb-1">Endpoints</h3>
-            <p className="text-white/40 text-sm">Select an endpoint to view integration code.</p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {scenarios.map(scenario => {
-              const isActive = scenario.id === activeScenarioId;
-              return (
-                <button
-                  key={scenario.id}
-                  onClick={() => handleScenarioChange(scenario.id)}
-                  className={`w-full text-left p-4 rounded-xl transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-teal/10 border border-teal/30 shadow-[inset_0_0_20px_rgba(70,189,198,0.1)]' 
-                      : 'bg-white/5 border border-transparent hover:bg-white/10'
-                  }`}
-                >
-                  <div className={`flex items-center gap-3 font-semibold mb-2 ${isActive ? 'text-teal' : 'text-white'}`}>
-                    {scenario.icon} {scenario.name}
-                  </div>
-                  <div className={`text-xs ${isActive ? 'text-white/70' : 'text-white/40'}`}>
-                    {scenario.desc}
-                  </div>
-                </button>
-              );
-            })}
+        {/* ACTIVITY BAR (Leftmost thin strip) */}
+        <div className="w-12 bg-[#333333] flex flex-col items-center py-4 gap-6 shrink-0 border-r border-[#1e1e1e]">
+          <FileCode2 className="w-6 h-6 text-white cursor-pointer" />
+          <Search className="w-6 h-6 text-[#858585] cursor-pointer hover:text-white" />
+          <Terminal className="w-6 h-6 text-[#858585] cursor-pointer hover:text-white" />
+          <div className="mt-auto pb-2">
+            <Settings className="w-6 h-6 text-[#858585] cursor-pointer hover:text-white" />
           </div>
         </div>
 
-        {/* RIGHT PANE: Code & Response */}
-        <div className="bg-[#09090B] flex flex-col relative overflow-hidden">
-          {/* Ambient Glow */}
-          <div className="absolute -top-32 -right-32 w-96 h-96 bg-teal/10 blur-[100px] pointer-events-none rounded-full" />
+        {/* EXPLORER PANE */}
+        <div className="w-64 bg-[#252526] border-r border-[#1e1e1e] flex flex-col shrink-0">
+          <div className="text-[11px] uppercase tracking-wider font-semibold text-[#cccccc] px-4 py-3 flex items-center">
+            Explorer
+          </div>
           
-          {/* Header / Language Switcher */}
-          <div className="flex items-center justify-between p-4 border-b border-white/5 bg-[#111115]">
-            <div className="flex space-x-1 p-1 bg-white/5 rounded-lg">
-              {(['curl', 'node', 'python'] as Language[]).map(lang => (
-                <button
-                  key={lang}
-                  onClick={() => setActiveLanguage(lang)}
-                  className={`px-4 py-1.5 rounded-md text-xs font-semibold capitalize transition-all ${
-                    activeLanguage === lang 
-                      ? 'bg-white/10 text-white shadow-sm' 
-                      : 'text-white/40 hover:text-white/70'
-                  }`}
-                >
-                  {lang === 'node' ? 'Node.js' : lang}
-                </button>
-              ))}
-            </div>
-            <button 
-              onClick={handleRun}
-              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all ${
-                showResponse 
-                  ? 'bg-white/10 text-white hover:bg-white/20' 
-                  : 'bg-teal text-ink shadow-[0_0_15px_rgba(70,189,198,0.4)] hover:bg-teal-ice hover:shadow-[0_0_20px_rgba(70,189,198,0.6)] hover:-translate-y-0.5'
-              }`}
-            >
-              {showResponse ? (
-                'Reset'
-              ) : isRunning ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-ink/30 border-t-ink rounded-full animate-spin" />
-                  Running...
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" fill="currentColor" />
-                  Run Request
-                </>
+          <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-[#464646]">
+            {/* Root Folder */}
+            <div className="px-2">
+              <button onClick={() => toggleFolder('root')} className="w-full flex items-center gap-1 hover:bg-[#2a2d2e] px-1 py-1 rounded text-sm font-bold text-[#cccccc]">
+                {expandedFolders['root'] !== false ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                zintlr-integration
+              </button>
+              
+              {expandedFolders['root'] !== false && (
+                <div className="pl-4 mt-1 flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2 px-1 py-1 hover:bg-[#2a2d2e] rounded text-sm text-[#cccccc] cursor-pointer">
+                    <FileJson className="w-4 h-4 text-[#cbcb41]" /> package.json
+                  </div>
+                  <div className="flex items-center gap-2 px-1 py-1 hover:bg-[#2a2d2e] rounded text-sm text-[#cccccc] cursor-pointer">
+                    <FileKey2 className="w-4 h-4 text-[#858585]" /> .env
+                  </div>
+
+                  {/* src folder */}
+                  <button onClick={() => toggleFolder('src')} className="w-full flex items-center gap-1 hover:bg-[#2a2d2e] px-1 py-1 rounded text-sm text-[#cccccc]">
+                    {expandedFolders['src'] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    <Folder className="w-4 h-4 text-[#519aba]" /> src
+                  </button>
+                  
+                  {expandedFolders['src'] && (
+                    <div className="pl-4 flex flex-col gap-0.5">
+                      {/* Dynamic Categories as Folders */}
+                      {CATEGORIES.map(category => {
+                        const categoryEndpoints = API_CATALOG.filter(e => e.categoryId === category.id);
+                        if (categoryEndpoints.length === 0) return null;
+                        const isExpanded = expandedFolders[category.id];
+
+                        return (
+                          <div key={category.id}>
+                            <button onClick={() => toggleFolder(category.id)} className="w-full flex items-center gap-1 hover:bg-[#2a2d2e] px-1 py-1 rounded text-sm text-[#cccccc]">
+                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              <Folder className="w-4 h-4 text-[#519aba]" /> {category.id}
+                            </button>
+                            
+                            {isExpanded && (
+                              <div className="pl-6 flex flex-col gap-0.5">
+                                {categoryEndpoints.map(scenario => {
+                                  const isActive = scenario.id === activeScenarioId;
+                                  return (
+                                    <button
+                                      key={scenario.id}
+                                      onClick={() => handleScenarioChange(scenario.id)}
+                                      className={`w-full flex items-center gap-2 px-1 py-1 text-sm truncate ${isActive ? 'bg-[#37373d] text-white' : 'hover:bg-[#2a2d2e] text-[#cccccc]'}`}
+                                    >
+                                      <FileCode2 className="w-4 h-4 text-[#519aba] shrink-0" />
+                                      <span className="truncate">{scenario.id}.ts</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
-            </button>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT PANE: EDITOR & TERMINAL */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
+          
+          {/* Editor Tabs */}
+          <div className="flex bg-[#252526] h-10 shrink-0">
+            <div className="flex items-center gap-2 px-4 bg-[#1e1e1e] border-t-2 border-t-[#007acc] text-[#ffffff] text-sm min-w-[120px]">
+              <FileCode2 className="w-4 h-4 text-[#519aba]" />
+              {activeScenario.id}.ts
+            </div>
+            
+            {/* Language Switcher (Simulating different file extensions) */}
+            <div className="ml-auto flex items-center px-4 gap-2">
+              <span className="text-xs text-[#858585]">View as:</span>
+              <div className="flex bg-[#333333] rounded">
+                {(['node', 'python', 'curl'] as Language[]).map(lang => (
+                  <button
+                    key={lang}
+                    onClick={() => {
+                      setActiveLanguage(lang);
+                      setShowResponse(false);
+                    }}
+                    className={`px-3 py-1 text-xs font-mono uppercase ${activeLanguage === lang ? 'bg-[#4d4d4d] text-white' : 'text-[#858585] hover:text-[#cccccc]'}`}
+                  >
+                    {lang === 'node' ? 'TS' : lang === 'python' ? 'PY' : 'SH'}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Editor Area */}
-          <div className="flex-1 flex flex-col overflow-hidden relative">
-            <AnimatePresence mode="popLayout">
-              {/* REQUEST SNIPPET */}
-              <motion.div
-                key={`req-${activeScenarioId}-${activeLanguage}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
-                className={`flex-1 p-6 overflow-y-auto font-mono text-sm ${showResponse ? 'pb-2' : ''}`}
-              >
-                <div className="text-white/30 text-xs font-bold mb-3 uppercase tracking-widest">
-                  {activeLanguage} Request
-                </div>
-                <pre className="text-white/80 leading-relaxed whitespace-pre-wrap">
-                  <code dangerouslySetInnerHTML={{
-                    __html: activeScenario.snippets[activeLanguage]
-                      .replace(/(".*?")/g, '<span class="text-teal-ice">$1</span>')
-                      .replace(/(const|await|fetch|import|requests|method|headers|body|json)/g, '<span class="text-teal">$1</span>')
-                  }} />
-                </pre>
-              </motion.div>
+          {/* Breadcrumbs */}
+          <div className="h-7 border-b border-[#2d2d2d] flex items-center px-4 gap-1 text-[13px] text-[#858585]">
+            <span>zintlr-integration</span> <ChevronRight className="w-3 h-3" />
+            <span>src</span> <ChevronRight className="w-3 h-3" />
+            <span>{activeScenario.categoryId}</span> <ChevronRight className="w-3 h-3" />
+            <span className="text-[#cccccc]">{activeScenario.id}.{activeLanguage === 'node' ? 'ts' : activeLanguage === 'python' ? 'py' : 'sh'}</span>
+          </div>
 
-              {/* RESPONSE PANEL */}
-              {showResponse && (
-                <motion.div
-                  key={`res-${activeScenarioId}`}
-                  initial={{ opacity: 0, y: "100%" }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: "100%" }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                  className="absolute bottom-0 left-0 right-0 h-[55%] bg-[#111115] border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col"
-                >
-                  <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#18181B]">
-                    <div className="text-semantic-success text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" />
-                      200 OK
-                    </div>
-                    <div className="text-white/30 text-xs font-mono">124ms</div>
-                  </div>
-                  <div className="flex-1 p-6 overflow-y-auto font-mono text-sm">
-                    <pre className="text-white/70 leading-relaxed">
-                      <code dangerouslySetInnerHTML={{
-                        __html: activeScenario.response
-                          .replace(/"(.*?)":/g, '<span class="text-teal">"$1"</span>:')
-                          .replace(/"(.*?)"/g, (match, p1) => match.includes(':') ? match : `<span class="text-teal-ice">"${p1}"</span>`)
-                          .replace(/\b(\d+\.?\d*)\b/g, '<span class="text-semantic-success">$1</span>')
-                      }} />
-                    </pre>
-                  </div>
-                </motion.div>
+          {/* Code Editor */}
+          <div className="flex-1 overflow-y-auto bg-[#1e1e1e] relative p-4 flex">
+            {/* Line Numbers */}
+            <div className="w-8 shrink-0 text-right pr-4 text-[#858585] font-mono text-[14px] select-none leading-relaxed flex flex-col">
+              {activeScenario.snippets[activeLanguage].split('\n').map((_, i) => (
+                <span key={i}>{i + 1}</span>
+              ))}
+            </div>
+            {/* Code */}
+            <div className="flex-1 font-mono text-[14px] leading-relaxed overflow-x-auto">
+              <pre className="text-[#d4d4d4]">
+                <code dangerouslySetInnerHTML={{
+                  __html: activeScenario.snippets[activeLanguage]
+                    .replace(/(".*?")/g, '<span style="color: #ce9178">$1</span>') // strings
+                    .replace(/'(.*?)'/g, '<span style="color: #ce9178">\'$1\'</span>') // single strings
+                    .replace(/(const|await|fetch|import|from|async|function|try|catch|let|var|if|return)/g, '<span style="color: #569cd6">$1</span>') // keywords
+                    .replace(/\b(Headers|Response|JSON|console|process|env)\b/g, '<span style="color: #4ec9b0">$1</span>') // classes/objects
+                    .replace(/(https?:\/\/[^\s"']+)/g, '<span style="color: #9cdcfe; text-decoration: underline;">$1</span>') // URLs
+                }} />
+              </pre>
+            </div>
+
+            {/* Run Button Overlay */}
+            <div className="absolute top-4 right-6">
+              <button
+                onClick={handleRun}
+                disabled={isRunning}
+                className="bg-[#007acc] hover:bg-[#0098ff] text-white px-3 py-1.5 rounded flex items-center gap-2 text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                {isRunning ? (
+                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Play className="w-3 h-3" fill="currentColor" />
+                )}
+                {isRunning ? 'Executing...' : 'Run Code'}
+              </button>
+            </div>
+          </div>
+
+          {/* Integrated Terminal Panel */}
+          <div className="h-64 border-t border-[#333333] bg-[#1e1e1e] flex flex-col shrink-0">
+            {/* Panel Tabs */}
+            <div className="flex h-9 border-b border-[#333333] px-4 gap-6 items-center">
+              <div className="text-[11px] uppercase tracking-wider text-[#858585] cursor-pointer hover:text-[#cccccc]">Problems</div>
+              <div className="text-[11px] uppercase tracking-wider text-[#858585] cursor-pointer hover:text-[#cccccc]">Output</div>
+              <div className="text-[11px] uppercase tracking-wider text-[#e7e7e7] border-b-2 border-[#e7e7e7] h-full flex items-center">Terminal</div>
+            </div>
+            
+            {/* Terminal Output */}
+            <div className="flex-1 overflow-y-auto p-4 font-mono text-[13px] leading-relaxed">
+              {!isRunning && !showResponse && (
+                <div className="text-[#cccccc]">
+                  <span className="text-[#39a061]">admin@macbook</span> <span className="text-[#c66e95]">~/zintlr-integration</span> $ node src/{activeScenario.categoryId}/{activeScenario.id}.ts
+                </div>
               )}
-            </AnimatePresence>
+
+              {isRunning && (
+                <div className="text-[#cccccc]">
+                  <span className="text-[#39a061]">admin@macbook</span> <span className="text-[#c66e95]">~/zintlr-integration</span> $ node src/{activeScenario.categoryId}/{activeScenario.id}.ts<br/>
+                  <span className="text-[#858585]">Running script... establishing secure connection to api.zinbit.zintlr.com...</span>
+                </div>
+              )}
+
+              <AnimatePresence>
+                {showResponse && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-[#cccccc]"
+                  >
+                    <span className="text-[#39a061]">admin@macbook</span> <span className="text-[#c66e95]">~/zintlr-integration</span> $ node src/{activeScenario.categoryId}/{activeScenario.id}.ts<br/>
+                    <div className="mt-2 text-[#4fc1ff] flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-[#39a061]" /> [200 OK] Fetched in {activeScenario.latency}
+                    </div>
+                    <pre className="mt-2 text-[#ce9178] whitespace-pre-wrap">
+                      {activeScenario.response}
+                    </pre>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>

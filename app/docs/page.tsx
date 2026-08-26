@@ -62,7 +62,7 @@ export default function PremiumDocsPage() {
         </div>
         <div className="flex items-center gap-3">
           <a 
-            href="#" 
+            href="/console/explorer" 
             className="text-xs font-bold text-[#FF6C37] hover:text-[#FF6C37]/80 px-4 py-2 rounded-lg border border-[#FF6C37]/20 bg-[#FF6C37]/5 hover:bg-[#FF6C37]/10 transition-colors flex items-center gap-2 shadow-sm"
           >
             <Download className="w-4 h-4" />
@@ -184,7 +184,7 @@ export default function PremiumDocsPage() {
             <div className="prose prose-invert max-w-none">
               <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-6">API Documentation</h1>
               <p className="text-lg md:text-xl text-white/60 font-medium leading-relaxed">
-                Welcome to the Zintlr API. Use this reference to integrate our powerful B2B enrichment and identity resolution engine directly into your products.
+                Welcome to the zinbit API. Use this reference to integrate our powerful B2B enrichment and identity resolution engine directly into your products.
               </p>
               <hr className="my-12 border-white/10" />
             </div>
@@ -194,7 +194,7 @@ export default function PremiumDocsPage() {
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">System Architecture & Data Flow</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  Understanding how data moves through Zintlr will help you build highly scalable and reliable integrations. Our global edge network routes requests directly to the nearest Identity Resolution Engine.
+                  Understanding how data moves through zinbit will help you build highly scalable and reliable integrations. Our global edge network routes requests directly to the nearest Identity Resolution Engine.
                 </p>
               </div>
 
@@ -255,7 +255,7 @@ export default function PremiumDocsPage() {
                 </div>
                 <div className="border-l-2 border-teal pl-4">
                   <h4 className="font-bold text-white mb-2">2. Global Edge Routing</h4>
-                  <p className="text-sm text-white/60">Anycast routes your request to the nearest Zintlr point of presence (PoP), where authentication and rate-limiting are evaluated in Redis &lt;2ms.</p>
+                  <p className="text-sm text-white/60">Anycast routes your request to the nearest zinbit point of presence (PoP), where authentication and rate-limiting are evaluated in Redis &lt;2ms.</p>
                 </div>
                 <div className="border-l-2 border-teal pl-4">
                   <h4 className="font-bold text-white mb-2">3. Graph Resolution</h4>
@@ -269,7 +269,7 @@ export default function PremiumDocsPage() {
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Authentication</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  The Zintlr API uses API keys to authenticate requests. You can view and manage your API keys in the <Link href="/console/keys" className="text-teal hover:underline font-bold">Dashboard</Link>.
+                  The zinbit API uses API keys to authenticate requests. You can view and manage your API keys in the <Link href="/console/keys" className="text-teal hover:underline font-bold">Dashboard</Link>.
                 </p>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
                   Authentication to the API is performed via HTTP Bearer Auth. Provide your API key as the bearer token value in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">Authorization</code> header.
@@ -299,12 +299,12 @@ export default function PremiumDocsPage() {
                 </div>
                 <div className="p-6 overflow-x-auto text-white/80 leading-relaxed whitespace-pre">
                   {authTab === 'curl' && (
-`curl -X GET https://api.zintlr.com/v1/people-search \\
+`curl -X GET https://api.zinbit.zintlr.com/v1/people-search \\
   -H "Authorization: Bearer ${apiKey}" \\
   -d "email=demo@example.com"`
                   )}
                   {authTab === 'node' && (
-`const response = await fetch('https://api.zintlr.com/v1/people-search?email=demo@example.com', {
+`const response = await fetch('https://api.zinbit.zintlr.com/v1/people-search?email=demo@example.com', {
   method: 'GET',
   headers: {
     'Authorization': 'Bearer ${apiKey}'
@@ -317,7 +317,7 @@ console.log(data);`
                   {authTab === 'python' && (
 `import requests
 
-url = "https://api.zintlr.com/v1/people-search"
+url = "https://api.zinbit.zintlr.com/v1/people-search"
 headers = {
     "Authorization": "Bearer ${apiKey}"
 }
@@ -337,7 +337,7 @@ print(response.json())`
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Official SDKs</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  We provide official client libraries for major programming languages to make integrating with Zintlr as seamless as possible.
+                  We provide official client libraries for major programming languages to make integrating with zinbit as seamless as possible.
                 </p>
               </div>
 
@@ -348,14 +348,14 @@ print(response.json())`
                     <div className="w-12 h-12 rounded-xl bg-[#339933]/10 flex items-center justify-center border border-[#339933]/20 shadow-inner">
                       <span className="font-black text-[#339933] text-sm">Node</span>
                     </div>
-                    <a href="#" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
+                    <a href="https://github.com/zinbit" target="_blank" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
                   </div>
                   <h3 className="text-lg font-bold text-white mb-2">Node.js</h3>
                   <div className="bg-ink/80 p-3 rounded-xl border border-white/5 font-mono text-xs text-white/80 select-all mb-4 shadow-inner">
-                    npm install @zintlr/node
+                    npm install @zinbit/node
                   </div>
                   <div className="mt-auto pt-2">
-                    <a href="#" className="text-sm font-bold text-teal hover:text-teal-ice transition-colors flex items-center gap-1 group-hover:gap-2">
+                    <a href="#endpoints" className="text-sm font-bold text-teal hover:text-teal-ice transition-colors flex items-center gap-1 group-hover:gap-2">
                       View Documentation <ChevronRight className="w-4 h-4" />
                     </a>
                   </div>
@@ -367,14 +367,14 @@ print(response.json())`
                     <div className="w-12 h-12 rounded-xl bg-[#3776AB]/10 flex items-center justify-center border border-[#3776AB]/20 shadow-inner">
                       <span className="font-black text-[#3776AB] text-sm">Py</span>
                     </div>
-                    <a href="#" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
+                    <a href="https://github.com/zinbit" target="_blank" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
                   </div>
                   <h3 className="text-lg font-bold text-white mb-2">Python</h3>
                   <div className="bg-ink/80 p-3 rounded-xl border border-white/5 font-mono text-xs text-white/80 select-all mb-4 shadow-inner">
-                    pip install zintlr
+                    pip install zinbit
                   </div>
                   <div className="mt-auto pt-2">
-                    <a href="#" className="text-sm font-bold text-teal hover:text-teal-ice transition-colors flex items-center gap-1 group-hover:gap-2">
+                    <a href="#endpoints" className="text-sm font-bold text-teal hover:text-teal-ice transition-colors flex items-center gap-1 group-hover:gap-2">
                       View Documentation <ChevronRight className="w-4 h-4" />
                     </a>
                   </div>
@@ -386,14 +386,14 @@ print(response.json())`
                     <div className="w-12 h-12 rounded-xl bg-[#00ADD8]/10 flex items-center justify-center border border-[#00ADD8]/20 shadow-inner">
                       <span className="font-black text-[#00ADD8] text-sm">Go</span>
                     </div>
-                    <a href="#" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
+                    <a href="https://github.com/zinbit" target="_blank" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
                   </div>
                   <h3 className="text-lg font-bold text-white mb-2">Go</h3>
                   <div className="bg-ink/80 p-3 rounded-xl border border-white/5 font-mono text-xs text-white/80 select-all mb-4 shadow-inner">
                     go get zintlr.com/go
                   </div>
                   <div className="mt-auto pt-2">
-                    <a href="#" className="text-sm font-bold text-teal hover:text-teal-ice transition-colors flex items-center gap-1 group-hover:gap-2">
+                    <a href="#endpoints" className="text-sm font-bold text-teal hover:text-teal-ice transition-colors flex items-center gap-1 group-hover:gap-2">
                       View Documentation <ChevronRight className="w-4 h-4" />
                     </a>
                   </div>
@@ -406,7 +406,7 @@ print(response.json())`
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Errors</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  Zintlr uses conventional HTTP response codes to indicate the success or failure of an API request. In general, codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">2xx</code> range indicate success, codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">4xx</code> range indicate an error that failed given the information provided, and codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">5xx</code> range indicate an error with Zintlr's servers.
+                  zinbit uses conventional HTTP response codes to indicate the success or failure of an API request. In general, codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">2xx</code> range indicate success, codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">4xx</code> range indicate an error that failed given the information provided, and codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">5xx</code> range indicate an error with zinbit's servers.
                 </p>
               </div>
 
@@ -455,7 +455,7 @@ print(response.json())`
                     <div className="w-24 flex-shrink-0">
                       <span className="text-semantic-error font-mono font-bold bg-semantic-error/10 px-2 py-1 rounded shadow-sm border border-semantic-error/20">500</span>
                     </div>
-                    <p className="text-sm text-white/60 font-medium"><span className="text-white font-bold">Server Error</span> - Something went wrong on Zintlr's end. (These are rare.)</p>
+                    <p className="text-sm text-white/60 font-medium"><span className="text-white font-bold">Server Error</span> - Something went wrong on zinbit's end. (These are rare.)</p>
                   </div>
                 </div>
               </div>
@@ -463,7 +463,7 @@ print(response.json())`
               <div>
                 <h3 className="text-xl font-bold text-white tracking-tight mb-4">Error Types</h3>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-sm">
-                  When an API request fails, Zintlr returns an error object in the response body. The <code className="bg-white/10 px-1 rounded text-white">type</code> attribute indicates the specific nature of the error.
+                  When an API request fails, zinbit returns an error object in the response body. The <code className="bg-white/10 px-1 rounded text-white">type</code> attribute indicates the specific nature of the error.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="glass-inner rounded-xl p-5 border border-white/10 hover:border-white/20 transition-colors">
@@ -500,7 +500,7 @@ print(response.json())`
                 <p className="text-sm text-white/60 leading-relaxed">
                   Every account is provisioned with a <code className="bg-white/10 px-1 py-0.5 rounded text-white font-mono text-xs">sk_test_...</code> key. All requests made with a test key bypass billing completely and always return static synthetic data, regardless of the search parameters.
                 </p>
-                <CodeBlock code={`curl -X GET 'https://api.zintlr.com/v1/people-search?email=realperson@example.com' \\
+                <CodeBlock code={`curl -X GET 'https://api.zinbit.zintlr.com/v1/people-search?email=realperson@example.com' \\
   -H "Authorization: Bearer sk_test_ab12cd34ef56gh78"
   
 # Returns synthetic John Doe profile (Credits charged: 0)`} />
@@ -544,7 +544,7 @@ print(response.json())`
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Rate Limits</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  To ensure a high quality of service for all users, the Zintlr API enforces rate limits on a per-account basis based on your active pricing tier. 
+                  To ensure a high quality of service for all users, the zinbit API enforces rate limits on a per-account basis based on your active pricing tier. 
                   When you exceed your limit, the API will respond with a <code className="text-semantic-error bg-semantic-error/10 px-1 py-0.5 rounded">429 Too Many Requests</code> HTTP status code.
                 </p>
               </div>
@@ -636,8 +636,8 @@ GET /v1/people-search?company=apple&limit=50&cursor=eyJpZCI6IjY0YWM5M2Y...`} />
                 </p>
 
                 <CodeBlock code={`// Safe Retry Example
-curl -X POST https://api.zintlr.com/v1/enrich \\
-  -H "Authorization: Bearer zintlr_live_..." \\
+curl -X POST https://api.zinbit.zintlr.com/v1/enrich \\
+  -H "Authorization: Bearer zinbit_live_..." \\
   -H "Idempotency-Key: 9d214695-1f92-4913-91db-a3e20eec9502" \\
   -H "Content-Type: application/json" \\
   -d '{"email": "tim@apple.com"}'`} />
@@ -654,7 +654,7 @@ curl -X POST https://api.zintlr.com/v1/enrich \\
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Tutorials & Use Cases</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  Learn how to integrate Zintlr into your existing workflows. These step-by-step guides cover the most common enterprise use cases.
+                  Learn how to integrate zinbit into your existing workflows. These step-by-step guides cover the most common enterprise use cases.
                 </p>
               </div>
 
@@ -678,10 +678,10 @@ curl -X POST https://api.zintlr.com/v1/enrich \\
                     <div className="flex gap-4">
                       <div className="w-8 h-8 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold text-sm shrink-0">2</div>
                       <div>
-                        <h4 className="text-white font-bold mb-1">Query the Zintlr API</h4>
+                        <h4 className="text-white font-bold mb-1">Query the zinbit API</h4>
                         <p className="text-sm text-white/60 leading-relaxed">Pass the bare email address to the <code className="text-teal">/v1/people-search</code> endpoint to retrieve their full profile, company data, and direct-dial phone number.</p>
                         
-                        <CodeBlock code={`const response = await fetch('https://api.zintlr.com/v1/people-search?email=lead@example.com', {
+                        <CodeBlock code={`const response = await fetch('https://api.zinbit.zintlr.com/v1/people-search?email=lead@example.com', {
   headers: {
     'Authorization': 'Bearer sk_live_YOUR_KEY'
   }
@@ -711,7 +711,7 @@ const enrichedData = await response.json();`} />
               <div id="migration-apollo" className="scroll-mt-32">
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Migrating from Apollo / Clearbit</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  Transitioning from legacy enrichment providers to Zintlr is a matter of updating endpoints and response mapping. Zintlr provides a 1-to-1 data parity with Clearbit's Person and Company Enrichment APIs, but at 10x the speed and deterministic scale.
+                  Transitioning from legacy enrichment providers to zinbit is a matter of updating endpoints and response mapping. zinbit provides a 1-to-1 data parity with Clearbit's Person and Company Enrichment APIs, but at 10x the speed and deterministic scale.
                 </p>
                 <div className="glass-inner rounded-xl border border-white/10 p-6 space-y-6">
                   <h3 className="text-xl font-bold text-white tracking-tight">Endpoint Mapping</h3>
@@ -720,7 +720,7 @@ const enrichedData = await response.json();`} />
                       <thead className="bg-[#09090b]/80 border-b border-white/10 text-white/50 font-bold uppercase tracking-wider text-[10px]">
                         <tr>
                           <th className="px-4 py-3 rounded-tl-lg">Legacy Provider</th>
-                          <th className="px-4 py-3">Zintlr API (v1)</th>
+                          <th className="px-4 py-3">zinbit API (v1)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5 text-white/80">
@@ -746,22 +746,22 @@ const enrichedData = await response.json();`} />
               <div id="migration-zoominfo" className="scroll-mt-32">
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Migrating from ZoomInfo</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  Moving from ZoomInfo Enterprise API to Zintlr simplifies your authentication flow (no more rotating JWTs) and switches your payload from complex XML/JSON SOAP structures to modern REST JSON.
+                  Moving from ZoomInfo Enterprise API to zinbit simplifies your authentication flow (no more rotating JWTs) and switches your payload from complex XML/JSON SOAP structures to modern REST JSON.
                 </p>
                 <div className="glass-inner rounded-xl border border-white/10 p-6 space-y-6">
                   <h3 className="text-xl font-bold text-white tracking-tight">Key Differences</h3>
                   <ul className="space-y-4 text-white/70 text-sm">
                     <li className="flex gap-3">
                       <div className="w-5 h-5 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">1</div>
-                      <span><strong>Authentication:</strong> ZoomInfo requires exchanging a username/password for a JWT token every 60 minutes. Zintlr uses static Bearer tokens generated from your Partner Console that never expire unless manually revoked.</span>
+                      <span><strong>Authentication:</strong> ZoomInfo requires exchanging a username/password for a JWT token every 60 minutes. zinbit uses static Bearer tokens generated from your zinbit Console that never expire unless manually revoked.</span>
                     </li>
                     <li className="flex gap-3">
                       <div className="w-5 h-5 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">2</div>
-                      <span><strong>Intent Data:</strong> ZoomInfo returns intent signals natively in the enterprise search endpoint. In Zintlr, intent is managed exclusively through Real-time Webhooks (via Kafka) to ensure you aren't paying for stale intent data.</span>
+                      <span><strong>Intent Data:</strong> ZoomInfo returns intent signals natively in the enterprise search endpoint. In zinbit, intent is managed exclusively through Real-time Webhooks (via Kafka) to ensure you aren't paying for stale intent data.</span>
                     </li>
                     <li className="flex gap-3">
                       <div className="w-5 h-5 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">3</div>
-                      <span><strong>Pagination:</strong> ZoomInfo uses page/rpp (results per page). Zintlr relies on cursor-based pagination for enterprise stability.</span>
+                      <span><strong>Pagination:</strong> ZoomInfo uses page/rpp (results per page). zinbit relies on cursor-based pagination for enterprise stability.</span>
                     </li>
                   </ul>
                 </div>
@@ -779,7 +779,7 @@ const enrichedData = await response.json();`} />
                   <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">{endpoint.description}</p>
                   
                   <div className="flex items-center gap-3 bg-white/5 p-4 rounded-xl border border-white/10 font-mono text-sm shadow-inner overflow-x-auto">
-                    <span className="text-white/40 select-none flex-shrink-0">https://api.zintlr.com/v1</span>
+                    <span className="text-white/40 select-none flex-shrink-0">https://api.zinbit.zintlr.com/v1</span>
                     <span className="text-white font-bold flex-shrink-0">{endpoint.path}</span>
                   </div>
                 </div>
@@ -895,7 +895,7 @@ const enrichedData = await response.json();`} />
                   <ul className="space-y-3">
                     <li className="flex gap-3 text-sm text-white/70">
                       <span className="text-white/60 font-bold mt-0.5">Release</span>
-                      <span>Initial stable release of the Zintlr B2B2B Identity API.</span>
+                      <span>Initial stable release of the zinbit by Zintlr B2B Identity API.</span>
                     </li>
                   </ul>
                 </div>

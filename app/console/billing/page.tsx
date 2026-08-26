@@ -1,10 +1,12 @@
 'use client';
 
-import { Activity, ShieldAlert, ArrowRight, Zap, Check, CreditCard, Download, FileText, BellRing, Trash2, Plus, Bell } from 'lucide-react';
+import { Activity, ShieldAlert, ArrowRight, Zap, Check, CreditCard, Download, FileText, BellRing, Trash2, Plus, Bell, Settings } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
+import { useToast } from '@/components/Toast';
+import Link from 'next/link';
 
 const mockLedger = [
   { date: '2026-08-24', source: 'Find Phone by Email', hits: 1450, totalCredits: 1450 },
@@ -28,6 +30,7 @@ const mockInvoices = [
 
 export default function BillingPage() {
   const { creditBalance, usageAlerts, addUsageAlert, toggleUsageAlert, deleteUsageAlert } = useStore();
+  const toast = useToast();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isAlertFormOpen, setIsAlertFormOpen] = useState(false);
   const [newAlertPercent, setNewAlertPercent] = useState('80');
@@ -37,8 +40,20 @@ export default function BillingPage() {
     setDownloadingId(id);
     await new Promise(r => setTimeout(r, 800)); // Simulate PDF generation
     setDownloadingId(null);
-    // In a real app, this would trigger a window.open or blob download
-    alert(`Downloading statement for ${id}...`);
+    
+    // Simulate PDF download
+    const mockPdfContent = `Invoice ${id}\nAmount: $99.00\nStatus: Paid`;
+    const blob = new Blob([mockPdfContent], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zinbit-${id.toLowerCase()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.success('Invoice Downloaded', `${id} has been downloaded to your device.`);
   };
   
   // Rate Limit Data for Gauge Chart
@@ -93,7 +108,7 @@ export default function BillingPage() {
               transition={{ delay: i * 0.1 }}
               className={`glass-inner rounded-3xl p-8 flex flex-col items-center text-center transition-all ${
                 tier.current 
-                  ? 'border-teal shadow-[0_0_30px_-5px_rgba(70,189,198,0.3)] bg-white/5' 
+                  ? 'border-teal shadow-[0_0_30px_-5px_rgba(70,189,198,0.3)] bg-[#09090b]/5' 
                   : 'border-white/10 hover:border-white/20'
               }`}
             >
@@ -108,10 +123,16 @@ export default function BillingPage() {
               </div>
               <div className="text-4xl font-black text-white mb-8">{tier.price}<span className="text-lg text-white/40 font-medium">/mo</span></div>
               
-              <button className={`w-full py-3 rounded-full font-bold transition-colors ${
+              <button 
+                onClick={() => {
+                  if (!tier.current) {
+                    toast.info('Redirecting to Checkout', 'A real app would open a Stripe checkout session here.');
+                  }
+                }}
+                className={`w-full py-3 rounded-full font-bold transition-colors ${
                 tier.current 
-                  ? 'bg-white/10 text-white/50 cursor-default' 
-                  : 'border border-white/20 text-white hover:bg-white hover:text-ink'
+                  ? 'bg-[#09090b]/10 text-white/50 cursor-default' 
+                  : 'border border-white/20 text-white hover:bg-[#09090b] hover:text-white'
               }`}>
                 {tier.current ? 'Active' : 'Upgrade'}
               </button>
@@ -209,7 +230,7 @@ export default function BillingPage() {
               </div>
             </div>
 
-            <button className="mt-8 w-full bg-white text-ink font-bold text-sm px-4 py-4 rounded-xl shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 relative z-10">
+            <button className="mt-8 w-full bg-[#09090b] text-white font-bold text-sm px-4 py-4 rounded-xl shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:bg-neutral-200 transition-all flex items-center justify-center gap-2 relative z-10">
               Request Limit Increase
               <ArrowRight className="w-4 h-4" />
             </button>
@@ -218,7 +239,7 @@ export default function BillingPage() {
 
         {/* LEDGER SECTION */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass-inner rounded-2xl border border-white/10 shadow-sm p-8 h-full flex flex-col">
+          <div className="glass-inner rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.02)] p-8 h-full flex flex-col">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
               <h2 className="text-lg font-bold text-white flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-teal/10 flex items-center justify-center">
@@ -237,14 +258,14 @@ export default function BillingPage() {
                 <thead className="bg-[#09090b]/80 border-b border-white/10 text-white/50 font-bold uppercase tracking-wider text-[10px]">
                   <tr>
                     <th className="px-4 py-4 rounded-tl-lg">Date</th>
-                    <th className="px-4 py-4">B2B2B API Source</th>
+                    <th className="px-4 py-4">zinbit API Source</th>
                     <th className="px-4 py-4 text-right">Successful Hits</th>
                     <th className="px-4 py-4 text-right rounded-tr-lg">Total Deductions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-white/80">
                   {mockLedger.map((entry, idx) => (
-                    <tr key={idx} className="hover:bg-white/5 transition-colors">
+                    <tr key={idx} className="hover:bg-[#09090b]/5 transition-colors">
                       <td className="px-4 py-5 font-mono text-xs text-white/40">{entry.date}</td>
                       <td className="px-4 py-5 font-semibold text-white/90">{entry.source}</td>
                       <td className="px-4 py-5 font-mono text-right font-medium text-white/60">{entry.hits.toLocaleString()}</td>
@@ -266,7 +287,7 @@ export default function BillingPage() {
       </div>
 
       {/* INVOICES SECTION */}
-      <section className="glass-inner rounded-2xl border border-white/10 shadow-sm p-8 relative overflow-hidden">
+      <section className="glass-inner rounded-2xl border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.02)] p-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
           <FileText className="w-48 h-48 text-white transform -rotate-12" />
         </div>
@@ -281,7 +302,7 @@ export default function BillingPage() {
             </h2>
             <button 
               onClick={() => setIsAlertFormOpen(true)}
-              className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/10 transition-all w-full sm:w-auto justify-center"
+              className="flex items-center gap-2 bg-[#09090b]/5 hover:bg-[#09090b]/10 text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/10 transition-all w-full sm:w-auto justify-center"
             >
               <Plus className="w-4 h-4" />
               New Alert
@@ -296,9 +317,9 @@ export default function BillingPage() {
                 {usageAlerts.length === 0 ? (
                   <div className="text-center py-6 text-white/40 text-sm">No usage alerts configured.</div>
                 ) : usageAlerts.map(alert => (
-                  <div key={alert.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4 group">
+                  <div key={alert.id} className="flex items-center justify-between bg-[#09090b]/5 border border-white/10 rounded-xl p-4 group">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${alert.isActive ? 'bg-teal/10 border-teal/20 text-teal' : 'bg-white/5 border-white/10 text-white/30'}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${alert.isActive ? 'bg-teal/10 border-teal/20 text-teal' : 'bg-[#09090b]/5 border-white/10 text-white/30'}`}>
                         <Bell className="w-4 h-4" />
                       </div>
                       <div>
@@ -311,9 +332,9 @@ export default function BillingPage() {
                     <div className="flex items-center gap-4">
                       <button 
                         onClick={() => toggleUsageAlert(alert.id)}
-                        className={`w-10 h-5 rounded-full p-0.5 transition-colors ${alert.isActive ? 'bg-teal' : 'bg-white/20'}`}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-colors ${alert.isActive ? 'bg-teal' : 'bg-[#09090b]/20'}`}
                       >
-                        <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${alert.isActive ? 'translate-x-5' : 'translate-x-0'}`} />
+                        <div className={`w-4 h-4 bg-[#09090b] rounded-full shadow-md transform transition-transform ${alert.isActive ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                       <button 
                         onClick={() => deleteUsageAlert(alert.id)}
@@ -329,13 +350,20 @@ export default function BillingPage() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-8 mt-16 relative z-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 mt-16 relative z-10 gap-4">
           <h2 className="text-lg font-bold text-white flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#09090b]/10 flex items-center justify-center">
               <FileText className="w-5 h-5 text-white" />
             </div>
             Invoices & Statements
           </h2>
+          <Link 
+            href="/console/billing/settings" 
+            className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-bold text-white transition-colors flex items-center gap-2 shadow-sm"
+          >
+            <Settings className="w-4 h-4" />
+            Manage POCs & Info
+          </Link>
         </div>
         
         <div className="overflow-x-auto relative z-10">
@@ -352,7 +380,7 @@ export default function BillingPage() {
             </thead>
             <tbody className="divide-y divide-white/5 text-white/80">
               {mockInvoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-white/5 transition-colors">
+                <tr key={inv.id} className="hover:bg-[#09090b]/5 transition-colors">
                   <td className="px-4 py-5 font-mono text-xs text-white/40">{inv.date}</td>
                   <td className="px-4 py-5 font-mono text-xs font-bold text-white/90">{inv.id}</td>
                   <td className="px-4 py-5 font-medium text-white/60">{inv.plan}</td>
@@ -366,7 +394,7 @@ export default function BillingPage() {
                     <button 
                       onClick={() => handleDownload(inv.id)}
                       disabled={downloadingId === inv.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs font-bold text-white disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#09090b]/5 hover:bg-[#09090b]/10 border border-white/10 transition-colors text-xs font-bold text-white disabled:opacity-50"
                     >
                       {downloadingId === inv.id ? (
                         <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
@@ -398,7 +426,7 @@ export default function BillingPage() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-md bg-[#09090b] border border-white/10 rounded-3xl shadow-2xl overflow-hidden z-10"
             >
-              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+              <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#09090b]/5">
                 <h3 className="font-bold text-white">Create Usage Alert</h3>
               </div>
               <div className="p-6 space-y-6">
@@ -418,7 +446,7 @@ export default function BillingPage() {
                 <div>
                   <label className="block text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Notification Channels</label>
                   <div className="space-y-2">
-                    <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 hover:bg-white/5 cursor-pointer">
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 hover:bg-[#09090b]/5 cursor-pointer">
                       <input 
                         type="checkbox"
                         checked={newAlertChannels.includes('email')}
@@ -430,7 +458,7 @@ export default function BillingPage() {
                       />
                       <span className="text-sm font-bold text-white">Email</span>
                     </label>
-                    <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 hover:bg-white/5 cursor-pointer">
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 hover:bg-[#09090b]/5 cursor-pointer">
                       <input 
                         type="checkbox"
                         checked={newAlertChannels.includes('webhook')}
@@ -448,7 +476,7 @@ export default function BillingPage() {
                 <div className="flex gap-3 pt-2">
                   <button 
                     onClick={() => setIsAlertFormOpen(false)}
-                    className="flex-1 py-3 px-4 rounded-xl font-bold bg-white/5 text-white hover:bg-white/10 transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold bg-[#09090b]/5 text-white hover:bg-[#09090b]/10 transition-colors"
                   >
                     Cancel
                   </button>

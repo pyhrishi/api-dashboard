@@ -12,6 +12,7 @@ export interface APIRequest {
   parameters: Record<string, any>;
   apiKey: string;
   baseUrl?: string;
+  simulateStatus?: number;
 }
 
 export interface APIResponse {
@@ -89,6 +90,43 @@ export async function callSandboxAPI(request: APIRequest): Promise<APIResponse |
     // Simulate network latency
     await simulateLatency();
 
+    // Handle simulated error statuses
+    if (request.simulateStatus && request.simulateStatus !== 200) {
+      let errorMsg = 'An error occurred';
+      let errorCode = 'UNKNOWN_ERROR';
+      
+      switch (request.simulateStatus) {
+        case 400:
+          errorMsg = 'Invalid parameters provided in the request.';
+          errorCode = 'INVALID_PARAMETERS';
+          break;
+        case 401:
+          errorMsg = 'Invalid or missing API key.';
+          errorCode = 'UNAUTHORIZED';
+          break;
+        case 402:
+          errorMsg = 'Insufficient credits to perform this operation.';
+          errorCode = 'PAYMENT_REQUIRED';
+          break;
+        case 429:
+          errorMsg = 'Too many requests. Please slow down.';
+          errorCode = 'RATE_LIMITED';
+          break;
+        case 500:
+          errorMsg = 'An internal server error occurred.';
+          errorCode = 'INTERNAL_ERROR';
+          break;
+      }
+      
+      throw createAPIError(
+        request.simulateStatus,
+        getStatusDescription(request.simulateStatus).split(' - ')[0],
+        errorMsg,
+        errorCode,
+        requestId
+      );
+    }
+
     // Generate mock response
     const mockResponse = generateMockResponse(request.endpoint, request.parameters);
     const duration = Math.round(performance.now() - startTime);
@@ -133,18 +171,42 @@ function validateRequestParameters(
   endpoint: Endpoint,
   parameters: Record<string, any>
 ): { isValid: boolean; error?: string } {
-  // Check required parameters
+  const allowedParamNames = new Set(endpoint.parameters.map(p => p.name));
+  
+  // 1. Strict unknown parameter check
+  for (const key of Object.keys(parameters)) {
+    if (!allowedParamNames.has(key)) {
+      return {
+        isValid: false,
+        error: `Strict Validation Failed: Unknown parameter '${key}' is not allowed for this endpoint.`,
+      };
+    }
+  }
+
+  // 2. Validate all defined parameters
   for (const param of endpoint.parameters) {
-    if (param.required) {
-      const value = parameters[param.name];
-      if (value === undefined || value === null || value === '') {
+    const value = parameters[param.name];
+    const isProvided = value !== undefined && value !== null && value !== '';
+
+    // Check required
+    if (param.required && !isProvided) {
+      return {
+        isValid: false,
+        error: `Missing required parameter: ${param.name}`,
+      };
+    }
+
+    // Check type and constraints if provided
+    if (isProvided) {
+      // Basic string validation
+      if (param.type === 'string' && typeof value !== 'string') {
         return {
           isValid: false,
-          error: `Missing required parameter: ${param.name}`,
+          error: `Parameter '${param.name}' must be a string.`,
         };
       }
 
-      // Basic type validation
+      // Email validation
       if (param.type === 'email') {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(String(value))) {
@@ -155,6 +217,7 @@ function validateRequestParameters(
         }
       }
 
+      // Phone validation
       if (param.type === 'phone') {
         const digitsOnly = String(value).replace(/\D/g, '');
         if (digitsOnly.length < 10 || digitsOnly.length > 15) {
@@ -165,12 +228,48 @@ function validateRequestParameters(
         }
       }
 
+      // Number validation
       if (param.type === 'number') {
         const num = Number(value);
         if (isNaN(num)) {
           return {
             isValid: false,
             error: `Invalid number for parameter: ${param.name}`,
+          };
+        }
+      }
+
+      // Boolean validation
+      if (param.type === 'boolean') {
+        const strVal = String(value).toLowerCase();
+        if (strVal !== 'true' && strVal !== 'false' && strVal !== '1' && strVal !== '0') {
+          return {
+            isValid: false,
+            error: `Parameter '${param.name}' must be a boolean (true/false).`,
+          };
+        }
+      }
+
+      // Max Length validation
+      if (param.maxLength && String(value).length > param.maxLength && param.type !== 'array') {
+        return {
+          isValid: false,
+          error: `Parameter '${param.name}' exceeds maximum length of ${param.maxLength} characters.`,
+        };
+      }
+
+      // Array validation
+      if (param.type === 'array') {
+        if (!Array.isArray(value)) {
+          return {
+            isValid: false,
+            error: `Parameter '${param.name}' must be a JSON array.`,
+          };
+        }
+        if (param.maxLength && value.length > param.maxLength) {
+          return {
+            isValid: false,
+            error: `Parameter '${param.name}' array exceeds maximum length of ${param.maxLength} items.`,
           };
         }
       }
@@ -183,8 +282,139 @@ function validateRequestParameters(
 /**
  * Generate mock response based on endpoint
  */
+const FIRST_NAMES = ['Alex', 'Jordan', 'Taylor', 'Sam', 'Casey', 'Riley', 'Morgan', 'Avery', 'Quinn', 'Harper'];
+const LAST_NAMES = ['Developer', 'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez'];
+const ROLES = ['Senior Software Engineer', 'Product Manager', 'Data Scientist', 'CTO', 'VP of Engineering', 'UX Designer', 'Marketing Director', 'DevOps Engineer'];
+const COMPANIES = ['Acme Corp', 'Globex', 'Soylent', 'Initech', 'Umbrella Corp', 'Stark Industries', 'Wayne Enterprises', 'Massive Dynamic'];
+
+function getRandomItem<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 function generateMockResponse(endpoint: Endpoint, parameters: Record<string, any>): any {
   switch (endpoint.id) {
+    case 'identity-resolve': {
+      const q = String(parameters.query || '').trim();
+      let type = 'unknown';
+      if (q.includes('@')) type = 'email';
+      else if (q.includes('linkedin.com')) type = 'linkedin';
+      else if (/^\+?[0-9]+$/.test(q)) type = 'phone';
+      else if (q.includes('.')) type = 'domain';
+      
+      if (type === 'domain') {
+        return {
+          type: 'company',
+          resolved_from: 'domain',
+          profile: {
+            id: `comp_${Date.now()}`,
+            name: `${q.split('.')[0].toUpperCase()} Corp`,
+            domain: q,
+            industry: 'Technology',
+            headquarters: 'San Francisco, CA'
+          }
+        };
+      } else {
+        return {
+          type: 'person',
+          resolved_from: type,
+          profile: {
+            id: `pers_${Date.now()}`,
+            name: `${getRandomItem(FIRST_NAMES)} ${getRandomItem(LAST_NAMES)}`,
+            title: getRandomItem(ROLES),
+            company: getRandomItem(COMPANIES),
+            email: type === 'email' ? q : `${getRandomItem(FIRST_NAMES).toLowerCase()}@${getRandomItem(COMPANIES).replace(' ', '').toLowerCase()}.com`,
+            phone: type === 'phone' ? q : `+1${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
+            linkedin_url: type === 'linkedin' ? q : `https://linkedin.com/in/${Math.random().toString(36).substring(7)}`
+          }
+        };
+      }
+    }
+    case 'batch-company-enrich': {
+      const domains = parameters.domains || [];
+      return {
+        results: domains.map((domain: string, idx: number) => ({
+          domain,
+          status: 'success',
+          data: {
+            name: `${domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1)} Corp`,
+            industry: ['Technology', 'Finance', 'Healthcare'][idx % 3],
+            employeeCount: 50 + (idx * 150),
+            revenue: '$1M - $10M',
+          }
+        }))
+      };
+    }
+    case 'company-employees': {
+      const limit = Number(parameters.limit) || 10;
+      let offset = 0;
+      
+      if (parameters.cursor) {
+        try {
+          const decoded = JSON.parse(atob(parameters.cursor));
+          offset = decoded.offset || 0;
+        } catch(e) {
+          // ignore invalid cursor
+        }
+      }
+
+      // Generate base dataset
+      const totalMockSize = 145;
+      let allEmployees = Array.from({ length: totalMockSize }).map((_, i) => {
+        // Deterministic mock generation
+        const depts = ['Engineering', 'Sales', 'Marketing', 'Product', 'HR'];
+        const firstNames = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace'];
+        const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 'Davis'];
+        
+        const dept = depts[i % depts.length];
+        const firstName = firstNames[i % firstNames.length];
+        const lastName = lastNames[i % lastNames.length];
+        
+        return {
+          id: `emp_${i}`,
+          email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${parameters.domain || 'example.com'}`,
+          name: `${firstName} ${lastName}`,
+          title: `Staff ${dept} Specialist`,
+          department: dept
+        };
+      });
+
+      // Apply Filter
+      if (parameters.department) {
+        allEmployees = allEmployees.filter(e => 
+          e.department.toLowerCase() === parameters.department.toLowerCase()
+        );
+      }
+
+      // Apply Sort
+      if (parameters.sort) {
+        const desc = parameters.sort.startsWith('-');
+        const field = desc ? parameters.sort.substring(1) : parameters.sort;
+        
+        allEmployees.sort((a: any, b: any) => {
+          if (a[field] < b[field]) return desc ? 1 : -1;
+          if (a[field] > b[field]) return desc ? -1 : 1;
+          return 0;
+        });
+      }
+
+      const totalEmployees = allEmployees.length;
+      const hasMore = offset + limit < totalEmployees;
+      const nextCursor = hasMore ? btoa(JSON.stringify({ offset: offset + limit })) : null;
+
+      const employees = allEmployees.slice(offset, offset + limit);
+
+      return {
+        success: true,
+        employees,
+        pagination: {
+          total: totalEmployees,
+          limit,
+          has_more: hasMore,
+          next_cursor: nextCursor
+        }
+      };
+    }
+
     case 'people-search':
       return {
         success: true,
@@ -412,16 +642,39 @@ export function formatResponseForDisplay(response: APIResponse | APIError): stri
   if (isAPIError(response)) {
     return JSON.stringify(
       {
-        error: response.error,
-        errorCode: response.errorCode,
-        message: response.statusText,
+        success: false,
+        error: {
+          code: response.errorCode || 'UNKNOWN_ERROR',
+          message: response.error || response.statusText,
+        },
+        metadata: {
+          requestId: response.requestId,
+          timestamp: response.timestamp,
+        }
       },
       null,
       2
     );
   }
 
-  return JSON.stringify(response.data, null, 2);
+  // Remove the wrapper if data is already wrapped (so we don't double wrap mock responses)
+  const payload = response.data?.success !== undefined && response.data?.data 
+    ? response.data.data 
+    : response.data;
+
+  return JSON.stringify(
+    {
+      success: true,
+      data: payload,
+      metadata: {
+        requestId: response.requestId,
+        timestamp: response.timestamp,
+        processingTimeMs: response.duration,
+      }
+    }, 
+    null, 
+    2
+  );
 }
 
 /**

@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ShieldCheck, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Logo } from '@/components/Logo';
 
 // Helper to generate a 60-day history array
 const generateUptimeHistory = (outageIndex?: number) => {
@@ -19,7 +20,7 @@ const generateUptimeHistory = (outageIndex?: number) => {
 const SYSTEMS = [
   { name: 'API Gateway', uptime: '100.00%', history: generateUptimeHistory() },
   { name: 'Identity Engine', uptime: '99.98%', history: generateUptimeHistory(45) },
-  { name: 'Partner Console', uptime: '100.00%', history: generateUptimeHistory() },
+  { name: 'zinbit Console', uptime: '100.00%', history: generateUptimeHistory() },
   { name: 'Webhook Dispatcher', uptime: '99.99%', history: generateUptimeHistory(12) },
 ];
 
@@ -50,6 +51,16 @@ const INCIDENTS = [
 ];
 
 export default function StatusPage() {
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setLastUpdated(new Date());
+    const interval = setInterval(() => {
+      setLastUpdated(new Date());
+    }, 60000); // 60s
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="bg-ink min-h-screen text-white font-sans selection:bg-teal selection:text-ink">
       {/* Background Grids */}
@@ -59,9 +70,9 @@ export default function StatusPage() {
       {/* Navbar Minimal */}
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-ink/70 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-6 h-[76px] flex items-center justify-between">
-          <Link href="/api" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Zintlr" className="h-8 w-auto" />
-            <span className="font-bold text-white/50 border-l border-white/20 pl-2 ml-2">Status</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo variant="auto" />
+            <span className="font-bold text-white/50 border-l border-white/20 pl-4 ml-2">Status</span>
           </Link>
           <div className="flex items-center gap-6">
             <Link href="/docs" className="text-sm font-medium text-white/70 hover:text-white transition-colors">API Docs</Link>
@@ -83,7 +94,13 @@ export default function StatusPage() {
           </div>
           <div className="text-center md:text-left">
             <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2">All Systems Operational</h1>
-            <p className="text-white/60 font-medium text-lg">Zintlr API and Identity services are running smoothly.</p>
+            <p className="text-white/60 font-medium text-lg mb-2">zinbit API and Identity services are running smoothly.</p>
+            {lastUpdated && (
+              <p className="text-xs text-white/40 font-mono flex items-center gap-1 justify-center md:justify-start">
+                <Clock className="w-3.5 h-3.5" />
+                Last updated: {lastUpdated.toLocaleTimeString()} (auto-refreshing)
+              </p>
+            )}
           </div>
         </motion.div>
 
@@ -194,7 +211,7 @@ export default function StatusPage() {
         <div className="max-w-5xl mx-auto px-6 flex flex-col items-center">
           <ShieldCheck className="w-8 h-8 text-white/20 mb-4" />
           <div className="text-sm font-semibold text-white/30">
-            © {new Date().getFullYear()} Zintlr B2B2B. All systems operational.
+            © {new Date().getFullYear()} zinbit by Zintlr. All systems operational.
           </div>
         </div>
       </footer>

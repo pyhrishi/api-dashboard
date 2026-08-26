@@ -24,6 +24,7 @@ import {
   Loader2, 
   AlertCircle,
   Code2,
+  Coins
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +47,7 @@ interface CodeSampleState {
   curl: string;
   python: string;
   nodejs: string;
+  graphql: string;
 }
 
 export default function RequestBuilder({
@@ -63,15 +65,18 @@ export default function RequestBuilder({
   );
   const [parameters, setParameters] = useState<Record<string, any>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [activeCodeTab, setActiveCodeTab] = useState<'curl' | 'python' | 'nodejs'>('curl');
+  const [simulateStatus, setSimulateStatus] = useState<number>(200);
+  const [activeCodeTab, setActiveCodeTab] = useState<'curl' | 'python' | 'nodejs' | 'graphql'>('curl');
   const [codeSamples, setCodeSamples] = useState<CodeSampleState>({
     curl: '',
     python: '',
     nodejs: '',
+    graphql: '',
   });
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<any>(null);
+  const [responseHeaders, setResponseHeaders] = useState<Record<string, string>>({});
   const [responseError, setResponseError] = useState<{message: string, code?: string} | null>(null);
   const [responseTime, setResponseTime] = useState<number>(0);
 
@@ -97,6 +102,7 @@ export default function RequestBuilder({
     setParameters({});
     setValidationErrors({});
     setResponse(null);
+    setResponseHeaders({});
     setResponseError(null);
   };
 
@@ -138,33 +144,64 @@ export default function RequestBuilder({
     setLoading(true);
     setResponseError(null);
     setResponse(null);
+    setResponseHeaders({});
 
     try {
-      const result = await callSandboxAPI({
-        endpoint,
-        parameters,
-        apiKey,
-      });
+      const url = new URL(window.location.origin + '/api' + endpoint.path);
+      const fetchOptions: RequestInit = {
+        method: endpoint.method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      };
 
-      setResponseTime(result.duration);
-
-      if (isAPIError(result)) {
-        setResponseError({ 
-          message: result.error || result.statusText, 
-          code: result.errorCode 
-        });
-        setResponse(null);
+      if (endpoint.method === 'GET') {
+        Object.entries(parameters).forEach(([k, v]) => url.searchParams.append(k, v as string));
       } else {
-        setResponse(result.data);
+        fetchOptions.body = JSON.stringify(parameters);
+      }
+
+      if (simulateStatus && simulateStatus !== 200) {
+        // We pass this as a special query param so the middleware can intercept or pass to router
+        // In reality, the router uses sandboxAPI which expects it in the request.
+        // Let's pass it via header to keep the URL clean.
+        (fetchOptions.headers as Record<string, string>)['X-Simulate-Status'] = simulateStatus.toString();
+      }
+
+      const start = Date.now();
+      const res = await fetch(url.toString(), fetchOptions);
+      const duration = Date.now() - start;
+      setResponseTime(duration);
+
+      // Extract headers
+      const headers: Record<string, string> = {};
+      res.headers.forEach((value, key) => {
+        if (key.toLowerCase().startsWith('x-')) {
+          headers[key] = value;
+        }
+      });
+      setResponseHeaders(headers);
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setResponseError({ 
+          message: json.error?.message || res.statusText, 
+          code: json.error?.code 
+        });
+        setResponse(json); // Also set response so the raw JSON is shown
+      } else {
+        setResponse(json);
         setResponseError(null);
 
         // Notify parent if callback provided
         if (onExecute) {
           onExecute({
             endpoint,
-            statusCode: result.status,
-            responseTime: result.duration,
-            response: result.data,
+            statusCode: res.status,
+            responseTime: duration,
+            response: json,
           });
         }
       }
@@ -266,6 +303,42 @@ export default function RequestBuilder({
         </div>
       )}
 
+      {/* Simulation Controls */}
+      {endpoint && isEditable && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-ink">Simulation Settings</h3>
+          <div className="p-4 bg-white rounded-lg border border-ink/8">
+            <label className="block text-xs font-bold text-ink mb-1.5">
+              Simulate Response Status
+            </label>
+            <div className="relative">
+              <select
+                value={simulateStatus}
+                onChange={e => setSimulateStatus(Number(e.target.value))}
+                disabled={disableEditing}
+                className="w-full px-3 py-2 rounded-lg border border-ink/10 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-all appearance-none cursor-pointer disabled:opacity-50"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%231D1C39' d='M1 4l5 5 5-5'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 12px center',
+                  paddingRight: '32px',
+                }}
+              >
+                <option value={200}>200 OK (Success)</option>
+                <option value={400}>400 Bad Request</option>
+                <option value={401}>401 Unauthorized</option>
+                <option value={402}>402 Payment Required</option>
+                <option value={429}>429 Too Many Requests</option>
+                <option value={500}>500 Internal Server Error</option>
+              </select>
+            </div>
+            <p className="text-[10px] text-ink/50 mt-1.5">
+              Use this to test how your integration handles different API errors.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Code Samples */}
       {endpoint && (
         <div className="space-y-3">
@@ -273,7 +346,7 @@ export default function RequestBuilder({
           <div className="border border-ink/8 rounded-lg overflow-hidden bg-white">
             {/* Tabs */}
             <div className="flex border-b border-ink/8">
-              {(['curl', 'python', 'nodejs'] as const).map(lang => (
+              {(['curl', 'python', 'nodejs', 'graphql'] as const).map(lang => (
                 <button
                   key={lang}
                   onClick={() => setActiveCodeTab(lang)}
@@ -287,6 +360,7 @@ export default function RequestBuilder({
                   {lang === 'curl' && 'cURL'}
                   {lang === 'python' && 'Python'}
                   {lang === 'nodejs' && 'Node.js'}
+                  {lang === 'graphql' && 'GraphQL'}
                   {activeCodeTab === lang && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal" />
                   )}
@@ -311,6 +385,29 @@ export default function RequestBuilder({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pre-Call Cost Estimation Preview */}
+      {endpoint && isEditable && !hideExecuteButton && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl border border-teal/20 bg-teal/5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-teal/20 flex items-center justify-center flex-shrink-0">
+              <Coins className="w-4 h-4 text-teal" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+                Estimated Cost
+                <span className="text-[10px] uppercase tracking-wider font-black bg-teal/10 text-teal px-1.5 py-0.5 rounded">PRE-CALL</span>
+              </h4>
+              <p className="text-xs text-ink/60 mt-0.5">Will be deducted from your credit balance</p>
+            </div>
+          </div>
+          <div className="text-right flex items-center sm:block">
+            <div className="text-sm font-bold text-ink">
+              {endpoint.creditCost} {endpoint.creditCost === 1 ? 'Credit' : 'Credits'}
             </div>
           </div>
         </div>
@@ -374,10 +471,25 @@ export default function RequestBuilder({
               </div>
             </div>
           ) : (
-            <div className="p-4 rounded-lg border border-ink/8 bg-ink text-white">
-              <pre className="text-xs font-mono overflow-x-auto">
-                <code>{formatResponseForDisplay(response)}</code>
-              </pre>
+            <div className="space-y-3">
+              {Object.keys(responseHeaders).length > 0 && (
+                <div className="p-3 rounded-lg border border-ink/8 bg-ink text-white/80">
+                  <h4 className="text-[10px] font-bold text-teal mb-2 uppercase tracking-wider">Headers</h4>
+                  <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[11px] font-mono">
+                    {Object.entries(responseHeaders).map(([key, value]) => (
+                      <div key={key} className="contents">
+                        <span className="text-white/60">{key}:</span>
+                        <span className="text-white truncate">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="p-4 rounded-lg border border-ink/8 bg-ink text-white">
+                <pre className="text-xs font-mono overflow-x-auto">
+                  <code>{formatResponseForDisplay(response)}</code>
+                </pre>
+              </div>
             </div>
           )}
         </div>

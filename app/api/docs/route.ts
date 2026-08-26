@@ -94,17 +94,17 @@ export async function GET() {
   const openapi = {
     openapi: '3.0.0',
     info: {
-      title: 'Zintlr B2B2B API',
-      description: 'Comprehensive API reference for Zintlr B2B data enrichment endpoints.',
+      title: 'zinbit by Zintlr',
+      description: 'Comprehensive API reference for zinbit B2B data enrichment endpoints.',
       version: '1.0.0'
     },
     servers: [
       {
-        url: 'https://api.zintlr.com/v1',
+        url: 'https://api.zinbit.zintlr.com/v1',
         description: 'Live API Server'
       },
       {
-        url: 'https://sandbox.zintlr.com/v1',
+        url: 'https://sandbox.zinbit.zintlr.com/v1',
         description: 'Sandbox Server'
       }
     ],

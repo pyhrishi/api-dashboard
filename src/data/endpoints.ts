@@ -4,7 +4,7 @@
  * Used by RequestBuilder and FirstCallWizard components.
  */
 
-export type ParameterType = 'string' | 'email' | 'phone' | 'number';
+export type ParameterType = 'string' | 'email' | 'phone' | 'number' | 'array';
 export type HTTPMethod = 'GET' | 'POST';
 export type NextStepCategory = 'sdks' | 'logging' | 'webhooks' | 'errorHandling';
 
@@ -38,6 +38,9 @@ export interface Endpoint {
   isRecommendedForFirstCall: boolean;
   parameters: EndpointParameter[];
   nextStepRecommendations: NextStepRecommendation[];
+  isDeprecated?: boolean;
+  sunsetDate?: string;
+  replacementEndpointId?: string;
 }
 
 /**
@@ -45,11 +48,73 @@ export interface Endpoint {
  */
 export const ENDPOINTS: Endpoint[] = [
   {
+    id: 'company-employees',
+    name: 'Company Employees',
+    description: 'Retrieve a paginated list of employees for a given company domain using cursor-based pagination.',
+    method: 'GET',
+    path: '/v1/companies/employees',
+    creditCost: 2,
+    isRecommendedForFirstCall: true,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'The domain of the company (e.g., acme.com)',
+        example: 'acme.com',
+        placeholder: 'Enter company domain',
+      },
+      {
+        name: 'limit',
+        type: 'number',
+        required: false,
+        description: 'Maximum number of records to return per page (max 100)',
+        example: '10',
+        placeholder: '10',
+        maxValue: 100,
+        minValue: 1,
+      },
+      {
+        name: 'cursor',
+        type: 'string',
+        required: false,
+        description: 'Cursor token for fetching the next page of results',
+        example: 'eyJvZmZzZXQiOjEwfQ==',
+        placeholder: 'Leave blank for first page',
+      },
+      {
+        name: 'department',
+        type: 'string',
+        required: false,
+        description: 'Filter employees by department',
+        example: 'Engineering',
+        placeholder: 'e.g., Engineering, Sales',
+      },
+      {
+        name: 'sort',
+        type: 'string',
+        required: false,
+        description: 'Field to sort by (e.g., name, -name, department)',
+        example: '-name',
+        placeholder: 'name or -name',
+      }
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'pagination-guide',
+        title: 'Implementing Pagination',
+        description: 'Learn how to traverse large employee datasets efficiently using our cursor-based pagination.',
+        category: 'sdks',
+        link: '/docs#pagination'
+      }
+    ]
+  },
+  {
     id: 'people-search',
     name: 'People Search',
     description: 'Search for a person by email, name, or phone. Returns contact details, company info, and professional data.',
     method: 'GET',
-    path: '/people-search',
+    path: '/v1/people',
     creditCost: 1,
     isRecommendedForFirstCall: true,
     parameters: [
@@ -110,7 +175,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'Find Phone by Email',
     description: 'Convert any corporate email address into a direct-dial phone number. 99.2% coverage on US B2B contacts.',
     method: 'GET',
-    path: '/email-to-phone',
+    path: '/v1/people/phone',
     creditCost: 2,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -146,7 +211,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'Find Email by Phone',
     description: 'Reverse lookup a mobile or landline number to find the associated corporate email and contact info.',
     method: 'GET',
-    path: '/phone-to-email',
+    path: '/v1/people/email',
     creditCost: 2,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -175,7 +240,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'LinkedIn to Profile Data',
     description: 'Extract rich, structured JSON data from a LinkedIn profile URL including current role, experience, and education.',
     method: 'GET',
-    path: '/linkedin-to-profile',
+    path: '/v1/people/linkedin/profile',
     creditCost: 3,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -205,7 +270,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'LinkedIn to Contact',
     description: 'Resolve a LinkedIn URL to verified email addresses and direct-dial phone numbers with high confidence scoring.',
     method: 'GET',
-    path: '/linkedin-to-contact',
+    path: '/v1/people/linkedin/contact',
     creditCost: 4,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -235,7 +300,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'Domain to CIN',
     description: 'Map any company domain to its official Ministry of Corporate Affairs (MCA) Corporate Identity Number (CIN).',
     method: 'GET',
-    path: '/domain-to-cin',
+    path: '/v1/companies/cin',
     creditCost: 1,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -265,7 +330,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'CIN to Company Data',
     description: 'Retrieve verified financial, compliance, and legal entity data using a Corporate Identity Number (CIN).',
     method: 'GET',
-    path: '/cin-to-company-data',
+    path: '/v1/companies',
     creditCost: 3,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -295,9 +360,12 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'Domain to LinkedIn URL',
     description: 'Find the official company LinkedIn page URL from a bare domain name.',
     method: 'GET',
-    path: '/domain-to-linkedin',
+    path: '/v1/companies/linkedin',
     creditCost: 1,
     isRecommendedForFirstCall: false,
+    isDeprecated: true,
+    sunsetDate: '2026-12-31',
+    replacementEndpointId: 'people-ai-search',
     parameters: [
       {
         name: 'domain',
@@ -325,9 +393,12 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'Contact to LinkedIn URL',
     description: 'Find a person\'s LinkedIn profile URL using their name, company, and optional job title.',
     method: 'GET',
-    path: '/contact-to-linkedin',
+    path: '/v1/people/linkedin',
     creditCost: 2,
     isRecommendedForFirstCall: false,
+    isDeprecated: true,
+    sunsetDate: '2026-12-31',
+    replacementEndpointId: 'people-ai-search',
     parameters: [
       {
         name: 'first_name',
@@ -382,7 +453,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'Reverse Enrichment',
     description: 'Input an IP address, email domain, or partial footprint to identify the B2B visitor and company.',
     method: 'GET',
-    path: '/reverse-enrichment',
+    path: '/v1/enrichment/reverse',
     creditCost: 2,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -412,7 +483,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'DIN to Phone',
     description: 'Map a Director Identification Number to direct contact information and corporate details.',
     method: 'GET',
-    path: '/din-to-phone',
+    path: '/v1/directors/phone',
     creditCost: 2,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -442,7 +513,7 @@ export const ENDPOINTS: Endpoint[] = [
     name: 'People AI Search',
     description: 'Use natural language queries (e.g., "VP of Sales at SaaS startups in Bangalore") to search 400M+ B2B contacts.',
     method: 'POST',
-    path: '/people-ai-search',
+    path: '/v1/people/search/ai',
     creditCost: 5,
     isRecommendedForFirstCall: false,
     parameters: [
@@ -476,6 +547,64 @@ export const ENDPOINTS: Endpoint[] = [
       },
     ],
   },
+  {
+    id: 'batch-company-enrich',
+    name: 'Batch Company Enrich',
+    description: 'Enrich multiple company profiles in a single request. Perfect for processing high-volume datasets synchronously.',
+    method: 'POST',
+    path: '/v1/batch/companies/enrich',
+    creditCost: 10,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domains',
+        type: 'array',
+        required: true,
+        description: 'An array of company domains to enrich (max 50).',
+        example: '["acme.com", "zintlr.com", "example.com"]',
+        placeholder: 'e.g., ["acme.com", "zintlr.com"]',
+        maxLength: 50,
+      }
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'ns_batch_async',
+        title: 'Use Async Processing for Huge Batches',
+        description: 'For payloads exceeding 50 items, use the Prefer: respond-async header to prevent connection timeouts.',
+        category: 'webhooks',
+        link: '/docs/async-processing'
+      }
+    ]
+  },
+  {
+    id: 'identity-resolve',
+    name: 'Universal Identity Resolution',
+    description: 'Auto-detects the input type (email, phone, LinkedIn, domain) and resolves it to a standardized Person or Company profile.',
+    method: 'GET',
+    path: '/v1/identity/resolve',
+    creditCost: 3,
+    isRecommendedForFirstCall: true,
+    parameters: [
+      {
+        name: 'query',
+        type: 'string',
+        required: true,
+        description: 'The identifier to resolve (e.g., email address, phone number, LinkedIn URL, or company domain).',
+        example: 'john@acme.com',
+        placeholder: 'e.g., john@acme.com or +1234567890',
+        maxLength: 255,
+      }
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'ns_id_webhooks',
+        title: 'Subscribe to Identity Updates',
+        description: 'Get notified via webhook if a resolved identity changes jobs or companies.',
+        category: 'webhooks',
+        link: '/console/webhooks'
+      }
+    ]
+  }
 ];
 
 /**

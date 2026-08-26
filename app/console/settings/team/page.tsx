@@ -4,6 +4,7 @@ import { useStore } from '@/lib/store';
 import { CheckCircle2, Clock, Trash2, Mail, Plus, Search, RefreshCw, Activity } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '@/components/Toast';
 
 export default function TeamSettingsPage() {
   const { teamMembers, addTeamMember, removeTeamMember, updateTeamMemberRole } = useStore();
@@ -11,6 +12,7 @@ export default function TeamSettingsPage() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'developer' | 'billing'>('developer');
+  const toast = useToast();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending'>('all');
@@ -24,12 +26,12 @@ export default function TeamSettingsPage() {
       setInviteRole('developer');
       setIsInviteModalOpen(false);
     } catch (err: any) {
-      alert(err.message);
+      toast.error('Invitation failed', err.message);
     }
   };
 
   const handleResend = (id: string) => {
-    alert(`Invitation resent to user ${id}.`);
+    toast.success('Invitation resent', `Invitation has been resent to user ${id}.`);
   };
 
   const filteredMembers = useMemo(() => {
@@ -55,7 +57,7 @@ export default function TeamSettingsPage() {
         </div>
         <button 
           onClick={() => setIsInviteModalOpen(true)}
-          className="bg-white text-ink font-bold px-5 py-2.5 rounded-xl shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:bg-neutral-200 transition-all flex items-center gap-2 flex-shrink-0"
+          className="bg-[#09090b] text-white font-bold px-5 py-2.5 rounded-xl shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:bg-neutral-200 transition-all flex items-center gap-2 flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
           Invite Member
@@ -80,7 +82,7 @@ export default function TeamSettingsPage() {
               key={status}
               onClick={() => setStatusFilter(status)}
               className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
-                statusFilter === status ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
+                statusFilter === status ? 'bg-[#09090b]/10 text-white' : 'text-white/40 hover:text-white/70'
               }`}
             >
               {status}
@@ -107,10 +109,10 @@ export default function TeamSettingsPage() {
                   <td colSpan={4} className="px-6 py-8 text-center text-white/40">No team members found.</td>
                 </tr>
               ) : filteredMembers.map((member) => (
-                <tr key={member.id} className="hover:bg-white/5 transition-colors group">
+                <tr key={member.id} className="hover:bg-[#09090b]/5 transition-colors group">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-white/70">
+                      <div className="w-8 h-8 rounded-full bg-[#09090b]/10 flex items-center justify-center font-bold text-white/70">
                         {member.email.charAt(0).toUpperCase()}
                       </div>
                       <span className="font-semibold text-white">{member.email}</span>
@@ -122,7 +124,7 @@ export default function TeamSettingsPage() {
                         <CheckCircle2 className="w-3 h-3" /> Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest bg-white/5 text-white/50 border border-white/10">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest bg-[#09090b]/5 text-white/50 border border-white/10">
                         <Clock className="w-3 h-3" /> Pending
                       </span>
                     )}
@@ -142,7 +144,7 @@ export default function TeamSettingsPage() {
                     {member.status === 'pending' && (
                       <button 
                         onClick={() => handleResend(member.id)}
-                        className="p-2 hover:bg-white/10 text-white/40 hover:text-white rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 hover:bg-[#09090b]/10 text-white/40 hover:text-white rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                         title="Resend Invite"
                       >
                         <RefreshCw className="w-4 h-4" />
@@ -214,7 +216,7 @@ export default function TeamSettingsPage() {
                           className={`py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
                             inviteRole === r 
                               ? 'bg-teal/10 border-teal/50 text-teal' 
-                              : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'
+                              : 'bg-[#09090b]/5 border-white/10 text-white/50 hover:bg-[#09090b]/10 hover:text-white'
                           }`}
                         >
                           {r}
@@ -228,13 +230,13 @@ export default function TeamSettingsPage() {
                   <button 
                     type="button"
                     onClick={() => setIsInviteModalOpen(false)}
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white/70 hover:text-white hover:bg-white/5 border border-transparent transition-colors"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-white/70 hover:text-white hover:bg-[#09090b]/5 border border-transparent transition-colors"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
-                    className="flex-1 py-3 px-4 rounded-xl font-bold bg-white text-ink hover:bg-white/90 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold bg-[#09090b] text-white hover:bg-[#09090b]/90 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                   >
                     Send Invite
                   </button>

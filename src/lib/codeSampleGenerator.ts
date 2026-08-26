@@ -10,6 +10,7 @@ export interface CodeSample {
   curl: string;
   python: string;
   nodejs: string;
+  graphql: string;
 }
 
 export interface CodeSampleContext {
@@ -29,6 +30,7 @@ export function generateCodeSamples(context: CodeSampleContext): CodeSample {
     curl: generateCurlSample(endpoint, parameters, apiKey, baseUrl),
     python: generatePythonSample(endpoint, parameters, apiKey, baseUrl),
     nodejs: generateNodeJsSample(endpoint, parameters, apiKey, baseUrl),
+    graphql: generateGraphQLSample(endpoint, parameters),
   };
 }
 
@@ -302,10 +304,11 @@ ${endpoint.parameters.map(p => `   * - ${p.name} (${p.type})${p.required ? ' [RE
  * Useful for showing developers what to expect
  */
 export function getExampleResponse(endpoint: Endpoint): string {
-  // Return mock response based on endpoint
+  let dataPayload: any = { example: 'response' };
+
   switch (endpoint.id) {
     case 'people-search':
-      return JSON.stringify({
+      dataPayload = {
         person: {
           id: 'person_123abc',
           email: 'john.doe@acme.com',
@@ -317,24 +320,24 @@ export function getExampleResponse(endpoint: Endpoint): string {
           location: 'San Francisco, CA',
           linkedin_url: 'https://www.linkedin.com/in/johndoe',
         },
-      }, null, 2);
-
+      };
+      break;
     case 'email-to-phone':
-      return JSON.stringify({
+      dataPayload = {
         email: 'john.doe@acme.com',
         phone: '+1-555-0123',
         confidence: 0.95,
-      }, null, 2);
-
+      };
+      break;
     case 'phone-to-email':
-      return JSON.stringify({
+      dataPayload = {
         phone: '5550123',
         email: 'john.doe@acme.com',
         confidence: 0.92,
-      }, null, 2);
-
+      };
+      break;
     case 'linkedin-to-profile':
-      return JSON.stringify({
+      dataPayload = {
         profile: {
           name: 'John Doe',
           headline: 'Senior Software Engineer at Acme',
@@ -345,37 +348,42 @@ export function getExampleResponse(endpoint: Endpoint): string {
             { degree: 'BS Computer Science', school: 'Stanford University' },
           ],
         },
-      }, null, 2);
-
+      };
+      break;
     case 'domain-to-cin':
-      return JSON.stringify({
+      dataPayload = {
         domain: 'acme.com',
         cin: 'L72900KA2020PLC123456',
         company_name: 'Acme Corporation',
-      }, null, 2);
-
+      };
+      break;
     case 'cin-to-company-data':
-      return JSON.stringify({
+      dataPayload = {
         cin: 'L72900KA2020PLC123456',
         company_name: 'Acme Corporation Pvt Ltd',
         registration_date: '2020-01-15',
         status: 'Active',
         authorized_capital: '10000000',
         paid_up_capital: '5000000',
-      }, null, 2);
-
-    default:
-      return JSON.stringify({
-        success: true,
-        data: { example: 'response' },
-      }, null, 2);
+      };
+      break;
   }
+
+  return JSON.stringify({
+    success: true,
+    data: dataPayload,
+    metadata: {
+      requestId: `req_${Date.now()}_mock`,
+      timestamp: Date.now(),
+      processingTimeMs: Math.floor(Math.random() * 100) + 20
+    }
+  }, null, 2);
 }
 
 /**
  * Generate inline code snippet for documentation
  */
-export function generateInlineCodeSnippet(endpoint: Endpoint, language: 'curl' | 'python' | 'nodejs'): string {
+export function generateInlineCodeSnippet(endpoint: Endpoint, language: 'curl' | 'python' | 'nodejs' | 'graphql'): string {
   const exampleParams: Record<string, string> = {};
   
   endpoint.parameters.forEach(param => {
@@ -399,7 +407,41 @@ export function generateInlineCodeSnippet(endpoint: Endpoint, language: 'curl' |
       return samples.python;
     case 'nodejs':
       return samples.nodejs;
+    case 'graphql':
+      return samples.graphql;
     default:
       return '';
   }
+}
+
+/**
+ * Generate GraphQL query sample
+ */
+export function generateGraphQLSample(
+  endpoint: Endpoint,
+  parameters: Record<string, any>
+): string {
+  // Simple GraphQL query generator based on parameters
+  const queryName = endpoint.name.replace(/[^a-zA-Z0-9]/g, '');
+  const args = Object.entries(parameters)
+    .filter(([_, value]) => value !== undefined && value !== '')
+    .map(([key, value]) => {
+      const type = endpoint.parameters.find(p => p.name === key)?.type;
+      const formattedValue = type === 'number' ? value : `"${value}"`;
+      return `${key}: ${formattedValue}`;
+    })
+    .join(', ');
+
+  const argsString = args ? `(${args})` : '';
+
+  return `query get${queryName} {
+  ${queryName.toLowerCase()}${argsString} {
+    success
+    data {
+      # Fields returned by this endpoint
+      id
+      createdAt
+    }
+  }
+}`;
 }

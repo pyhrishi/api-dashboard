@@ -1,4 +1,4 @@
-// Strict factory for the 12 Zintlr endpoints.
+// Strict factory for the 12 zinbit endpoints.
 // CRITICAL: Generate completely synthetic payload responses. ABSOLUTELY NO real PII.
 
 export const mockEndpoints = {

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Webhook, Plus, CheckCircle2, XCircle, Clock, RefreshCw, Loader2, Play, Trash2, Check, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Webhook, Plus, CheckCircle2, XCircle, Clock, RefreshCw, Loader2, Play, Trash2, Check, AlertCircle, ChevronDown, ChevronRight, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CodeBlock } from '@/components/CodeBlock';
 import RoleGuard from '@/components/RoleGuard';
@@ -16,7 +16,7 @@ const AVAILABLE_EVENTS = [
 ];
 
 export default function WebhooksPage() {
-  const { webhooks, webhookLogs, addWebhook, deleteWebhook, logWebhookEvent } = useStore();
+  const { webhooks, webhookLogs, webhookRetryQueue, addWebhook, deleteWebhook, logWebhookEvent, removeWebhookRetry, updateWebhookRetry } = useStore();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [endpointUrl, setEndpointUrl] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
@@ -28,6 +28,48 @@ export default function WebhooksPage() {
   // View payload state
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  // Timer to update 'now' for countdowns
+  useEffect(() => {
+    const int = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(int);
+  }, []);
+
+  // Automated Queue Processing
+  useEffect(() => {
+    const processQueue = async () => {
+      for (const item of webhookRetryQueue) {
+        if (Date.now() >= item.nextRetryAt && retryingId !== item.id) {
+           await handleQueueRetry(item);
+        }
+      }
+    };
+    
+    const queueInterval = setInterval(processQueue, 1000);
+    return () => clearInterval(queueInterval);
+  }, [webhookRetryQueue, retryingId]);
+
+  const handleQueueRetry = async (item: any) => {
+    setRetryingId(item.id);
+    await new Promise(r => setTimeout(r, 1000));
+    const isSuccess = Math.random() > 0.3; // Better chance on retry
+    const status = isSuccess ? 200 : 500;
+    
+    if (isSuccess) {
+       removeWebhookRetry(item.id);
+    }
+    
+    logWebhookEvent(
+      item.endpointId,
+      item.event,
+      status,
+      item.payload,
+      item.attempt + 1
+    );
+    
+    setRetryingId(null);
+  };
 
   const handleRetryEvent = async (log: any) => {
     setRetryingId(log.id);
@@ -115,14 +157,14 @@ export default function WebhooksPage() {
         transition={{ delay: 0.1 }}
         className="glass-panel rounded-2xl border border-white/10 shadow-xl overflow-hidden"
       >
-        <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex items-center gap-2">
+        <div className="px-6 py-4 border-b border-white/10 bg-[#09090b]/5 flex items-center gap-2">
           <Webhook className="w-5 h-5 text-white/40" />
           <h3 className="font-bold text-white">Configured Endpoints</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-white/10 text-white/40 font-mono text-[10px] uppercase tracking-widest bg-white/[0.02]">
+              <tr className="border-b border-white/10 text-white/40 font-mono text-[10px] uppercase tracking-widest bg-[#09090b]/[0.02]">
                 <th className="px-6 py-4 font-black">URL</th>
                 <th className="px-6 py-4 font-black">Subscribed Events</th>
                 <th className="px-6 py-4 font-black text-right">Actions</th>
@@ -132,9 +174,22 @@ export default function WebhooksPage() {
               <AnimatePresence>
                 {webhooks.length === 0 ? (
                   <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <td colSpan={3} className="px-6 py-12 text-center text-white/40">
-                      <Webhook className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                      No webhooks configured.
+                    <td colSpan={3} className="px-6 py-16 text-center text-white/40">
+                      <div className="flex flex-col items-center justify-center space-y-4">
+                        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                          <Webhook className="w-8 h-8 text-white/20" />
+                        </div>
+                        <div>
+                          <h4 className="text-white font-bold text-lg">No Webhooks Configured</h4>
+                          <p className="text-white/40 text-sm mt-1 max-w-sm mx-auto">Set up endpoints to receive real-time HTTP push notifications for background events.</p>
+                        </div>
+                        <button 
+                          onClick={() => setIsAddModalOpen(true)}
+                          className="mt-2 bg-white/5 hover:bg-white/10 text-white font-bold px-6 py-2.5 rounded-full text-sm border border-white/10 transition-colors shadow-sm"
+                        >
+                          Configure Endpoint
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ) : (
@@ -145,7 +200,7 @@ export default function WebhooksPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -10 }}
                       transition={{ delay: idx * 0.05 }}
-                      className="hover:bg-white/[0.02] transition-colors group"
+                      className="hover:bg-[#09090b]/[0.02] transition-colors group"
                     >
                       <td className="px-6 py-4 font-medium text-white font-mono text-xs max-w-[200px] truncate">{endpoint.url}</td>
                       <td className="px-6 py-4">
@@ -163,7 +218,7 @@ export default function WebhooksPage() {
                             <button 
                               onClick={() => handleTriggerTest(endpoint.id)}
                               disabled={testingId === endpoint.id}
-                              className="flex items-center gap-1.5 text-xs font-bold text-white/80 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 disabled:opacity-50"
+                              className="flex items-center gap-1.5 text-xs font-bold text-white/80 hover:text-white transition-colors bg-[#09090b]/5 hover:bg-[#09090b]/10 px-3 py-1.5 rounded-lg border border-white/10 disabled:opacity-50"
                             >
                               {testingId === endpoint.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" fill="currentColor" />}
                               Test
@@ -187,6 +242,79 @@ export default function WebhooksPage() {
         </div>
       </motion.div>
 
+      {/* Retry Queue */}
+      {webhookRetryQueue.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-panel rounded-2xl border border-semantic-warning/20 shadow-[0_0_20px_rgba(245,166,35,0.05)] overflow-hidden"
+        >
+          <div className="px-6 py-4 border-b border-white/10 bg-[#09090b]/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Timer className="w-5 h-5 text-semantic-warning animate-pulse" />
+              <h3 className="font-bold text-white">Retry Queue</h3>
+              <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-semantic-warning/10 text-semantic-warning">
+                {webhookRetryQueue.length} Pending
+              </span>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm whitespace-nowrap">
+              <thead>
+                <tr className="border-b border-white/10 text-white/40 font-mono text-[10px] uppercase tracking-widest bg-[#09090b]/[0.02]">
+                  <th className="px-6 py-4 font-black">Event Type</th>
+                  <th className="px-6 py-4 font-black">Attempt</th>
+                  <th className="px-6 py-4 font-black">Next Retry</th>
+                  <th className="px-6 py-4 font-black text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                <AnimatePresence>
+                  {webhookRetryQueue.map((item) => {
+                    const timeRemaining = Math.max(0, Math.ceil((item.nextRetryAt - now) / 1000));
+                    return (
+                      <motion.tr 
+                        key={item.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="bg-[#09090b]/20"
+                      >
+                        <td className="px-6 py-4 font-medium text-white text-xs">{item.event}</td>
+                        <td className="px-6 py-4">
+                          <span className="text-[11px] font-bold text-white/60">
+                            #{item.attempt}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            {timeRemaining > 0 ? (
+                              <span className="text-xs font-mono text-semantic-warning">In {timeRemaining}s</span>
+                            ) : (
+                              <span className="text-xs font-mono text-teal flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Retrying...</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => handleQueueRetry(item)}
+                            disabled={retryingId === item.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] font-bold text-white transition-colors disabled:opacity-50"
+                          >
+                            {retryingId === item.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                            Force Retry
+                          </button>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+      )}
+
       {/* Webhook Logs */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
@@ -194,7 +322,7 @@ export default function WebhooksPage() {
         transition={{ delay: 0.2 }}
         className="glass-panel rounded-2xl border border-white/10 shadow-xl overflow-hidden"
       >
-        <div className="px-6 py-4 border-b border-white/10 bg-white/5 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-white/10 bg-[#09090b]/5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-white/40" />
             <h3 className="font-bold text-white">Recent Deliveries</h3>
@@ -207,7 +335,7 @@ export default function WebhooksPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead>
-              <tr className="border-b border-white/10 text-white/40 font-mono text-[10px] uppercase tracking-widest bg-white/[0.02]">
+              <tr className="border-b border-white/10 text-white/40 font-mono text-[10px] uppercase tracking-widest bg-[#09090b]/[0.02]">
                 <th className="px-6 py-4 font-black w-10"></th>
                 <th className="px-6 py-4 font-black">Status</th>
                 <th className="px-6 py-4 font-black">Event Type</th>
@@ -232,7 +360,7 @@ export default function WebhooksPage() {
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: idx * 0.05 }}
-                          className={cn("group cursor-pointer transition-colors", isExpanded ? "bg-white/5" : "hover:bg-white/[0.02]")}
+                          className={cn("group cursor-pointer transition-colors", isExpanded ? "bg-[#09090b]/5" : "hover:bg-[#09090b]/[0.02]")}
                           onClick={() => setExpandedLog(isExpanded ? null : log.id)}
                         >
                           <td className="px-6 py-4 text-white/40 group-hover:text-white transition-colors">
@@ -281,7 +409,7 @@ export default function WebhooksPage() {
                                         handleRetryEvent(log);
                                       }}
                                       disabled={retryingId === log.id}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] font-bold text-white transition-colors disabled:opacity-50"
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#09090b]/5 hover:bg-[#09090b]/10 border border-white/10 rounded-lg text-[11px] font-bold text-white transition-colors disabled:opacity-50"
                                     >
                                       {retryingId === log.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                                       Retry Delivery
@@ -323,7 +451,7 @@ export default function WebhooksPage() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-lg glass bg-ink border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
             >
-              <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-white/5">
+              <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-[#09090b]/5">
                 <h3 className="font-bold text-white text-lg">Add Webhook Endpoint</h3>
               </div>
               <form onSubmit={handleAddEndpoint} className="p-6">
@@ -335,7 +463,7 @@ export default function WebhooksPage() {
                     autoFocus
                     disabled={isAdding}
                     placeholder="https://api.yourdomain.com/webhooks"
-                    className="w-full px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/50 transition-all text-sm text-white bg-white/5 placeholder:text-white/30 disabled:opacity-50 shadow-inner"
+                    className="w-full px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/50 transition-all text-sm text-white bg-[#09090b]/5 placeholder:text-white/30 disabled:opacity-50 shadow-inner"
                     value={endpointUrl}
                     onChange={(e) => setEndpointUrl(e.target.value)}
                   />
@@ -350,12 +478,12 @@ export default function WebhooksPage() {
                         onClick={() => toggleEvent(event.id)}
                         className={cn(
                           "flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer group",
-                          selectedEvents.includes(event.id) ? "bg-teal/10 border-teal/20" : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10"
+                          selectedEvents.includes(event.id) ? "bg-teal/10 border-teal/20" : "bg-[#09090b]/5 border-white/5 hover:bg-[#09090b]/10 hover:border-white/10"
                         )}
                       >
                         <div className={cn(
                           "w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 border transition-colors",
-                          selectedEvents.includes(event.id) ? "bg-teal border-teal text-ink" : "bg-white/10 border-white/20 text-transparent group-hover:border-white/40"
+                          selectedEvents.includes(event.id) ? "bg-teal border-teal text-white" : "bg-[#09090b]/10 border-white/20 text-transparent group-hover:border-white/40"
                         )}>
                           <Check className="w-3.5 h-3.5 opacity-100" />
                         </div>
@@ -375,7 +503,7 @@ export default function WebhooksPage() {
                     type="button"
                     onClick={() => setIsAddModalOpen(false)}
                     disabled={isAdding}
-                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-white/60 hover:text-white hover:bg-[#09090b]/5 transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>

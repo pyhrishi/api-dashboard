@@ -33,7 +33,7 @@ export default function ProfileSettingsPage() {
                   type="email" 
                   disabled
                   defaultValue={user?.email}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white/50 cursor-not-allowed"
+                  className="w-full bg-[#09090b]/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm text-white/50 cursor-not-allowed"
                 />
               </div>
               <p className="text-[10px] text-white/40 mt-2">Email address cannot be changed.</p>
@@ -55,7 +55,7 @@ export default function ProfileSettingsPage() {
           <button 
             type="submit"
             disabled={isSaving}
-            className="bg-white text-ink font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-neutral-200 transition-all disabled:opacity-50"
+            className="bg-[#09090b] text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 hover:bg-neutral-200 transition-all disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             {isSaving ? 'Saving...' : 'Save Changes'}
@@ -82,7 +82,7 @@ export default function ProfileSettingsPage() {
               className={`p-4 rounded-xl border text-left transition-all ${
                 user?.role === r 
                   ? 'bg-semantic-warning/20 border-semantic-warning/50 text-white shadow-[0_0_15px_rgba(255,176,32,0.1)]' 
-                  : 'bg-black/20 border-white/10 text-white/50 hover:bg-white/5 hover:text-white'
+                  : 'bg-black/20 border-white/10 text-white/50 hover:bg-[#09090b]/5 hover:text-white'
               }`}
             >
               <div className="text-xs font-black uppercase tracking-widest mb-1">{r}</div>

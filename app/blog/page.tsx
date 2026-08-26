@@ -4,9 +4,12 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Terminal, Database, ShieldCheck, Cpu, ArrowRight, BookOpen } from 'lucide-react';
+import { useToast } from '@/components/Toast';
+import { Logo } from '@/components/Logo';
 
 import { BLOG_POSTS } from './data';
 export default function BlogIndex() {
+  const toast = useToast();
   return (
     <div className="bg-ink min-h-screen text-white font-sans selection:bg-teal selection:text-ink">
       <div className="grid-dark absolute inset-0 opacity-30 pointer-events-none" />
@@ -14,9 +17,9 @@ export default function BlogIndex() {
       
       <nav className="sticky top-0 z-50 border-b border-white/10 bg-ink/70 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-6 h-[76px] flex items-center justify-between">
-          <Link href="/api" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Zintlr" className="h-8 w-auto" />
-            <span className="font-bold text-white/50 border-l border-white/20 pl-2 ml-2">Engineering</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo variant="auto" />
+            <span className="font-bold text-white/50 border-l border-white/20 pl-4 ml-2">Engineering</span>
           </Link>
           <div className="flex items-center gap-6">
             <Link href="/docs" className="text-sm font-medium text-white/70 hover:text-white transition-colors">API Docs</Link>
@@ -36,7 +39,7 @@ export default function BlogIndex() {
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4 font-display">Engineering Blog</h1>
           <p className="text-white/60 font-medium text-lg max-w-2xl mx-auto leading-relaxed">
-            Technical deep-dives, architecture decisions, and performance optimizations straight from the engineers building the Zintlr B2B2B API.
+            Technical deep-dives, architecture decisions, and performance optimizations straight from the engineers building the zinbit by Zintlr API.
           </p>
         </motion.div>
 
@@ -85,13 +88,22 @@ export default function BlogIndex() {
             </motion.article>
           ))}
         </div>
+
+        <div className="mt-16 flex justify-center">
+          <button 
+            onClick={() => toast.info('Loading articles...', 'Pagination is mocked for this prototype.')}
+            className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full font-bold text-white transition-colors"
+          >
+            Load More Articles
+          </button>
+        </div>
       </main>
 
       <footer className="bg-ink border-t border-white/10 py-12 text-center mt-20">
         <div className="max-w-5xl mx-auto px-6 flex flex-col items-center">
           <ShieldCheck className="w-8 h-8 text-white/20 mb-4" />
           <div className="text-sm font-semibold text-white/30">
-            © {new Date().getFullYear()} Zintlr Engineering.
+            © {new Date().getFullYear()} zinbit by Zintlr.
           </div>
         </div>
       </footer>

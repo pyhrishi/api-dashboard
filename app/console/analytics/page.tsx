@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
   };
 
   if (!mounted) {
-    return <div className="max-w-[1200px] mx-auto p-8 animate-pulse bg-white/5 rounded-2xl h-[500px]" />;
+    return <div className="max-w-[1200px] mx-auto p-8 animate-pulse bg-[#09090b]/5 rounded-2xl h-[500px]" />;
   }
 
   return (
@@ -253,7 +253,7 @@ export default function AnalyticsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-white/5 bg-white/5 text-white/40 font-mono text-xs uppercase tracking-widest">
+              <tr className="border-b border-white/5 bg-[#09090b]/5 text-white/40 font-mono text-xs uppercase tracking-widest">
                 <th className="px-6 py-4 font-semibold">Endpoint</th>
                 <th className="px-6 py-4 font-semibold text-right">Volume</th>
                 <th className="px-6 py-4 font-semibold text-right">Avg Latency</th>
@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
             </thead>
             <tbody>
               {endpointData.map((ep, idx) => (
-                <tr key={ep.path} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                <tr key={ep.path} className="border-b border-white/5 last:border-0 hover:bg-[#09090b]/5 transition-colors">
                   <td className="px-6 py-4 font-mono font-medium text-white flex items-center gap-3">
                     <span className={cn("px-2 py-1 rounded text-[10px] font-bold border", ep.path.startsWith('GET') ? 'bg-teal/10 text-teal border-teal/20' : 'bg-[#5865F2]/10 text-[#5865F2] border-[#5865F2]/20')}>
                       {ep.path.split(' ')[0]}
@@ -282,7 +282,7 @@ export default function AnalyticsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="w-full max-w-[150px] h-2 bg-white/10 rounded-full overflow-hidden flex ml-auto">
+                    <div className="w-full max-w-[150px] h-2 bg-[#09090b]/10 rounded-full overflow-hidden flex ml-auto">
                       <div className="h-full bg-semantic-success" style={{ width: `${ep.success}%` }} />
                       <div className="h-full bg-semantic-error" style={{ width: `${100 - ep.success}%` }} />
                     </div>

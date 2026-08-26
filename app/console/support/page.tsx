@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { LifeBuoy, AlertCircle, Clock, CheckCircle2, MessageSquare, Send } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 
 export default function SupportPage() {
   const [subject, setSubject] = useState('');
@@ -10,17 +11,25 @@ export default function SupportPage() {
   const [description, setDescription] = useState('');
 
   const [submitted, setSubmitted] = useState(false);
+  const toast = useToast();
+  
+  const [tickets, setTickets] = useState([
+    { id: 'ZN-8402', status: 'Resolved', title: 'Webhook payload missing intent data', date: 'Closed 2 days ago' },
+    { id: 'ZN-8319', status: 'Resolved', title: 'Rate limit increase request', date: 'Closed 2 weeks ago' }
+  ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (subject && description) {
+      const newTicket = {
+        id: `ZN-${Math.floor(Math.random() * 9000 + 1000)}`,
+        status: 'Open',
+        title: subject,
+        date: 'Just now'
+      };
+      setTickets([newTicket, ...tickets]);
       setSubmitted(true);
-      // Reset after 3 seconds for demo purposes
-      setTimeout(() => {
-        setSubmitted(false);
-        setSubject('');
-        setDescription('');
-      }, 3000);
+      toast.success('Ticket Submitted', `Your ticket ${newTicket.id} has been created.`);
     }
   };
 
@@ -37,7 +46,7 @@ export default function SupportPage() {
           <p className="text-white/60">Manage your technical support tickets and SLAs.</p>
         </div>
         
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center gap-4">
+        <div className="bg-[#09090b]/5 border border-white/10 rounded-xl p-4 flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-teal/10 flex items-center justify-center border-2 border-teal/20">
             <Clock className="w-6 h-6 text-teal" />
           </div>
@@ -53,7 +62,7 @@ export default function SupportPage() {
         {/* Left Col: Ticket Form */}
         <div className="lg:col-span-2 space-y-6">
           <div className="glass-inner rounded-2xl border border-white/10 overflow-hidden shadow-xl">
-            <div className="px-6 py-4 border-b border-white/10 bg-white/5">
+            <div className="px-6 py-4 border-b border-white/10 bg-[#09090b]/5">
               <h2 className="font-bold text-white">Open a Ticket</h2>
             </div>
             <div className="p-6">
@@ -64,7 +73,10 @@ export default function SupportPage() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white mb-2">Ticket Submitted</h3>
-                    <p className="text-white/60 text-sm max-w-md mx-auto">Our engineering team has been notified. You will receive an email confirmation shortly based on your SLA.</p>
+                    <p className="text-white/60 text-sm max-w-md mx-auto mb-6">Our engineering team has been notified. You will receive an email confirmation shortly based on your SLA.</p>
+                    <button onClick={() => { setSubmitted(false); setSubject(''); setDescription(''); }} className="text-teal font-bold hover:text-teal-ice transition-colors">
+                      Open Another Ticket
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -123,7 +135,7 @@ export default function SupportPage() {
                   </div>
 
                   <div className="pt-2 flex justify-end">
-                    <button type="submit" className="bg-white text-ink px-6 py-2.5 rounded-full font-bold hover:bg-neutral-200 transition-colors flex items-center gap-2 text-sm shadow-lg shadow-white/10">
+                    <button type="submit" className="bg-[#09090b] text-white px-6 py-2.5 rounded-full font-bold hover:bg-neutral-200 transition-colors flex items-center gap-2 text-sm shadow-lg shadow-white/10">
                       <Send className="w-4 h-4" />
                       Submit Ticket
                     </button>
@@ -138,28 +150,23 @@ export default function SupportPage() {
         <div className="space-y-6">
           
           <div className="glass-inner rounded-2xl border border-white/10 overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/10 bg-white/5">
+            <div className="px-6 py-4 border-b border-white/10 bg-[#09090b]/5">
               <h2 className="font-bold text-white text-sm">Recent Tickets</h2>
             </div>
             <div className="divide-y divide-white/5">
               
-              <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer group">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono text-white/40">#ZN-8402</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-semantic-success bg-semantic-success/10 px-2 py-0.5 rounded">Resolved</span>
+              {tickets.map(ticket => (
+                <div key={ticket.id} className="p-4 hover:bg-[#09090b]/5 transition-colors cursor-pointer group">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-mono text-white/40">#{ticket.id}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${ticket.status === 'Resolved' ? 'text-semantic-success bg-semantic-success/10' : 'text-amber-400 bg-amber-400/10'}`}>
+                      {ticket.status}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-white group-hover:text-teal transition-colors truncate">{ticket.title}</h4>
+                  <div className="text-xs text-white/50 mt-2">{ticket.date}</div>
                 </div>
-                <h4 className="text-sm font-bold text-white group-hover:text-teal transition-colors truncate">Webhook payload missing intent data</h4>
-                <div className="text-xs text-white/50 mt-2">Closed 2 days ago</div>
-              </div>
-
-              <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer group">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono text-white/40">#ZN-8319</span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-semantic-success bg-semantic-success/10 px-2 py-0.5 rounded">Resolved</span>
-                </div>
-                <h4 className="text-sm font-bold text-white group-hover:text-teal transition-colors truncate">Rate limit increase request</h4>
-                <div className="text-xs text-white/50 mt-2">Closed 2 weeks ago</div>
-              </div>
+              ))}
 
             </div>
           </div>
@@ -167,7 +174,7 @@ export default function SupportPage() {
           <div className="glass-inner rounded-2xl border border-white/10 p-6 space-y-4">
             <h3 className="font-bold text-white">Other Channels</h3>
             
-            <a href="https://discord.gg/zintlr" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors">
+            <a href="https://discord.gg/zinbit" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-[#09090b]/5 hover:bg-[#09090b]/10 transition-colors">
               <MessageSquare className="w-5 h-5 text-[#5865F2]" />
               <div>
                 <div className="text-sm font-bold text-white">Community Discord</div>
@@ -175,7 +182,7 @@ export default function SupportPage() {
               </div>
             </a>
 
-            <a href="/status" className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors">
+            <a href="/status" className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-[#09090b]/5 hover:bg-[#09090b]/10 transition-colors">
               <AlertCircle className="w-5 h-5 text-semantic-success" />
               <div>
                 <div className="text-sm font-bold text-white">System Status</div>

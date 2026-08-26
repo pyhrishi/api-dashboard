@@ -123,16 +123,16 @@ export default function ExplorerPage() {
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] bg-white rounded-2xl border border-ink/8 shadow-2xl overflow-hidden relative"
+      className="flex flex-col h-[calc(100vh-8rem)] min-h-[600px] bg-[#09090b] rounded-2xl border border-white/10 shadow-2xl overflow-hidden relative"
     >
       {/* 3-Pane Layout */}
       <div className="flex flex-1 overflow-hidden relative">
         
         {/* LEFT PANE: Navigation */}
-        <div className="w-80 border-r border-ink/8 bg-mist/30 flex flex-col z-10 flex-shrink-0">
-          <div className="p-5 border-b border-ink/8 bg-white/50 backdrop-blur-md">
-            <h2 className="font-display font-extrabold text-ink tracking-tight text-lg">Endpoints</h2>
-            <p className="text-xs text-ink/50 mt-1 font-medium">Select an endpoint to configure</p>
+        <div className="w-80 border-r border-white/10 bg-[#111115] flex flex-col z-10 flex-shrink-0">
+          <div className="p-5 border-b border-white/10 bg-[#09090b]/50 backdrop-blur-md">
+            <h2 className="font-display font-extrabold text-white tracking-tight text-lg">Endpoints</h2>
+            <p className="text-xs text-white/50 mt-1 font-medium">Select an endpoint to configure</p>
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             <ul className="space-y-1">
@@ -144,13 +144,14 @@ export default function ExplorerPage() {
                       "w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all duration-300",
                       selectedId === ep.id
                         ? "bg-teal/10 text-teal shadow-[0_0_10px_rgba(70,189,198,0.1)] border border-teal/20"
-                        : "text-ink/60 hover:bg-white hover:text-ink hover:shadow-sm border border-transparent"
+                        : "text-white/60 hover:bg-[#09090b] hover:text-white hover:shadow-[0_0_15px_rgba(255,255,255,0.02)] border border-transparent"
                     )}
                   >
-                    <span className={cn("flex-shrink-0 transition-colors", selectedId === ep.id ? "text-teal" : "text-ink/40")}>
+                    <span className={cn("flex-shrink-0 transition-colors", selectedId === ep.id ? "text-teal" : "text-white/40")}>
                       {getIcon(ep.id)}
                     </span>
-                    <span className="truncate">{ep.name}</span>
+                    <span className={cn("truncate flex-1", ep.isDeprecated && "line-through text-white/40")}>{ep.name}</span>
+                    {ep.isDeprecated && <ShieldAlert className="w-3.5 h-3.5 text-semantic-error flex-shrink-0" title="Deprecated" />}
                   </button>
                 </li>
               ))}
@@ -159,7 +160,7 @@ export default function ExplorerPage() {
         </div>
 
         {/* MIDDLE PANE: Configuration */}
-        <div className="flex-1 border-r border-ink/8 flex flex-col relative bg-white min-w-[400px]">
+        <div className="flex-1 border-r border-white/10 flex flex-col relative bg-[#09090b] min-w-[400px]">
           {/* Sticky Badge */}
           <div className="bg-semantic-warning/10 border-b border-semantic-warning/20 px-4 py-2.5 flex items-center justify-center gap-2 flex-shrink-0">
             <ShieldAlert className="w-4 h-4 text-semantic-warning" />
@@ -178,33 +179,53 @@ export default function ExplorerPage() {
                 transition={{ duration: 0.2 }}
                 className="mb-8"
               >
-                <h1 className="text-2xl font-display font-extrabold text-ink mb-4 tracking-tight">{activeEndpoint.name}</h1>
-                <div className="flex items-center gap-3 mt-4 font-mono text-sm bg-mist/50 border border-ink/8 rounded-xl p-2 shadow-inner">
+                <h1 className="text-2xl font-display font-extrabold text-white mb-4 tracking-tight flex items-center gap-3">
+                  {activeEndpoint.name}
+                  {activeEndpoint.isDeprecated && (
+                    <span className="text-[10px] font-bold bg-semantic-error/10 text-semantic-error px-2 py-0.5 rounded uppercase tracking-widest border border-semantic-error/20">Deprecated</span>
+                  )}
+                </h1>
+
+                {activeEndpoint.isDeprecated && (
+                  <div className="mb-6 bg-semantic-error/5 border border-semantic-error/20 rounded-xl p-4 flex flex-col gap-2 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+                    <div className="flex items-center gap-2 text-semantic-error font-bold text-sm">
+                      <ShieldAlert className="w-4 h-4" />
+                      Warning: Endpoint Deprecated
+                    </div>
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      This endpoint is deprecated and will be removed on <strong className="text-white">{activeEndpoint.sunsetDate || 'a future date'}</strong>.
+                      {activeEndpoint.replacementEndpointId && (
+                        <span> Please migrate to the <button onClick={() => handleSelect(activeEndpoint.replacementEndpointId!)} className="font-bold text-teal hover:text-teal-ice transition-colors underline underline-offset-2">recommended replacement</button> as soon as possible.</span>
+                      )}
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 mt-4 font-mono text-sm bg-[#111115] border border-white/10 rounded-xl p-2 shadow-inner">
                   <span className={cn(
                     "px-3 py-1 rounded-md font-bold text-white tracking-widest text-xs",
                     activeEndpoint.method === 'GET' ? "bg-semantic-success" : "bg-teal text-ink"
                   )}>{activeEndpoint.method}</span>
-                  <span className="text-ink/80 flex-1 truncate">
-                    <span className="text-ink/40">https://api.zintlr.com/v1</span>
-                    <span className="font-bold text-ink">{activeEndpoint.path}</span>
+                  <span className="text-white/80 flex-1 truncate">
+                    <span className="text-white/40">https://api.zintlr.com/v1</span>
+                    <span className="font-bold text-white">{activeEndpoint.path}</span>
                   </span>
                 </div>
               </motion.div>
             </AnimatePresence>
 
             {/* Headers Section */}
-            <div className="mb-8 bg-mist/30 border border-ink/8 rounded-xl p-4 shadow-sm">
-              <h3 className="text-xs font-bold text-ink/50 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <div className="mb-8 bg-[#111115] border border-white/10 rounded-xl p-4 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+              <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <Lock className="w-3.5 h-3.5" /> Authentication
               </h3>
               <div className="space-y-2">
-                <div className="flex justify-between items-center text-sm font-mono bg-white px-3 py-2 rounded-lg border border-ink/5 shadow-sm">
-                  <span className="text-ink/60 font-bold">Bearer Token</span>
+                <div className="flex justify-between items-center text-sm font-mono bg-[#09090b] px-3 py-2 rounded-lg border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.02)]">
+                  <span className="text-white/60 font-bold">Bearer Token</span>
                   {filteredKeys.length > 0 ? (
                     <select 
                       value={selectedKeyId}
                       onChange={(e) => setSelectedKeyId(e.target.value)}
-                      className="bg-mist text-ink font-bold px-3 py-1.5 rounded-md border border-ink/10 outline-none focus:border-teal/50 text-right w-48 text-xs cursor-pointer"
+                      className="bg-[#111115] text-white font-bold px-3 py-1.5 rounded-md border border-white/10 outline-none focus:border-teal/50 text-right w-48 text-xs cursor-pointer"
                     >
                       {filteredKeys.map(k => (
                         <option key={k.id} value={k.id}>{k.name} ({k.key.substring(0, 12)}...)</option>
@@ -221,16 +242,16 @@ export default function ExplorerPage() {
 
             {/* Parameters Form */}
             <div className="space-y-4 flex-1 flex flex-col mb-8">
-              <h3 className="text-xs font-bold text-ink/50 uppercase tracking-widest flex items-center gap-2 mb-2">
+              <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest flex items-center gap-2 mb-2">
                  Parameters
               </h3>
               
               <div className="space-y-4">
                 {activeEndpoint.parameters.map((param) => (
                   <div key={param.name}>
-                    <label className="flex items-center justify-between text-xs font-bold text-ink mb-1.5">
+                    <label className="flex items-center justify-between text-xs font-bold text-white mb-1.5">
                       <span className="flex items-center gap-1.5">
-                        <span className="text-ink/40">{getParamIcon(param.type)}</span>
+                        <span className="text-white/40">{getParamIcon(param.type)}</span>
                         {param.name}
                         {param.required && <span className="text-semantic-error ml-1">*</span>}
                       </span>
@@ -241,10 +262,10 @@ export default function ExplorerPage() {
                       onChange={(e) => handleParameterChange(param.name, e.target.value)}
                       placeholder={param.placeholder || param.example}
                       className={cn(
-                        "w-full px-4 py-3 rounded-xl border outline-none transition-all font-mono text-ink shadow-sm text-sm bg-mist/20",
+                        "w-full px-4 py-3 rounded-xl border outline-none transition-all font-mono text-white shadow-[0_0_15px_rgba(255,255,255,0.02)] text-sm bg-[#111115]/20",
                         validationErrors[param.name] 
                           ? "border-semantic-error focus:ring-4 focus:ring-semantic-error/20" 
-                          : "border-ink/10 focus:border-teal focus:ring-4 focus:ring-teal/20"
+                          : "border-white/10 focus:border-teal focus:ring-4 focus:ring-teal/20"
                       )}
                     />
                     {validationErrors[param.name] ? (
@@ -253,7 +274,7 @@ export default function ExplorerPage() {
                         {validationErrors[param.name]}
                       </p>
                     ) : (
-                      <p className="text-xs text-ink/40 mt-1.5 font-medium ml-1">
+                      <p className="text-xs text-white/40 mt-1.5 font-medium ml-1">
                         {param.description}
                       </p>
                     )}
@@ -263,7 +284,7 @@ export default function ExplorerPage() {
             </div>
 
             {/* Execute Button */}
-            <div className="pt-2 sticky bottom-0 bg-white pb-2">
+            <div className="pt-2 sticky bottom-0 bg-[#09090b] pb-2">
               <button
                 onClick={handleTest}
                 disabled={!isFormValid || isLoading || !selectedKeyId}
@@ -286,7 +307,7 @@ export default function ExplorerPage() {
         <div className="w-[400px] lg:w-[500px] flex flex-col bg-ink flex-shrink-0 z-10 shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 grid-dark opacity-20 pointer-events-none" />
           
-          <div className="h-[52px] border-b border-white/10 bg-white/5 px-5 flex items-center justify-between flex-shrink-0 backdrop-blur-xl relative z-20">
+          <div className="h-[52px] border-b border-white/10 bg-[#09090b]/5 px-5 flex items-center justify-between flex-shrink-0 backdrop-blur-xl relative z-20">
             <div className="flex items-center gap-2 text-white/50 font-mono text-xs uppercase tracking-widest font-bold">
               <Terminal className="w-4 h-4" />
               {response ? 'Response' : 'Code Snippet'}
@@ -301,7 +322,7 @@ export default function ExplorerPage() {
           <div className="flex-1 overflow-y-auto relative z-10 flex flex-col">
             {!response && !isLoading && (
               <div className="flex-1 flex flex-col">
-                <div className="flex border-b border-white/5 bg-white/5">
+                <div className="flex border-b border-white/5 bg-[#09090b]/5">
                   {(['curl', 'nodejs', 'python'] as const).map(lang => (
                     <button
                       key={lang}
@@ -309,7 +330,7 @@ export default function ExplorerPage() {
                       className={cn(
                         'flex-1 px-4 py-3 text-xs font-bold transition-colors relative uppercase tracking-wider',
                         activeCodeTab === lang
-                          ? 'text-teal bg-white/5'
+                          ? 'text-teal bg-[#09090b]/5'
                           : 'text-white/40 hover:text-white/80'
                       )}
                     >
@@ -329,7 +350,7 @@ export default function ExplorerPage() {
                   </pre>
                   <button
                     onClick={() => copyToClipboard(codeSamples[activeCodeTab], `code-${activeCodeTab}`)}
-                    className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-white/50 hover:text-white border border-white/10"
+                    className="absolute top-4 right-4 p-2 rounded-lg bg-[#09090b]/5 hover:bg-[#09090b]/10 transition-colors text-white/50 hover:text-white border border-white/10"
                   >
                     {copiedId === `code-${activeCodeTab}` ? (
                       <Check className="w-4 h-4 text-teal" />
@@ -343,11 +364,11 @@ export default function ExplorerPage() {
 
             {isLoading && (
               <div className="p-8 space-y-4 animate-pulse">
-                <div className="h-4 bg-white/10 rounded w-3/4"></div>
-                <div className="h-4 bg-white/10 rounded w-1/2"></div>
-                <div className="h-4 bg-white/10 rounded w-5/6"></div>
-                <div className="h-4 bg-white/10 rounded w-2/3"></div>
-                <div className="h-4 bg-white/10 rounded w-4/5"></div>
+                <div className="h-4 bg-[#09090b]/10 rounded w-3/4"></div>
+                <div className="h-4 bg-[#09090b]/10 rounded w-1/2"></div>
+                <div className="h-4 bg-[#09090b]/10 rounded w-5/6"></div>
+                <div className="h-4 bg-[#09090b]/10 rounded w-2/3"></div>
+                <div className="h-4 bg-[#09090b]/10 rounded w-4/5"></div>
               </div>
             )}
 
@@ -364,11 +385,11 @@ export default function ExplorerPage() {
                   </span>
                 </div>
                 <div className="glass-inner rounded-xl border border-white/10 shadow-inner overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-white/5">
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-[#09090b]/5">
                     <span className="text-[10px] text-white/40 font-mono font-bold tracking-widest uppercase">JSON Response</span>
                     <button
                       onClick={() => copyToClipboard(JSON.stringify(response, null, 2), 'response')}
-                      className="p-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 hover:text-white transition-all backdrop-blur-sm shadow-sm"
+                      className="p-1.5 rounded-md bg-[#09090b]/5 hover:bg-[#09090b]/10 border border-white/10 text-white/50 hover:text-white transition-all backdrop-blur-sm shadow-[0_0_15px_rgba(255,255,255,0.02)]"
                       title="Copy response"
                     >
                       {copiedId === 'response' ? <CheckCircle2 className="w-3.5 h-3.5 text-teal" /> : <Copy className="w-3.5 h-3.5" />}
@@ -385,7 +406,7 @@ export default function ExplorerPage() {
                 </div>
                 <button 
                   onClick={() => setResponse(null)}
-                  className="mt-6 w-full py-3 text-xs font-bold text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/10"
+                  className="mt-6 w-full py-3 text-xs font-bold text-white/50 hover:text-white bg-[#09090b]/5 hover:bg-[#09090b]/10 rounded-xl transition-colors border border-white/10"
                 >
                   Clear Response
                 </button>
@@ -409,7 +430,7 @@ export default function ExplorerPage() {
                 </div>
                 <button 
                   onClick={() => setResponse(null)}
-                  className="w-full py-3 text-xs font-bold text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-colors border border-white/10"
+                  className="w-full py-3 text-xs font-bold text-white/50 hover:text-white bg-[#09090b]/5 hover:bg-[#09090b]/10 rounded-xl transition-colors border border-white/10"
                 >
                   Try Again
                 </button>
