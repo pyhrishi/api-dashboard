@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PhoneCall, Building2, SearchCheck, Play, CheckCircle2 } from 'lucide-react';
 
@@ -163,10 +163,15 @@ print(response.json())`
 type Language = 'curl' | 'node' | 'python';
 
 export function IntegrationTerminal() {
+  const [mounted, setMounted] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState(scenarios[0].id);
   const [activeLanguage, setActiveLanguage] = useState<Language>('curl');
   const [isRunning, setIsRunning] = useState(false);
   const [showResponse, setShowResponse] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const activeScenario = scenarios.find(s => s.id === activeScenarioId)!;
 
@@ -188,6 +193,22 @@ export function IntegrationTerminal() {
     setShowResponse(false);
     setIsRunning(false);
   };
+
+  if (!mounted) {
+    return (
+      <div className="glass rounded-3xl overflow-hidden border-gradient shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+        <div className="grid lg:grid-cols-[300px_1fr] h-[600px]">
+          <div className="bg-ink/60 border-r border-white/10 flex flex-col">
+            <div className="p-6 border-b border-white/5">
+              <h3 className="text-white font-bold mb-1">Endpoints</h3>
+              <p className="text-white/40 text-sm">Loading endpoints...</p>
+            </div>
+          </div>
+          <div className="bg-[#09090B] flex flex-col relative overflow-hidden" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass rounded-3xl overflow-hidden border-gradient shadow-[0_30px_60px_rgba(0,0,0,0.5)]">

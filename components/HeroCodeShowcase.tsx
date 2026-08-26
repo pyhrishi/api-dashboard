@@ -43,11 +43,20 @@ const scenarios = [
 ];
 
 export function HeroCodeShowcase() {
+  const [mounted, setMounted] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const [typedRequest, setTypedRequest] = useState('');
   const [showResponse, setShowResponse] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
+    let isCancelled = false;
+    
     const runTyping = async () => {
       const currentReq = scenarios[activeIdx].request;
       
@@ -57,25 +66,52 @@ export function HeroCodeShowcase() {
       
       // Typing effect
       for (let i = 0; i <= currentReq.length; i++) {
+        if (isCancelled) return;
         setTypedRequest(currentReq.substring(0, i));
         await new Promise(r => setTimeout(r, 20 + Math.random() * 30));
       }
       
+      if (isCancelled) return;
       // Wait a moment after typing
       await new Promise(r => setTimeout(r, 500));
       
+      if (isCancelled) return;
       // Show response
       setShowResponse(true);
       
+      if (isCancelled) return;
       // Wait before next scenario
       await new Promise(r => setTimeout(r, 4000));
       
+      if (isCancelled) return;
       // Advance to next scenario
       setActiveIdx((prev) => (prev + 1) % scenarios.length);
     };
 
     runTyping();
-  }, [activeIdx]);
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeIdx, mounted]);
+
+  if (!mounted) {
+    return (
+      <div className="w-full h-full min-h-[400px] flex flex-col font-mono text-sm shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+        <div className="flex items-center px-4 py-3 bg-[#1A1924] border-b border-white/10 rounded-t-2xl">
+          <div className="flex space-x-2">
+            <div className="w-3 h-3 rounded-full bg-semantic-error/80" />
+            <div className="w-3 h-3 rounded-full bg-semantic-warning/80" />
+            <div className="w-3 h-3 rounded-full bg-semantic-success/80" />
+          </div>
+          <div className="mx-auto text-xs font-bold text-white/40 tracking-wider">
+            Loading...
+          </div>
+        </div>
+        <div className="flex-1 bg-[#09090B] p-5 rounded-b-2xl flex flex-col relative overflow-hidden text-left border border-white/10 border-t-0" />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full min-h-[400px] flex flex-col font-mono text-sm shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
@@ -129,7 +165,7 @@ export function HeroCodeShowcase() {
                       __html: scenarios[activeIdx].response
                         .replace(/"(.*?)":/g, '<span class="text-teal">"$1"</span>:')
                         .replace(/"(.*?)"/g, (match, p1) => match.includes(':') ? match : `<span class="text-teal-ice">"${p1}"</span>`) 
-                        .replace(/\\b(\\d+\\.?\\d*)\\b/g, '<span class="text-semantic-success">$1</span>')
+                        .replace(/\b(\d+\.?\d*)\b/g, '<span class="text-semantic-success">$1</span>')
                     }} />
                   </pre>
                 </div>
