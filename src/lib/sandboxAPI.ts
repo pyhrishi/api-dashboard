@@ -13,6 +13,7 @@ export interface APIRequest {
   apiKey: string;
   baseUrl?: string;
   simulateStatus?: number;
+  isIdempotentReplay?: boolean;
 }
 
 export interface APIResponse {

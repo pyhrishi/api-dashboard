@@ -151,7 +151,7 @@ export default function ExplorerPage() {
                       {getIcon(ep.id)}
                     </span>
                     <span className={cn("truncate flex-1", ep.isDeprecated && "line-through text-white/40")}>{ep.name}</span>
-                    {ep.isDeprecated && <ShieldAlert className="w-3.5 h-3.5 text-semantic-error flex-shrink-0" title="Deprecated" />}
+                    {ep.isDeprecated && <ShieldAlert className="w-3.5 h-3.5 text-semantic-error flex-shrink-0" />}
                   </button>
                 </li>
               ))}

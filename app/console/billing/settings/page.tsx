@@ -8,7 +8,7 @@ import { useToast } from '@/components/Toast';
 
 export default function BillingSettingsPage() {
   const { billingDetails, updateBillingDetails, pocContacts, addPOCContact, removePOCContact, updatePOCContact } = useStore();
-  const { addToast } = useToast();
+  const { success, info } = useToast();
   
   // Local state for company details form
   const [details, setDetails] = useState(billingDetails);
@@ -23,7 +23,7 @@ export default function BillingSettingsPage() {
     await new Promise(r => setTimeout(r, 600));
     updateBillingDetails(details);
     setIsSavingDetails(false);
-    addToast({ title: 'Success', message: 'Company details updated successfully', type: 'success' });
+    success('Company details updated successfully');
   };
 
   const handleAddPOC = () => {
@@ -31,12 +31,12 @@ export default function BillingSettingsPage() {
     addPOCContact(newPOC);
     setNewPOC({ name: '', email: '', role: 'Billing' });
     setIsAddingPOC(false);
-    addToast({ title: 'POC Added', message: `${newPOC.name} added as ${newPOC.role} POC`, type: 'success' });
+    success(`${newPOC.name} added as ${newPOC.role} POC`);
   };
 
   const handleRemovePOC = (id: string, name: string) => {
     removePOCContact(id);
-    addToast({ title: 'POC Removed', message: `${name} has been removed.`, type: 'info' });
+    info(`${name} has been removed.`);
   };
 
   const roleIcons = {
