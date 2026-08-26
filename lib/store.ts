@@ -537,6 +537,14 @@ export const useStore = create<AppState>()(
         webhookRetryQueue: state.webhookRetryQueue.map(r => r.id === id ? { ...r, attempt, nextRetryAt } : r)
       })),
 
+      removeUsageAlert: (id) => set((state) => ({ usageAlerts: state.usageAlerts.filter(a => a.id !== id) })),
+      updateBillingDetails: (details) => set({ billingDetails: details }),
+      addPOCContact: (contact) => set((state) => ({ pocContacts: [...state.pocContacts, contact] })),
+      removePOCContact: (id) => set((state) => ({ pocContacts: state.pocContacts.filter(c => c.id !== id) })),
+      updatePOCContact: (id, contact) => set((state) => ({
+        pocContacts: state.pocContacts.map(c => c.id === id ? contact : c)
+      })),
+
       // First-Call Actions
       markOnboardingStepComplete: (step) => set((state) => {
         const steps = new Set(state.completedOnboardingSteps);

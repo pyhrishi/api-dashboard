@@ -11,7 +11,8 @@ export function TraceWaterfall({ duration, status, endpoint }: TraceWaterfallPro
   // Generate simulated spans based on duration and status
   const generateSpans = () => {
     let currentStart = 0;
-    const spans = [];
+    type SpanType = { service: string; name: string; start: number; dur: number; color: string; error?: string };
+    const spans: SpanType[] = [];
 
     // 1. Gateway Routing (always happens)
     const gwDur = Math.max(1, Math.floor(duration * 0.05));

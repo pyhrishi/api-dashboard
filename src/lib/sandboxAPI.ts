@@ -241,7 +241,7 @@ function validateRequestParameters(
       }
 
       // Boolean validation
-      if (param.type === 'boolean') {
+      if ((param.type as string) === 'boolean') {
         const strVal = String(value).toLowerCase();
         if (strVal !== 'true' && strVal !== 'false' && strVal !== '1' && strVal !== '0') {
           return {

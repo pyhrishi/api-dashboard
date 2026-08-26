@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Scale, Shield, FileText, Clock, CheckCircle2, ChevronDown, ChevronRight, ExternalLink, AlertTriangle, Award, Globe, Lock, Download, Search } from 'lucide-react';
+import { Scale, Shield, FileText, Clock, CheckCircle2, ChevronDown, ChevronRight, ExternalLink, AlertTriangle, Award, Globe, Lock, Download, Search, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ─── Legal Document Data ──────────────────────────────────────────────────────

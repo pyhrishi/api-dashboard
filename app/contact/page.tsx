@@ -57,7 +57,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-white">Custom Volume Pricing</h3>
-                  <p className="text-sm text-white/50 mt-1">Discounts available for >10M requests/mo.</p>
+                  <p className="text-sm text-white/50 mt-1">Discounts available for &gt;10M requests/mo.</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">

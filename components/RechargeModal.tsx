@@ -14,7 +14,7 @@ interface RechargeModalProps {
 
 export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
   const { rechargeCredits, creditBalance } = useStore();
-  const { addToast } = useToast();
+  const { success } = useToast();
   const [selectedPack, setSelectedPack] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -44,11 +44,10 @@ export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
       colors: ['#46BDC6', '#ffffff', '#1D1D21']
     });
     
-    addToast({
-      title: 'Level Up! ⚡',
-      message: `Successfully added ${(pack.credits + pack.bonus).toLocaleString()} credits to your account.`,
-      type: 'success'
-    });
+    success(
+      'Level Up! ⚡',
+      `Successfully added ${(pack.credits + pack.bonus).toLocaleString()} credits to your account.`
+    );
 
     setIsProcessing(false);
     onClose();

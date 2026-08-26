@@ -346,7 +346,7 @@ export function processMonthEndPayouts(): PayoutRecord[] {
   const periodStart = now - 30 * 24 * 60 * 60 * 1000;
   const processed: PayoutRecord[] = [];
 
-  for (const [partnerId, partner] of partnerRegistry) {
+  for (const [partnerId, partner] of Array.from(partnerRegistry.entries())) {
     if (partner.pendingPayout < 100) continue; // Minimum payout threshold: $100
 
     const relevantEvents = revenueEvents

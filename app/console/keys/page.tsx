@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { useStore, MockKey } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Key, Plus, Copy, Trash2, Check, ShieldAlert, Loader2, RotateCw, Activity, CalendarClock, Globe } from 'lucide-react';
+import { Key, Plus, Copy, Trash2, Check, ShieldAlert, Loader2, RotateCw, Activity, CalendarClock, Globe, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CodeBlock } from '@/components/CodeBlock';
 import RoleGuard from '@/components/RoleGuard';
+import Link from 'next/link';
 
 const AVAILABLE_SCOPES = [
   { id: 'people:read', label: 'People Search', desc: 'Read-only access to B2B profiles' },

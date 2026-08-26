@@ -14,6 +14,7 @@ export interface ApiKeyRecord {
   status?: 'ACTIVE' | 'REVOKED';
   msaStatus: MsaStatus;
   dpaStatus: DpaStatus;
+  monthlyLimit?: number;
 }
 
 const apiKeys: Record<string, ApiKeyRecord> = {
@@ -46,7 +47,7 @@ export function calculateVolumeDiscount(key: string, baseCost: number): { cost: 
   if (!record) return { cost: baseCost, discountPct: 0 };
 
   // Volume discounts are based on cumulative usage in the current billing cycle
-  const cumulativeUsage = record.consumed || 0;
+  const cumulativeUsage = record.usage || 0;
   
   if (cumulativeUsage > 500000) {
     // 50% Volume Discount (Enterprise Scale)
@@ -69,30 +70,30 @@ export function deductCredits(key: string, cost: number): { success: boolean, re
     return { success: false, remaining: 0, error: 'Invalid API Key' };
   }
 
-  if (record.type === 'prepaid') {
-    if ((record.balance || 0) < cost) {
+  if (record.plan === 'prepaid') {
+    if ((record.credits || 0) < cost) {
       return { 
         success: false, 
-        remaining: record.balance || 0, 
+        remaining: record.credits || 0, 
         error: 'Insufficient pre-paid credits. Please top up your ledger at console.zinbit.zintlr.com/billing to continue using the API.' 
       };
     }
     
-    record.balance = (record.balance || 0) - cost;
+    record.credits = (record.credits || 0) - cost;
     return { 
       success: true, 
-      remaining: record.balance 
+      remaining: record.credits 
     };
-  } else if (record.type === 'postpaid') {
+  } else if (record.plan === 'postpaid') {
     // Enterprise Post-Paid Logic (No hard limits, bill at end of month)
-    record.consumed = (record.consumed || 0) + cost;
+    record.usage = (record.usage || 0) + cost;
     return {
       success: true,
       remaining: -1 // Indicates unlimited/post-paid in headers
     };
   } else {
     // Standard Metered Logic (Hard limits)
-    const remaining = (record.monthlyLimit || 0) - (record.consumed || 0);
+    const remaining = (record.monthlyLimit || 0) - (record.usage || 0);
 
     if (remaining < cost) {
       return { 
@@ -102,10 +103,10 @@ export function deductCredits(key: string, cost: number): { success: boolean, re
       };
     }
 
-    record.consumed = (record.consumed || 0) + cost;
+    record.usage = (record.usage || 0) + cost;
     return { 
       success: true, 
-      remaining: (record.monthlyLimit || 0) - record.consumed 
+      remaining: (record.monthlyLimit || 0) - record.usage 
     };
   }
 }

@@ -11,7 +11,7 @@ import { useToast } from '@/components/Toast';
 export default function SecuritySettingsPage() {
   const { is2faEnabled, enable2fa, disable2fa, activeSessions, revokeSession, ipWhitelist, addIpWhitelist, removeIpWhitelist, logout, user } = useStore();
   const router = useRouter();
-  const { toast } = useToast();
+  const { success, error, info } = useToast();
   
   // Password state
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -41,14 +41,14 @@ export default function SecuritySettingsPage() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwords.new !== passwords.confirm) {
-      toast({ title: 'Error', description: 'New passwords do not match', variant: 'destructive' });
+      error('New passwords do not match', 'Error');
       return;
     }
     setIsChangingPassword(true);
     await new Promise(r => setTimeout(r, 1000));
     setIsChangingPassword(false);
     setPasswords({ current: '', new: '', confirm: '' });
-    toast({ title: 'Success', description: 'Password updated successfully' });
+    success('Password updated successfully', 'Success');
   };
 
   const handleVerify2fa = async (e: React.FormEvent) => {
@@ -69,7 +69,7 @@ export default function SecuritySettingsPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: 'Copied', description: 'Code copied to clipboard' });
+    info('Code copied to clipboard', 'Copied');
   };
 
   const handleAddIp = (e: React.FormEvent) => {
@@ -101,7 +101,7 @@ export default function SecuritySettingsPage() {
     URL.revokeObjectURL(url);
     
     setIsExporting(false);
-    toast({ title: 'Export complete', description: 'Your data archive has been generated and downloaded.' });
+    success('Your data archive has been generated and downloaded.', 'Export complete');
   };
 
   const handleDeleteAccount = async (e: React.FormEvent) => {
