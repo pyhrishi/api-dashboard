@@ -6,6 +6,7 @@
 
 import { Endpoint } from '@/data/endpoints';
 import { generateCodeSamples } from './codeSampleGenerator';
+import { useStore } from '@/lib/store';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -74,6 +75,20 @@ export async function callSandboxAPI(request: APIRequest): Promise<APIResponse |
         'INVALID_ENDPOINT',
         requestId
       );
+    }
+
+    // Check v2 Dark Launch gating
+    if (request.endpoint.version === 'v2') {
+      const isV2Enabled = useStore.getState().v2DarkLaunchEnabled;
+      if (!isV2Enabled) {
+        throw createAPIError(
+          403,
+          'Forbidden',
+          'This endpoint is currently in Dark Launch. Please enable v2 Beta access in your developer console.',
+          'V2_BETA_ACCESS_REQUIRED',
+          requestId
+        );
+      }
     }
 
     // Validate parameters

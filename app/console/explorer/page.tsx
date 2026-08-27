@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ExplorerPage() {
-  const { deductCredits, environment, activeKeys } = useStore();
+  const { deductCredits, environment, activeKeys, v2DarkLaunchEnabled } = useStore();
   const [selectedId, setSelectedId] = useState(ENDPOINTS[0].id);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [parameters, setParameters] = useState<Record<string, any>>({});
@@ -23,10 +23,11 @@ export default function ExplorerPage() {
   const [responseTime, setResponseTime] = useState(0);
   const [selectedKeyId, setSelectedKeyId] = useState<string>('');
   
-  const [activeCodeTab, setActiveCodeTab] = useState<'curl' | 'python' | 'nodejs'>('curl');
+  const [activeCodeTab, setActiveCodeTab] = useState<'cli' | 'curl' | 'python' | 'nodejs'>('cli');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const activeEndpoint = ENDPOINTS.find(e => e.id === selectedId)!;
+  const visibleEndpoints = ENDPOINTS.filter(ep => ep.version !== 'v2' || v2DarkLaunchEnabled);
 
   const filteredKeys = activeKeys.filter(k => 
     environment === 'live' ? k.key.startsWith('sk_live_') : k.key.startsWith('sk_test_')
@@ -136,7 +137,7 @@ export default function ExplorerPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-3">
             <ul className="space-y-1">
-              {ENDPOINTS.map((ep) => (
+              {visibleEndpoints.map((ep) => (
                 <li key={ep.id}>
                   <button
                     onClick={() => handleSelect(ep.id)}
@@ -323,7 +324,7 @@ export default function ExplorerPage() {
             {!response && !isLoading && (
               <div className="flex-1 flex flex-col">
                 <div className="flex border-b border-white/5 bg-[#09090b]/5">
-                  {(['curl', 'nodejs', 'python'] as const).map(lang => (
+                  {(['cli', 'curl', 'nodejs', 'python'] as const).map(lang => (
                     <button
                       key={lang}
                       onClick={() => setActiveCodeTab(lang)}
@@ -334,6 +335,7 @@ export default function ExplorerPage() {
                           : 'text-white/40 hover:text-white/80'
                       )}
                     >
+                      {lang === 'cli' && 'CLI'}
                       {lang === 'curl' && 'cURL'}
                       {lang === 'python' && 'Python'}
                       {lang === 'nodejs' && 'Node.js'}

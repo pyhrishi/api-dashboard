@@ -11,6 +11,7 @@ export interface CodeSample {
   python: string;
   nodejs: string;
   graphql: string;
+  cli: string;
 }
 
 export interface CodeSampleContext {
@@ -31,6 +32,7 @@ export function generateCodeSamples(context: CodeSampleContext): CodeSample {
     python: generatePythonSample(endpoint, parameters, apiKey, baseUrl),
     nodejs: generateNodeJsSample(endpoint, parameters, apiKey, baseUrl),
     graphql: generateGraphQLSample(endpoint, parameters),
+    cli: generateCliSample(endpoint, parameters, apiKey),
   };
 }
 
@@ -59,6 +61,28 @@ export function generateCurlSample(
     command += `\n  -d '${JSON.stringify(bodyParams)}'`;
   }
 
+  return command;
+}
+
+/**
+ * Generate CLI command sample
+ * Format: npx zintlr test PATH --key="API_KEY" --param="value"
+ */
+export function generateCliSample(
+  endpoint: Endpoint,
+  parameters: Record<string, any>,
+  apiKey: string
+): string {
+  let command = `npx zintlr test ${endpoint.path} --key="${apiKey}"`;
+  
+  const allParams = { ...getQueryParameters(endpoint, parameters), ...getBodyParameters(endpoint, parameters) };
+  
+  for (const [key, value] of Object.entries(allParams)) {
+    if (value !== undefined && value !== null && value !== '') {
+      command += ` --${key}="${value}"`;
+    }
+  }
+  
   return command;
 }
 

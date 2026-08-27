@@ -162,8 +162,10 @@ interface AppState extends FirstCallState {
   auditLogs: AuditLog[];
   usageAlerts: UsageAlert[];
   ipWhitelist: string[];
+  v2DarkLaunchEnabled: boolean;
   
   toggleEnvironment: () => void;
+  toggleV2DarkLaunch: (enabled: boolean) => void;
   dismissChecklist: () => void;
   deductCredits: (amount: number) => void;
   rechargeCredits: (amount: number) => void;
@@ -211,6 +213,7 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       // App State
       environment: 'sandbox',
+      v2DarkLaunchEnabled: false,
       creditBalance: 5000,
       activeKeys: [{
         id: 'key_default',
@@ -276,6 +279,8 @@ export const useStore = create<AppState>()(
       toggleEnvironment: () => set((state) => ({ 
         environment: state.environment === 'sandbox' ? 'live' : 'sandbox' 
       })),
+      
+      toggleV2DarkLaunch: (enabled) => set({ v2DarkLaunchEnabled: enabled }),
       
       dismissChecklist: () => set({ isChecklistDismissed: true }),
 
@@ -591,6 +596,7 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({
         // Persist both app and first-call state
         environment: state.environment,
+        v2DarkLaunchEnabled: state.v2DarkLaunchEnabled,
         creditBalance: state.creditBalance,
         activeKeys: state.activeKeys,
         user: state.user,

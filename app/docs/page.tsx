@@ -62,11 +62,12 @@ export default function PremiumDocsPage() {
         </div>
         <div className="flex items-center gap-3">
           <a 
-            href="/console/explorer" 
+            href="/api/docs/postman"
+            download="Zinbit_Postman_Collection.json"
             className="text-xs font-bold text-[#FF6C37] hover:text-[#FF6C37]/80 px-4 py-2 rounded-lg border border-[#FF6C37]/20 bg-[#FF6C37]/5 hover:bg-[#FF6C37]/10 transition-colors flex items-center gap-2 shadow-sm"
           >
             <Download className="w-4 h-4" />
-            Postman Collection
+            Run in Postman
           </a>
           <a 
             href="/api/docs" 
@@ -161,6 +162,15 @@ export default function PremiumDocsPage() {
                     </button>
                   </li>
                 ))}
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-[11px] font-black text-white/40 uppercase tracking-widest mb-3">Starter Kits</h3>
+              <ul className="space-y-1">
+                <li><button onClick={() => document.getElementById('boilerplates')?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center text-sm font-medium text-white/60 hover:text-white py-1.5 transition-colors w-full text-left">
+                  Integration Boilerplates
+                </button></li>
               </ul>
             </div>
 
@@ -398,6 +408,64 @@ print(response.json())`
                     </a>
                   </div>
                 </div>
+                
+                {/* Rust SDK */}
+                <div className="glass-inner rounded-2xl p-6 border border-white/10 shadow-xl group hover:border-[#DEA584]/50 transition-colors flex flex-col">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-[#DEA584]/10 flex items-center justify-center border border-[#DEA584]/20 shadow-inner">
+                      <span className="font-black text-[#DEA584] text-sm">Rs</span>
+                    </div>
+                    <a href="https://github.com/zinbit" target="_blank" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">Rust</h3>
+                  <div className="bg-ink/80 p-3 rounded-xl border border-white/5 font-mono text-xs text-white/80 select-all mb-4 shadow-inner">
+                    cargo add zinbit
+                  </div>
+                  <div className="mt-auto pt-2">
+                    <a href="#endpoints" className="text-sm font-bold text-[#DEA584] hover:text-[#DEA584]/80 transition-colors flex items-center gap-1 group-hover:gap-2">
+                      View Documentation <ChevronRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Java SDK */}
+                <div className="glass-inner rounded-2xl p-6 border border-white/10 shadow-xl group hover:border-[#ED8B00]/50 transition-colors flex flex-col">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-[#ED8B00]/10 flex items-center justify-center border border-[#ED8B00]/20 shadow-inner">
+                      <span className="font-black text-[#ED8B00] text-sm">Java</span>
+                    </div>
+                    <a href="https://github.com/zinbit" target="_blank" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">Java</h3>
+                  <div className="bg-ink/80 p-3 rounded-xl border border-white/5 font-mono text-[10px] text-white/80 select-all mb-4 shadow-inner overflow-x-auto whitespace-nowrap">
+                    mvn dependency:get -Dartifact=com.zinbit:api-client
+                  </div>
+                  <div className="mt-auto pt-2">
+                    <a href="#endpoints" className="text-sm font-bold text-[#ED8B00] hover:text-[#ED8B00]/80 transition-colors flex items-center gap-1 group-hover:gap-2">
+                      View Documentation <ChevronRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Ruby SDK */}
+                <div className="glass-inner rounded-2xl p-6 border border-white/10 shadow-xl group hover:border-[#CC342D]/50 transition-colors flex flex-col">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-[#CC342D]/10 flex items-center justify-center border border-[#CC342D]/20 shadow-inner">
+                      <span className="font-black text-[#CC342D] text-sm">Ruby</span>
+                    </div>
+                    <a href="https://github.com/zinbit" target="_blank" className="text-xs font-bold text-white/40 hover:text-white transition-colors">GitHub ↗</a>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">Ruby</h3>
+                  <div className="bg-ink/80 p-3 rounded-xl border border-white/5 font-mono text-xs text-white/80 select-all mb-4 shadow-inner">
+                    gem install zinbit
+                  </div>
+                  <div className="mt-auto pt-2">
+                    <a href="#endpoints" className="text-sm font-bold text-[#CC342D] hover:text-[#CC342D]/80 transition-colors flex items-center gap-1 group-hover:gap-2">
+                      View Documentation <ChevronRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                </div>
+
               </div>
             </section>
 
@@ -775,6 +843,19 @@ const enrichedData = await response.json();`} />
                   <div className="flex items-center gap-4 mb-4">
                     <h2 className="text-3xl font-extrabold text-white tracking-tight">{endpoint.name}</h2>
                     <MethodBadge method={endpoint.method} />
+                    <div className="ml-auto flex-shrink-0">
+                      <a 
+                        href={`https://god.gw.postman.com/run-collection?url=${encodeURIComponent('https://api.zintlr.com/api/docs/postman')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-bold text-[#FF6C37] px-3 py-1.5 rounded-lg border border-[#FF6C37]/20 bg-[#FF6C37]/10 hover:bg-[#FF6C37]/20 transition-colors flex items-center gap-2 shadow-sm"
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M12.0001 0.380859C5.58984 0.380859 0.380859 5.58984 0.380859 12.0001C0.380859 18.4102 5.58984 23.6192 12.0001 23.6192C18.4102 23.6192 23.6192 18.4102 23.6192 12.0001C23.6192 5.58984 18.4102 0.380859 12.0001 0.380859ZM12.0001 21.6192C6.69043 21.6192 2.38086 17.3096 2.38086 12.0001C2.38086 6.69043 6.69043 2.38086 12.0001 2.38086C17.3096 2.38086 21.6192 6.69043 21.6192 12.0001C21.6192 17.3096 17.3096 21.6192 12.0001 21.6192ZM14.9317 12.0303L9.67383 15.1152C9.17383 15.4092 8.5 15.0508 8.5 14.4443V8.27246C8.5 7.66602 9.17383 7.30762 9.67383 7.60156L14.9317 10.6865C15.4219 10.9746 15.4219 11.7412 14.9317 12.0303Z"/>
+                        </svg>
+                        Run in Postman
+                      </a>
+                    </div>
                   </div>
                   <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">{endpoint.description}</p>
                   
@@ -817,7 +898,7 @@ const enrichedData = await response.json();`} />
                     </div>
                     <h3 className="text-sm font-black text-white uppercase tracking-widest">Live Sandbox</h3>
                   </div>
-                  <div className="glass-inner rounded-[20px] shadow-2xl p-2 border border-white/10 ring-1 ring-black/10">
+                  <div className="dark glass-inner rounded-[20px] shadow-2xl p-2 border border-white/10 ring-1 ring-black/10">
                     <RequestBuilder 
                       key={`inline-${endpoint.id}`}
                       mode="full" 
@@ -828,6 +909,91 @@ const enrichedData = await response.json();`} />
                 </div>
               </section>
             ))}
+
+            {/* Starter Kits & Boilerplates Section */}
+            <section id="boilerplates" className="scroll-mt-32 space-y-12 mb-16 border-t border-white/10 pt-16">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-[#FF6C37]/10 rounded-xl border border-[#FF6C37]/20 shadow-inner">
+                    <Cloud className="w-5 h-5 text-[#FF6C37]" />
+                  </div>
+                  <h2 className="text-3xl font-extrabold text-white tracking-tight">Starter Kits & Boilerplates</h2>
+                </div>
+                <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
+                  Hit the ground running with our official integration starter kits. Each boilerplate comes pre-configured with authentication, error handling, rate-limiting logic, and webhook receivers.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                {/* Next.js Starter */}
+                <div className="glass-inner rounded-2xl p-6 border border-white/10 hover:border-teal/50 hover:bg-white/5 transition-all group flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg">
+                      <svg viewBox="0 0 128 128" className="w-6 h-6 text-black"><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64s28.7 64 64 64c11.2 0 21.7-2.9 30.8-7.9L48.4 55.3v36.6h-6.8V41.8h6.8l50.5 75.8C116.4 106.2 128 86.5 128 64c0-35.3-28.7-64-64-64zm22.1 84.6l-7.4-11.2v-31.5h6.8v39.3c.2 1.2.4 2.3.6 3.4z"/></svg>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-teal bg-teal/10 px-2 py-1 rounded-full border border-teal/20">React / Fullstack</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Next.js App Router</h3>
+                  <p className="text-sm text-white/50 mb-6 flex-1">
+                    A production-ready Next.js 14 template using App Router, TailwindCSS, and Server Actions for secure API key management.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="bg-ink p-3 rounded-lg border border-white/5 font-mono text-xs text-white/70 overflow-x-auto shadow-inner flex items-center justify-between group-hover:border-teal/30 transition-colors">
+                      <span className="truncate">npx create-zinbit-app@latest --template nextjs</span>
+                    </div>
+                    <a href="https://github.com/zinbit/zinbit-nextjs-starter" target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white font-medium text-sm transition-colors border border-white/10">
+                      View on GitHub <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Express.js Starter */}
+                <div className="glass-inner rounded-2xl p-6 border border-white/10 hover:border-green-500/50 hover:bg-white/5 transition-all group flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-full bg-[#339933]/10 flex items-center justify-center border border-[#339933]/20 shadow-lg">
+                      <Database className="w-5 h-5 text-[#339933]" />
+                    </div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#339933] bg-[#339933]/10 px-2 py-1 rounded-full border border-[#339933]/20">Node.js</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Express.js Backend</h3>
+                  <p className="text-sm text-white/50 mb-6 flex-1">
+                    A robust Node.js/Express template with built-in Redis caching, rate limiting, and Stripe billing synchronization.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="bg-ink p-3 rounded-lg border border-white/5 font-mono text-xs text-white/70 overflow-x-auto shadow-inner flex items-center justify-between group-hover:border-[#339933]/30 transition-colors">
+                      <span className="truncate">npx create-zinbit-app@latest --template express</span>
+                    </div>
+                    <a href="https://github.com/zinbit/zinbit-express-starter" target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white font-medium text-sm transition-colors border border-white/10">
+                      View on GitHub <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Django Starter */}
+                <div className="glass-inner rounded-2xl p-6 border border-white/10 hover:border-[#092E20]/50 hover:bg-white/5 transition-all group flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-full bg-[#092E20] flex items-center justify-center border border-white/10 shadow-lg">
+                      <svg viewBox="0 0 100 100" className="w-5 h-5 text-white"><path fill="currentColor" d="M37.3 75.3v-5c-2.3 2-5 3.3-8 3.9-3 .6-6.1.9-9.1.9-4.8 0-9-.8-12.7-2.4-3.7-1.6-6.8-3.9-9.3-7-2.5-3-4.3-6.6-5.5-10.7-1.2-4.1-1.7-8.6-1.7-13.6 0-5.1.6-9.7 1.8-13.8 1.2-4.1 3-7.7 5.6-10.8 2.5-3.1 5.7-5.5 9.5-7.1 3.8-1.6 8-2.4 12.8-2.4 3 0 6.1.3 9.1 1 3 .6 5.8 2 8.3 4v-4.9h11.9v72.5h-12.7zm-11.4-18.7c3.4 0 6.2-1.3 8.3-4s3.2-6.6 3.2-11.8c0-5-.9-8.8-2.8-11.4-1.9-2.5-4.4-3.8-7.8-3.8s-6 1.3-7.8 4c-1.8 2.7-2.7 6.6-2.7 11.9 0 5.1 1 8.9 2.9 11.5 2 2.4 4.3 3.6 6.7 3.6zM69.8 17h12.5v7.2H69.8V17zm0 15.3h12.5v54.7H69.8V32.3z"/></svg>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#44B78B] bg-[#44B78B]/10 px-2 py-1 rounded-full border border-[#44B78B]/20">Python</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">Django Enterprise</h3>
+                  <p className="text-sm text-white/50 mb-6 flex-1">
+                    A Django starter kit featuring Celery background tasks for bulk enrichment, database models for identity resolution, and Kafka integration.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="bg-ink p-3 rounded-lg border border-white/5 font-mono text-xs text-white/70 overflow-x-auto shadow-inner flex items-center justify-between group-hover:border-[#44B78B]/30 transition-colors">
+                      <span className="truncate">pip install zinbit-django-starter</span>
+                    </div>
+                    <a href="https://github.com/zinbit/zinbit-django-starter" target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white font-medium text-sm transition-colors border border-white/10">
+                      View on GitHub <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+              </div>
+            </section>
 
             {/* Changelog Section */}
             <section id="changelog" className="scroll-mt-32 space-y-12 mb-16 border-t border-white/10 pt-16">

@@ -1,11 +1,11 @@
 'use client';
 
 import { useStore } from '@/lib/store';
-import { User, Building2, HardDrive, Mail, Save, Fingerprint } from 'lucide-react';
+import { User, Building2, HardDrive, Mail, Save, Fingerprint, FlaskConical } from 'lucide-react';
 import { useState } from 'react';
 
 export default function ProfileSettingsPage() {
-  const { user, switchRole } = useStore();
+  const { user, switchRole, v2DarkLaunchEnabled, toggleV2DarkLaunch } = useStore();
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -93,6 +93,36 @@ export default function ProfileSettingsPage() {
               </div>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Dark Launch / Experimental Features */}
+      <div className="glass-inner rounded-2xl border border-teal/30 bg-teal/5 shadow-xl overflow-hidden p-8">
+        <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+          <FlaskConical className="w-5 h-5 text-teal" />
+          API Versioning & Experimental Features
+        </h2>
+        <p className="text-white/60 text-sm mb-6 max-w-2xl">
+          Opt-in to test upcoming API versions and experimental endpoints before they are officially released. Note: Experimental endpoints are only available in the Sandbox environment.
+        </p>
+
+        <div className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-black/20 max-w-2xl">
+          <div>
+            <h3 className="text-sm font-bold text-white">v2 Endpoints (Beta)</h3>
+            <p className="text-xs text-white/50 mt-1">Enable access to the v2 API sandbox endpoints.</p>
+          </div>
+          <button
+            onClick={() => toggleV2DarkLaunch(!v2DarkLaunchEnabled)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              v2DarkLaunchEnabled ? 'bg-teal' : 'bg-white/20'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                v2DarkLaunchEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </div>
       </div>
     </div>

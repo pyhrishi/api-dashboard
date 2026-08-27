@@ -34,6 +34,7 @@ export interface Endpoint {
   description: string; // 1-2 sentences
   method: HTTPMethod;
   path: string;
+  version?: 'v1' | 'v2';
   creditCost: number;
   isRecommendedForFirstCall: boolean;
   parameters: EndpointParameter[];
@@ -602,6 +603,35 @@ export const ENDPOINTS: Endpoint[] = [
         description: 'Get notified via webhook if a resolved identity changes jobs or companies.',
         category: 'webhooks',
         link: '/console/webhooks'
+      }
+    ]
+  },
+  {
+    id: 'v2-people-search',
+    name: 'People Search (v2 Beta)',
+    description: 'Next-generation people search with enhanced data coverage, faster response times, and new social links.',
+    method: 'GET',
+    path: '/v2/people',
+    version: 'v2',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'Email address to search for',
+        example: 'john.doe@acme.com',
+        placeholder: 'user@example.com',
+      }
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'v2-migration',
+        title: 'Migrating to v2 API',
+        description: 'Read the migration guide to update your integrations to our new v2 endpoints.',
+        category: 'sdks',
+        link: '/docs/v2-migration'
       }
     ]
   }

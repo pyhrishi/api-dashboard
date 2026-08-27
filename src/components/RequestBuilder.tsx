@@ -12,10 +12,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Endpoint, getEndpointById } from '@/data/endpoints';
+import { Endpoint, getEndpointById, ENDPOINTS } from '@/data/endpoints';
 import { validateAllParameters, hasValidationErrors } from '@/lib/validation';
 import { generateCodeSamples } from '@/lib/codeSampleGenerator';
 import { callSandboxAPI, isAPIError, formatResponseForDisplay } from '@/lib/sandboxAPI';
+import { useStore } from '@/lib/store';
 import { 
   ChevronDown, 
   Copy, 
@@ -60,6 +61,7 @@ export default function RequestBuilder({
   apiKey = 'sk_test_demo_key',
 }: RequestBuilderProps) {
   // State management
+  const { v2DarkLaunchEnabled } = useStore();
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | undefined>(
     preselectedEndpointId
   );
@@ -222,7 +224,7 @@ export default function RequestBuilder({
   // Render nothing if no endpoint selected and not in preview mode
   if (!endpoint && mode !== 'preview') {
     return (
-      <div className="p-6 text-center text-ink/60">
+      <div className="p-6 text-center text-ink/60 dark:text-white/60">
         <Code2 className="w-8 h-8 mx-auto mb-3 opacity-30" />
         <p>Select an endpoint to get started</p>
       </div>
@@ -236,13 +238,13 @@ export default function RequestBuilder({
       {/* Endpoint Selector */}
       {isEditable && (
         <div className="space-y-2">
-          <label className="block text-sm font-bold text-ink">API Endpoint *</label>
+          <label className="block text-sm font-bold text-ink dark:text-white">API Endpoint *</label>
           <div className="relative">
             <select
               value={selectedEndpointId || ''}
               onChange={handleEndpointChange}
               disabled={disableEditing}
-              className="w-full px-4 py-2.5 rounded-lg border border-ink/10 bg-white text-ink font-medium focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-all appearance-none cursor-pointer disabled:opacity-50"
+              className="w-full px-4 py-2.5 rounded-lg border border-ink/10 dark:border-white/10 bg-white dark:bg-white/5 text-ink dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-all appearance-none cursor-pointer disabled:opacity-50"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%231D1C39' d='M1 4l5 5 5-5'/%3E%3C/svg%3E")`,
                 backgroundRepeat: 'no-repeat',
@@ -251,7 +253,7 @@ export default function RequestBuilder({
               }}
             >
               <option value="">Choose an endpoint...</option>
-              {[getEndpointById('people-search'), getEndpointById('email-to-phone'), getEndpointById('phone-to-email'), getEndpointById('linkedin-to-profile'), getEndpointById('linkedin-to-contact'), getEndpointById('domain-to-cin'), getEndpointById('cin-to-company-data'), getEndpointById('domain-to-linkedin'), getEndpointById('contact-to-linkedin'), getEndpointById('reverse-enrichment'), getEndpointById('din-to-phone'), getEndpointById('people-ai-search')].map(ep => ep && (
+              {ENDPOINTS.filter(ep => ep.version !== 'v2' || v2DarkLaunchEnabled).map(ep => ep && (
                 <option key={ep.id} value={ep.id}>
                   {ep.name} ({ep.creditCost} credit{ep.creditCost !== 1 ? 's' : ''})
                 </option>
@@ -259,7 +261,7 @@ export default function RequestBuilder({
             </select>
           </div>
           {endpoint && (
-            <p className="text-xs text-ink/50">{endpoint.description}</p>
+            <p className="text-xs text-ink/50 dark:text-white/50">{endpoint.description}</p>
           )}
         </div>
       )}
@@ -267,11 +269,11 @@ export default function RequestBuilder({
       {/* Parameter Inputs */}
       {endpoint && isEditable && (
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-ink">Parameters</h3>
-          <div className="space-y-3 p-4 bg-white rounded-lg border border-ink/8">
+          <h3 className="text-sm font-bold text-ink dark:text-white">Parameters</h3>
+          <div className="space-y-3 p-4 bg-white dark:bg-transparent rounded-lg border border-ink/8 dark:border-white/10">
             {endpoint.parameters.map(param => (
               <div key={param.name}>
-                <label className="block text-xs font-bold text-ink mb-1.5">
+                <label className="block text-xs font-bold text-ink dark:text-white mb-1.5">
                   {param.name
                     .split('_')
                     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
@@ -285,10 +287,10 @@ export default function RequestBuilder({
                   placeholder={param.placeholder || param.example}
                   disabled={disableEditing}
                   className={cn(
-                    'w-full px-3 py-2 rounded-lg border text-sm font-medium focus:outline-none focus:ring-2 focus:border-transparent transition-all',
+                    'w-full px-3 py-2 rounded-lg border bg-white dark:bg-white/5 text-ink dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal transition-all',
                     validationErrors[param.name]
                       ? 'border-semantic-error/50 focus:ring-semantic-error/30'
-                      : 'border-ink/10 focus:ring-teal focus:border-transparent'
+                      : 'border-ink/10 dark:border-white/10 focus:ring-teal focus:border-transparent'
                   )}
                 />
                 {validationErrors[param.name] && (
@@ -306,9 +308,9 @@ export default function RequestBuilder({
       {/* Simulation Controls */}
       {endpoint && isEditable && (
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-ink">Simulation Settings</h3>
-          <div className="p-4 bg-white rounded-lg border border-ink/8">
-            <label className="block text-xs font-bold text-ink mb-1.5">
+          <h3 className="text-sm font-bold text-ink dark:text-white">Simulation Settings</h3>
+          <div className="p-4 bg-white dark:bg-transparent rounded-lg border border-ink/8 dark:border-white/10">
+            <label className="block text-xs font-bold text-ink dark:text-white mb-1.5">
               Simulate Response Status
             </label>
             <div className="relative">
@@ -316,7 +318,7 @@ export default function RequestBuilder({
                 value={simulateStatus}
                 onChange={e => setSimulateStatus(Number(e.target.value))}
                 disabled={disableEditing}
-                className="w-full px-3 py-2 rounded-lg border border-ink/10 bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-all appearance-none cursor-pointer disabled:opacity-50"
+                className="w-full px-3 py-2 rounded-lg border border-ink/10 dark:border-white/10 bg-white dark:bg-white/5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-all appearance-none cursor-pointer disabled:opacity-50"
                 style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%231D1C39' d='M1 4l5 5 5-5'/%3E%3C/svg%3E")`,
                   backgroundRepeat: 'no-repeat',
@@ -332,7 +334,7 @@ export default function RequestBuilder({
                 <option value={500}>500 Internal Server Error</option>
               </select>
             </div>
-            <p className="text-[10px] text-ink/50 mt-1.5">
+            <p className="text-[10px] text-ink/50 dark:text-white/50 mt-1.5">
               Use this to test how your integration handles different API errors.
             </p>
           </div>
@@ -342,10 +344,10 @@ export default function RequestBuilder({
       {/* Code Samples */}
       {endpoint && (
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-ink">Code Samples</h3>
-          <div className="border border-ink/8 rounded-lg overflow-hidden bg-white">
+          <h3 className="text-sm font-bold text-ink dark:text-white">Code Samples</h3>
+          <div className="border border-ink/8 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-transparent">
             {/* Tabs */}
-            <div className="flex border-b border-ink/8">
+            <div className="flex border-b border-ink/8 dark:border-white/10">
               {(['curl', 'python', 'nodejs', 'graphql'] as const).map(lang => (
                 <button
                   key={lang}
@@ -354,7 +356,7 @@ export default function RequestBuilder({
                     'flex-1 px-4 py-2 text-xs font-bold transition-colors relative',
                     activeCodeTab === lang
                       ? 'text-teal bg-teal/5'
-                      : 'text-ink/60 hover:text-ink/80'
+                      : 'text-ink/60 dark:text-white/60 hover:text-ink/80 dark:text-white/80'
                   )}
                 >
                   {lang === 'curl' && 'cURL'}
@@ -398,15 +400,15 @@ export default function RequestBuilder({
               <Coins className="w-4 h-4 text-teal" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-ink flex items-center gap-2">
+              <h4 className="text-sm font-bold text-ink dark:text-white flex items-center gap-2">
                 Estimated Cost
                 <span className="text-[10px] uppercase tracking-wider font-black bg-teal/10 text-teal px-1.5 py-0.5 rounded">PRE-CALL</span>
               </h4>
-              <p className="text-xs text-ink/60 mt-0.5">Will be deducted from your credit balance</p>
+              <p className="text-xs text-ink/60 dark:text-white/60 mt-0.5">Will be deducted from your credit balance</p>
             </div>
           </div>
           <div className="text-right flex items-center sm:block">
-            <div className="text-sm font-bold text-ink">
+            <div className="text-sm font-bold text-ink dark:text-white">
               {endpoint.creditCost} {endpoint.creditCost === 1 ? 'Credit' : 'Credits'}
             </div>
           </div>
@@ -418,7 +420,7 @@ export default function RequestBuilder({
         <button
           onClick={handleExecute}
           disabled={!isFormValid || loading}
-          className="w-full flex items-center justify-center gap-2 bg-teal text-ink px-6 py-3 rounded-lg font-bold hover:bg-teal-ice transition-all shadow-[0_4px_14px_rgba(70,189,198,0.3)] disabled:opacity-50 disabled:cursor-wait"
+          className="w-full flex items-center justify-center gap-2 bg-teal text-ink dark:text-white px-6 py-3 rounded-lg font-bold hover:bg-teal-ice transition-all shadow-[0_4px_14px_rgba(70,189,198,0.3)] disabled:opacity-50 disabled:cursor-wait"
         >
           {loading ? (
             <>
@@ -438,8 +440,8 @@ export default function RequestBuilder({
       {(response || responseError) && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-ink">Response</h3>
-            <span className="text-xs font-mono text-ink/60">
+            <h3 className="text-sm font-bold text-ink dark:text-white">Response</h3>
+            <span className="text-xs font-mono text-ink/60 dark:text-white/60">
               {responseTime}ms
             </span>
           </div>
@@ -473,7 +475,7 @@ export default function RequestBuilder({
           ) : (
             <div className="space-y-3">
               {Object.keys(responseHeaders).length > 0 && (
-                <div className="p-3 rounded-lg border border-ink/8 bg-ink text-white/80">
+                <div className="p-3 rounded-lg border border-ink/8 dark:border-white/10 bg-ink text-white/80">
                   <h4 className="text-[10px] font-bold text-teal mb-2 uppercase tracking-wider">Headers</h4>
                   <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[11px] font-mono">
                     {Object.entries(responseHeaders).map(([key, value]) => (
@@ -485,7 +487,7 @@ export default function RequestBuilder({
                   </div>
                 </div>
               )}
-              <div className="p-4 rounded-lg border border-ink/8 bg-ink text-white">
+              <div className="p-4 rounded-lg border border-ink/8 dark:border-white/10 bg-ink text-white">
                 <pre className="text-xs font-mono overflow-x-auto">
                   <code>{formatResponseForDisplay(response)}</code>
                 </pre>
