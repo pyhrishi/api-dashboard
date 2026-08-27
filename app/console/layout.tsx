@@ -201,7 +201,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           </div>
           
           {/* Tenant Switcher / Client Logo */}
-          <div className="px-4 py-4 border-b border-white/10 bg-[#09090b]/5 relative z-10" ref={dropdownRef}>
+          <div className="px-4 py-4 border-b border-white/10 bg-[#09090b]/5 relative z-50" ref={dropdownRef}>
             <button 
               onClick={() => setIsTenantDropdownOpen(!isTenantDropdownOpen)}
               className="w-full flex items-center rounded-xl transition-all duration-300 hover:bg-white/10 p-2"

@@ -1,20 +1,41 @@
 'use client';
 
+import { useState } from 'react';
 import { HealthCard } from '@/components/HealthCard';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { FirstCallWizard } from '@/src/components/FirstCallWizard';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
 import { Omnibar } from '@/components/Omnibar';
 import { QuickActions } from '@/components/QuickActions';
+import { EndpointFilter } from '@/components/EndpointFilter';
 import { useStore } from '@/lib/store';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const mockChartData = Array.from({ length: 30 }).map((_, i) => ({
-  date: `Aug ${i + 1}`,
-  calls: Math.floor(Math.random() * 30000) + 70000, 
-  latency: Math.floor(Math.random() * 30) + 90,
-}));
+export const ENDPOINTS = [
+  { id: 'all', label: 'All Endpoints', color: '#46BDC6' },
+  { id: '/v1/people/search', label: 'POST /v1/people/search', color: '#46BDC6' },
+  { id: '/v1/company/enrich', label: 'GET /v1/company/enrich', color: '#207C82' },
+  { id: '/v1/webhooks', label: 'POST /v1/webhooks', color: '#5865F2' },
+  { id: '/v1/billing/usage', label: 'GET /v1/billing/usage', color: '#C47B0A' },
+];
+
+const mockChartData = Array.from({ length: 30 }).map((_, i) => {
+  const peopleSearch = Math.floor(Math.random() * 15000) + 30000;
+  const companyEnrich = Math.floor(Math.random() * 10000) + 25000;
+  const webhooks = Math.floor(Math.random() * 4000) + 10000;
+  const billing = Math.floor(Math.random() * 1000) + 5000;
+  
+  return {
+    date: `Aug ${i + 1}`,
+    '/v1/people/search': peopleSearch,
+    '/v1/company/enrich': companyEnrich,
+    '/v1/webhooks': webhooks,
+    '/v1/billing/usage': billing,
+    calls: peopleSearch + companyEnrich + webhooks + billing,
+    latency: Math.floor(Math.random() * 30) + 90,
+  };
+});
 
 export default function OverviewDashboard() {
   const creditBurnPhone = 1250;
@@ -23,6 +44,17 @@ export default function OverviewDashboard() {
   const phonePercent = Math.round((creditBurnPhone / totalBurn) * 100) || 0;
   const emailPercent = Math.round((creditBurnEmail / totalBurn) * 100) || 0;
   const { user, isFirstCallMade, resetPrototypeState } = useStore();
+  const [selectedEndpoint, setSelectedEndpoint] = useState('all');
+
+  const filteredChartData = mockChartData.map(d => {
+    if (selectedEndpoint === 'all') return d;
+    return {
+      date: d.date,
+      [selectedEndpoint]: d[selectedEndpoint as keyof typeof d],
+      calls: d[selectedEndpoint as keyof typeof d],
+      latency: d.latency + (Math.random() * 10 - 5), // Slight variation for specific endpoints
+    };
+  });
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12 pt-4 relative">
@@ -81,11 +113,23 @@ export default function OverviewDashboard() {
 
             {/* Dual-axis Recharts Area Chart */}
             <div className="glass-inner p-8 rounded-2xl hover:border-white/20 transition-all hover:shadow-2xl mb-8">
-              <h3 className="text-lg font-bold text-white mb-8">Traffic & Latency</h3>
-              <div className="h-[350px] w-full">
+              <div className="flex items-center justify-between mb-8 z-20 relative">
+                <h3 className="text-lg font-bold text-white">Traffic & Latency</h3>
+                <EndpointFilter 
+                  selected={selectedEndpoint} 
+                  onChange={(id) => setSelectedEndpoint(id)} 
+                />
+              </div>
+              <div className="h-[350px] w-full z-10 relative">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={mockChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <AreaChart data={filteredChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
+                      {ENDPOINTS.slice(1).map(ep => (
+                        <linearGradient key={ep.id} id={`color_${ep.id}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={ep.color} stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor={ep.color} stopOpacity={0}/>
+                        </linearGradient>
+                      ))}
                       <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#46BDC6" stopOpacity={0.4}/>
                         <stop offset="95%" stopColor="#46BDC6" stopOpacity={0}/>
@@ -123,7 +167,13 @@ export default function OverviewDashboard() {
                       itemStyle={{ color: '#fff', fontWeight: 600 }}
                     />
                     <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                    <Area yAxisId="left" type="monotone" dataKey="calls" name="Total Calls" stroke="#46BDC6" strokeWidth={3} fill="url(#colorCalls)" />
+                    {selectedEndpoint === 'all' ? (
+                      ENDPOINTS.slice(1).map(ep => (
+                        <Area key={ep.id} stackId="1" yAxisId="left" type="monotone" dataKey={ep.id} name={ep.label} stroke={ep.color} strokeWidth={2} fill={`url(#color_${ep.id})`} />
+                      ))
+                    ) : (
+                      <Area yAxisId="left" type="monotone" dataKey={selectedEndpoint} name={ENDPOINTS.find(e => e.id === selectedEndpoint)?.label} stroke="#46BDC6" strokeWidth={3} fill="url(#colorCalls)" />
+                    )}
                     <Area yAxisId="right" type="monotone" dataKey="latency" name="Latency (ms)" stroke="#C47B0A" strokeWidth={3} fill="url(#colorLatency)" />
                   </AreaChart>
                 </ResponsiveContainer>

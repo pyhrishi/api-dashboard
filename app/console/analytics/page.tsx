@@ -5,11 +5,14 @@ import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 import { Activity, Clock, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, BarChart, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, BarChart, Legend, LineChart } from 'recharts';
+import { ENDPOINTS } from '../page';
+import { EndpointFilter } from '@/components/EndpointFilter';
 
 export default function AnalyticsPage() {
   const { environment } = useStore();
   const [mounted, setMounted] = useState(false);
+  const [selectedEndpoint, setSelectedEndpoint] = useState('all');
   
   useEffect(() => {
     setMounted(true);
@@ -31,18 +34,39 @@ export default function AnalyticsPage() {
       const baseLatency = environment === 'live' ? 42 : 180;
       const latVariance = environment === 'live' ? 12 : 150;
 
+      const vPeople = Math.max(0, Math.floor((baseVolume * 0.4) + (Math.random() - 0.5) * (volVariance * 0.4)));
+      const vCompany = Math.max(0, Math.floor((baseVolume * 0.35) + (Math.random() - 0.5) * (volVariance * 0.35)));
+      const vWebhooks = Math.max(0, Math.floor((baseVolume * 0.2) + (Math.random() - 0.5) * (volVariance * 0.2)));
+      const vBilling = Math.max(0, Math.floor((baseVolume * 0.05) + (Math.random() - 0.5) * (volVariance * 0.05)));
+
       data.push({
         date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        volume: Math.max(0, Math.floor(baseVolume + (Math.random() - 0.5) * volVariance)),
+        '/v1/people/search': vPeople,
+        '/v1/company/enrich': vCompany,
+        '/v1/webhooks': vWebhooks,
+        '/v1/billing/usage': vBilling,
+        volume: vPeople + vCompany + vWebhooks + vBilling,
         latency: Math.max(15, Math.floor(baseLatency + (Math.random() - 0.5) * latVariance)),
       });
     }
     return data;
   }, [environment]);
 
+  const filteredData = useMemo(() => {
+    return mockData.map(d => {
+      if (selectedEndpoint === 'all') return d;
+      return {
+        date: d.date,
+        [selectedEndpoint]: d[selectedEndpoint as keyof typeof d],
+        volume: d[selectedEndpoint as keyof typeof d],
+        latency: d.latency + (Math.random() * 10 - 5),
+      };
+    });
+  }, [mockData, selectedEndpoint]);
+
   const kpis = useMemo(() => {
-    const totalVolume = mockData.reduce((acc, curr) => acc + curr.volume, 0);
-    const avgLatency = Math.floor(mockData.reduce((acc, curr) => acc + curr.latency, 0) / mockData.length);
+    const totalVolume = filteredData.reduce((acc, curr) => acc + (curr.volume as number), 0);
+    const avgLatency = Math.floor(filteredData.reduce((acc, curr) => acc + curr.latency, 0) / filteredData.length);
     
     return {
       volume: totalVolume,
@@ -55,12 +79,36 @@ export default function AnalyticsPage() {
   const endpointData = useMemo(() => {
     const base = environment === 'live' ? 10000 : 100;
     return [
-      { path: 'POST /v1/people/search', volume: Math.floor(base * 4.2), latency: environment === 'live' ? 45 : 120, success: environment === 'live' ? 99.9 : 91.2 },
-      { path: 'GET /v1/company/enrich', volume: Math.floor(base * 3.8), latency: environment === 'live' ? 32 : 95, success: environment === 'live' ? 99.99 : 94.5 },
-      { path: 'POST /v1/webhooks', volume: Math.floor(base * 1.5), latency: environment === 'live' ? 12 : 40, success: environment === 'live' ? 99.99 : 98.1 },
-      { path: 'GET /v1/billing/usage', volume: Math.floor(base * 0.2), latency: environment === 'live' ? 85 : 210, success: environment === 'live' ? 100 : 99.0 },
+      { 
+        path: 'POST /v1/people/search', 
+        volume: Math.floor(base * 4.2), 
+        latency: environment === 'live' ? 45 : 120, 
+        success: environment === 'live' ? 99.9 : 91.2,
+        trend: mockData.map(d => ({ val: d['/v1/people/search'] }))
+      },
+      { 
+        path: 'GET /v1/company/enrich', 
+        volume: Math.floor(base * 3.8), 
+        latency: environment === 'live' ? 32 : 95, 
+        success: environment === 'live' ? 99.99 : 94.5,
+        trend: mockData.map(d => ({ val: d['/v1/company/enrich'] }))
+      },
+      { 
+        path: 'POST /v1/webhooks', 
+        volume: Math.floor(base * 1.5), 
+        latency: environment === 'live' ? 12 : 40, 
+        success: environment === 'live' ? 99.99 : 98.1,
+        trend: mockData.map(d => ({ val: d['/v1/webhooks'] }))
+      },
+      { 
+        path: 'GET /v1/billing/usage', 
+        volume: Math.floor(base * 0.2), 
+        latency: environment === 'live' ? 85 : 210, 
+        success: environment === 'live' ? 100 : 99.0,
+        trend: mockData.map(d => ({ val: d['/v1/billing/usage'] }))
+      },
     ];
-  }, [environment]);
+  }, [environment, mockData]);
 
   const errorData = useMemo(() => {
     const base = environment === 'live' ? 10 : 50;
@@ -102,14 +150,24 @@ export default function AnalyticsPage() {
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
+        className="flex items-start justify-between"
       >
-        <h1 className="text-2xl font-display font-bold text-white flex items-center gap-3">
-          Usage & Analytics
-          <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border", environment === 'live' ? "bg-semantic-success/10 text-semantic-success border-semantic-success/20" : "bg-semantic-warning/10 text-semantic-warning border-semantic-warning/20")}>
-            {environment} Data
-          </span>
-        </h1>
-        <p className="text-white/60 mt-1">Global health metrics, traffic volume, and endpoint performance over the last 30 days.</p>
+        <div>
+          <h1 className="text-2xl font-display font-bold text-white flex items-center gap-3">
+            Usage & Analytics
+            <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border", environment === 'live' ? "bg-semantic-success/10 text-semantic-success border-semantic-success/20" : "bg-semantic-warning/10 text-semantic-warning border-semantic-warning/20")}>
+              {environment} Data
+            </span>
+          </h1>
+          <p className="text-white/60 mt-1">Global health metrics, traffic volume, and endpoint performance over the last 30 days.</p>
+        </div>
+        
+        <div className="z-50 relative">
+          <EndpointFilter 
+            selected={selectedEndpoint} 
+            onChange={(id) => setSelectedEndpoint(id)} 
+          />
+        </div>
       </motion.div>
 
       {/* KPIs */}
@@ -173,8 +231,14 @@ export default function AnalyticsPage() {
         
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={mockData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <ComposedChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
+                {ENDPOINTS.slice(1).map(ep => (
+                  <linearGradient key={ep.id} id={`color_${ep.id}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={ep.color} stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor={ep.color} stopOpacity={0}/>
+                  </linearGradient>
+                ))}
                 <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#46BDC6" stopOpacity={0.3}/>
                   <stop offset="95%" stopColor="#46BDC6" stopOpacity={0}/>
@@ -209,16 +273,36 @@ export default function AnalyticsPage() {
                 tickMargin={12}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-              <Area 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="volume" 
-                stroke="#46BDC6" 
-                strokeWidth={2}
-                fillOpacity={1} 
-                fill="url(#colorVolume)" 
-                animationDuration={1500}
-              />
+              <Legend wrapperStyle={{ paddingTop: '20px' }} />
+              {selectedEndpoint === 'all' ? (
+                ENDPOINTS.slice(1).map(ep => (
+                  <Area 
+                    key={ep.id}
+                    stackId="1"
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey={ep.id} 
+                    name={ep.label}
+                    stroke={ep.color} 
+                    strokeWidth={2}
+                    fillOpacity={1} 
+                    fill={`url(#color_${ep.id})`} 
+                    animationDuration={1500}
+                  />
+                ))
+              ) : (
+                <Area 
+                  yAxisId="left"
+                  type="monotone" 
+                  dataKey={selectedEndpoint} 
+                  name={ENDPOINTS.find(e => e.id === selectedEndpoint)?.label}
+                  stroke="#46BDC6" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorVolume)" 
+                  animationDuration={1500}
+                />
+              )}
               <Line 
                 yAxisId="right"
                 type="monotone" 
@@ -256,26 +340,38 @@ export default function AnalyticsPage() {
               <tr className="border-b border-white/5 bg-[#09090b]/5 text-white/40 font-mono text-xs uppercase tracking-widest">
                 <th className="px-6 py-4 font-semibold">Endpoint</th>
                 <th className="px-6 py-4 font-semibold text-right">Volume</th>
+                <th className="px-6 py-4 font-semibold w-32">Trend (30d)</th>
                 <th className="px-6 py-4 font-semibold text-right">Avg Latency</th>
                 <th className="px-6 py-4 font-semibold text-right">Success Rate</th>
                 <th className="px-6 py-4 font-semibold">Health</th>
               </tr>
             </thead>
             <tbody>
-              {endpointData.map((ep, idx) => (
-                <tr key={ep.path} className="border-b border-white/5 last:border-0 hover:bg-[#09090b]/5 transition-colors">
-                  <td className="px-6 py-4 font-mono font-medium text-white flex items-center gap-3">
-                    <span className={cn("px-2 py-1 rounded text-[10px] font-bold border", ep.path.startsWith('GET') ? 'bg-teal/10 text-teal border-teal/20' : 'bg-[#5865F2]/10 text-[#5865F2] border-[#5865F2]/20')}>
-                      {ep.path.split(' ')[0]}
-                    </span>
-                    {ep.path.split(' ')[1]}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-white/70">
-                    {ep.volume.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-white/70">
-                    {ep.latency}ms
-                  </td>
+              {endpointData.map((ep, idx) => {
+                const epColor = ep.path.startsWith('GET') ? '#46BDC6' : '#5865F2';
+                return (
+                  <tr key={ep.path} className="border-b border-white/5 last:border-0 hover:bg-[#09090b]/5 transition-colors">
+                    <td className="px-6 py-4 font-mono font-medium text-white flex items-center gap-3">
+                      <span className={cn("px-2 py-1 rounded text-[10px] font-bold border", ep.path.startsWith('GET') ? 'bg-teal/10 text-teal border-teal/20' : 'bg-[#5865F2]/10 text-[#5865F2] border-[#5865F2]/20')}>
+                        {ep.path.split(' ')[0]}
+                      </span>
+                      {ep.path.split(' ')[1]}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-white/70">
+                      {ep.volume.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-2 w-32">
+                      <div className="h-8 w-full opacity-70">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={ep.trend}>
+                            <Line type="monotone" dataKey="val" stroke={epColor} strokeWidth={2} dot={false} isAnimationActive={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-white/70">
+                      {ep.latency}ms
+                    </td>
                   <td className="px-6 py-4 text-right">
                     <span className={cn("font-mono", ep.success >= 99 ? 'text-semantic-success' : 'text-semantic-warning')}>
                       {ep.success}%
@@ -288,7 +384,7 @@ export default function AnalyticsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
