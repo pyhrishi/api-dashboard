@@ -68,7 +68,7 @@ export function FirstCallWizard() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", delay: 0.2 }}
-                  className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-teal/20 to-teal/5 border border-teal/20 mb-5 shadow-inner"
+                  className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-teal/20 to-teal/5 border border-teal/20 mb-8 shadow-inner"
                 >
                   <Code2 className="w-7 h-7 text-teal" />
                 </motion.div>
