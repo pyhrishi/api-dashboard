@@ -5,9 +5,9 @@ import { useStore, MockKey } from '@/lib/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Key, Plus, Copy, Trash2, Check, ShieldAlert, Loader2, RotateCw, Activity, CalendarClock, Globe, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CodeBlock } from '@/components/CodeBlock';
 import RoleGuard from '@/components/RoleGuard';
 import Link from 'next/link';
+import { Portal } from '@/components/Portal';
 
 const AVAILABLE_SCOPES = [
   { id: 'people:read', label: 'People Search', desc: 'Read-only access to B2B profiles' },
@@ -316,272 +316,276 @@ export default function ApiKeysPage() {
       </div>
 
       {/* Advanced Create Modal */}
-      <AnimatePresence>
-        {isCreateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-ink/80 backdrop-blur-sm"
-              onClick={() => !isCreating && closeCreateModal()}
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-2xl glass bg-ink rounded-2xl shadow-2xl overflow-hidden border-white/10"
-            >
-              {generatedKey ? (
-                <div className="p-8">
-                  <div className="text-center mb-6">
-                    <div className="w-12 h-12 bg-teal/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-teal/20">
-                      <Key className="w-6 h-6 text-teal" />
+      <Portal>
+        <AnimatePresence>
+          {isCreateModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-ink/80 backdrop-blur-sm"
+                onClick={() => !isCreating && closeCreateModal()}
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-2xl glass bg-ink rounded-2xl shadow-2xl overflow-hidden border-white/10"
+              >
+                {generatedKey ? (
+                  <div className="p-8">
+                    <div className="text-center mb-6">
+                      <div className="w-12 h-12 bg-teal/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-teal/20">
+                        <Key className="w-6 h-6 text-teal" />
+                      </div>
+                      <h3 className="font-display font-bold text-white text-2xl">Key Generated Successfully</h3>
                     </div>
-                    <h3 className="font-display font-bold text-white text-2xl">Key Generated Successfully</h3>
-                  </div>
 
-                  <div className="mb-6 p-4 rounded-xl border border-semantic-warning/20 bg-semantic-warning/5">
-                    <div className="flex items-start gap-3">
-                      <ShieldAlert className="w-5 h-5 text-semantic-warning flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="font-bold text-semantic-warning text-sm">Save your secret key</h4>
-                        <p className="text-xs text-semantic-warning/80 mt-1 leading-relaxed">
-                          Please copy this secret key and store it securely. For your protection, you will not be able to view it again.
-                        </p>
+                    <div className="mb-6 p-4 rounded-xl border border-semantic-warning/20 bg-semantic-warning/5">
+                      <div className="flex items-start gap-3">
+                        <ShieldAlert className="w-5 h-5 text-semantic-warning flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-bold text-semantic-warning text-sm">Save your secret key</h4>
+                          <p className="text-xs text-semantic-warning/80 mt-1 leading-relaxed">
+                            Please copy this secret key and store it securely. For your protection, you will not be able to view it again.
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="mb-8">
-                    <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Secret Key</label>
-                    <div className="relative">
-                      <pre className="w-full bg-[#09090b] border border-white/10 rounded-xl p-4 font-mono text-sm text-white/90 overflow-x-auto shadow-inner">
-                        {generatedKey.key}
-                      </pre>
-                      <button
-                        onClick={() => copyToClipboard('generated_key', generatedKey.key)}
-                        className="absolute right-2 top-2 p-2 rounded-lg bg-[#09090b]/5 hover:bg-[#09090b]/10 transition-colors text-white hover:text-teal shadow-[0_0_15px_rgba(255,255,255,0.02)] border border-white/10 backdrop-blur-sm"
-                        title="Copy to clipboard"
-                      >
-                        {copiedId === 'generated_key' ? <Check className="w-4 h-4 text-teal" /> : <Copy className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mb-6">
-                    <label className="flex items-center gap-3 cursor-pointer p-4 rounded-xl border border-white/10 bg-[#09090b]/5 hover:bg-[#09090b]/10 transition-colors">
-                      <input 
-                        type="checkbox"
-                        checked={hasSavedKey}
-                        onChange={(e) => setHasSavedKey(e.target.checked)}
-                        className="w-5 h-5 rounded bg-black/50 border-white/20 text-teal focus:ring-teal focus:ring-offset-ink"
-                      />
-                      <span className="text-sm font-bold text-white">I have securely copied this secret key. I understand it will never be shown again.</span>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={closeCreateModal}
-                      disabled={!hasSavedKey}
-                      className="flex-1 py-3.5 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
-                    >
-                      Done
-                    </button>
-                    <Link
-                      href={hasSavedKey ? "/console/explorer" : "#"}
-                      onClick={(e) => {
-                        if (!hasSavedKey) e.preventDefault();
-                      }}
-                      className={`flex-1 py-3.5 flex items-center justify-center gap-2 rounded-xl bg-teal text-ink font-bold hover:bg-teal-ice transition-colors shadow-[0_0_20px_rgba(70,189,198,0.3)] hover:shadow-[0_0_30px_rgba(70,189,198,0.5)] ${!hasSavedKey ? 'opacity-50 cursor-not-allowed shadow-none hover:shadow-none' : ''}`}
-                    >
-                      Make First Call <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-[#09090b]/5">
-                    <h3 className="font-bold text-white text-lg">Create New Key</h3>
-                  </div>
-                  <form onSubmit={handleCreate} className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                      
-                      {/* Left Column: Basic Info */}
-                      <div className="space-y-6">
-                        <div>
-                          <label className="block text-sm font-bold text-white mb-2">Key Name</label>
-                          <input 
-                            type="text"
-                            required
-                            autoFocus
-                            disabled={isCreating}
-                            placeholder="e.g. Prod Internal Microservice"
-                            className="w-full px-4 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-shadow text-white font-medium bg-[#09090b]/5 disabled:opacity-50"
-                            value={newKeyName}
-                            onChange={(e) => setNewKeyName(e.target.value)}
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-bold text-white mb-2">Expiration</label>
-                          <select
-                            disabled={isCreating}
-                            value={expiration}
-                            onChange={(e) => setExpiration(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-shadow text-white font-medium bg-[#0f111a] disabled:opacity-50 appearance-none"
-                          >
-                            <option value="never">Never expire</option>
-                            <option value="30">30 days</option>
-                            <option value="60">60 days</option>
-                            <option value="90">90 days</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="flex items-center gap-2 text-sm font-bold text-white mb-2">
-                            <Globe className="w-4 h-4 text-white/40" />
-                            IP Allowlist (Optional)
-                          </label>
-                          <textarea 
-                            disabled={isCreating}
-                            placeholder="e.g. 192.168.1.1, 10.0.0.0/24"
-                            className="w-full px-4 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-shadow text-white font-medium bg-[#09090b]/5 disabled:opacity-50 h-24 resize-none font-mono text-xs"
-                            value={allowedIps}
-                            onChange={(e) => setAllowedIps(e.target.value)}
-                          />
-                          <p className="mt-2 text-[10px] text-white/40 uppercase tracking-widest font-semibold">Comma separated IP addresses</p>
-                        </div>
-                      </div>
-
-                      {/* Right Column: Scopes */}
-                      <div>
-                        <label className="block text-sm font-bold text-white mb-3">Permissions (Scopes)</label>
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                          {AVAILABLE_SCOPES.map(scope => (
-                            <div 
-                              key={scope.id}
-                              onClick={() => !isCreating && toggleScope(scope.id)}
-                              className={cn(
-                                "p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3",
-                                selectedScopes.includes(scope.id) 
-                                  ? "bg-teal/10 border-teal/30" 
-                                  : "bg-[#09090b]/5 border-white/10 hover:border-white/20 opacity-60 hover:opacity-100"
-                              )}
-                            >
-                              <div className={cn("w-4 h-4 mt-0.5 rounded flex items-center justify-center flex-shrink-0 border", selectedScopes.includes(scope.id) ? "bg-teal border-teal text-white" : "bg-transparent border-white/20")}>
-                                {selectedScopes.includes(scope.id) && <Check className="w-3 h-3" />}
-                              </div>
-                              <div>
-                                <div className={cn("text-sm font-bold", selectedScopes.includes(scope.id) ? "text-teal" : "text-white")}>{scope.label}</div>
-                                <div className="text-xs text-white/50 mt-0.5">{scope.desc}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        {selectedScopes.length === 0 && (
-                          <p className="text-xs text-semantic-error mt-3 font-semibold">Please select at least one scope.</p>
-                        )}
+                    
+                    <div className="mb-8">
+                      <label className="block text-xs font-bold text-white/40 uppercase tracking-widest mb-2">Secret Key</label>
+                      <div className="relative">
+                        <pre className="w-full bg-[#09090b] border border-white/10 rounded-xl p-4 font-mono text-sm text-white/90 overflow-x-auto shadow-inner">
+                          {generatedKey.key}
+                        </pre>
+                        <button
+                          onClick={() => copyToClipboard('generated_key', generatedKey.key)}
+                          className="absolute right-2 top-2 p-2 rounded-lg bg-[#09090b]/5 hover:bg-[#09090b]/10 transition-colors text-white hover:text-teal shadow-[0_0_15px_rgba(255,255,255,0.02)] border border-white/10 backdrop-blur-sm"
+                          title="Copy to clipboard"
+                        >
+                          {copiedId === 'generated_key' ? <Check className="w-4 h-4 text-teal" /> : <Copy className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                    <div className="mb-6">
+                      <label className="flex items-center gap-3 cursor-pointer p-4 rounded-xl border border-white/10 bg-[#09090b]/5 hover:bg-[#09090b]/10 transition-colors">
+                        <input 
+                          type="checkbox"
+                          checked={hasSavedKey}
+                          onChange={(e) => setHasSavedKey(e.target.checked)}
+                          className="w-5 h-5 rounded bg-black/50 border-white/20 text-teal focus:ring-teal focus:ring-offset-ink"
+                        />
+                        <span className="text-sm font-bold text-white">I have securely copied this secret key. I understand it will never be shown again.</span>
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-4">
                       <button 
-                        type="button"
                         onClick={closeCreateModal}
-                        disabled={isCreating}
-                        className="px-5 py-2.5 rounded-lg text-white font-bold hover:bg-[#09090b]/10 transition-colors disabled:opacity-50"
+                        disabled={!hasSavedKey}
+                        className="flex-1 py-3.5 rounded-xl bg-white/5 text-white font-bold hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
                       >
-                        Cancel
+                        Done
                       </button>
-                      <button 
-                        type="submit"
-                        disabled={isCreating || selectedScopes.length === 0 || !newKeyName.trim()}
-                        className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-teal text-ink font-bold hover:bg-teal-ice transition-colors shadow-lg shadow-teal/20 disabled:opacity-50 disabled:cursor-wait"
+                      <Link
+                        href={hasSavedKey ? "/console/explorer" : "#"}
+                        onClick={(e) => {
+                          if (!hasSavedKey) e.preventDefault();
+                        }}
+                        className={`flex-1 py-3.5 flex items-center justify-center gap-2 rounded-xl bg-teal text-ink font-bold hover:bg-teal-ice transition-colors shadow-[0_0_20px_rgba(70,189,198,0.3)] hover:shadow-[0_0_30px_rgba(70,189,198,0.5)] ${!hasSavedKey ? 'opacity-50 cursor-not-allowed shadow-none hover:shadow-none' : ''}`}
                       >
-                        {isCreating ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" /> Creating...
-                          </>
-                        ) : (
-                          'Generate Key'
-                        )}
-                      </button>
+                        Make First Call <ArrowRight className="w-4 h-4" />
+                      </Link>
                     </div>
-                  </form>
-                </>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                  </div>
+                ) : (
+                  <>
+                    <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-[#09090b]/5">
+                      <h3 className="font-bold text-white text-lg">Create New Key</h3>
+                    </div>
+                    <form onSubmit={handleCreate} className="p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                        
+                        {/* Left Column: Basic Info */}
+                        <div className="space-y-6">
+                          <div>
+                            <label className="block text-sm font-bold text-white mb-2">Key Name</label>
+                            <input 
+                              type="text"
+                              required
+                              autoFocus
+                              disabled={isCreating}
+                              placeholder="e.g. Prod Internal Microservice"
+                              className="w-full px-4 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-shadow text-white font-medium bg-[#09090b]/5 disabled:opacity-50"
+                              value={newKeyName}
+                              onChange={(e) => setNewKeyName(e.target.value)}
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-bold text-white mb-2">Expiration</label>
+                            <select
+                              disabled={isCreating}
+                              value={expiration}
+                              onChange={(e) => setExpiration(e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-shadow text-white font-medium bg-[#0f111a] disabled:opacity-50 appearance-none"
+                            >
+                              <option value="never">Never expire</option>
+                              <option value="30">30 days</option>
+                              <option value="60">60 days</option>
+                              <option value="90">90 days</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="flex items-center gap-2 text-sm font-bold text-white mb-2">
+                              <Globe className="w-4 h-4 text-white/40" />
+                              IP Allowlist (Optional)
+                            </label>
+                            <textarea 
+                              disabled={isCreating}
+                              placeholder="e.g. 192.168.1.1, 10.0.0.0/24"
+                              className="w-full px-4 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-teal focus:border-transparent transition-shadow text-white font-medium bg-[#09090b]/5 disabled:opacity-50 h-24 resize-none font-mono text-xs"
+                              value={allowedIps}
+                              onChange={(e) => setAllowedIps(e.target.value)}
+                            />
+                            <p className="mt-2 text-[10px] text-white/40 uppercase tracking-widest font-semibold">Comma separated IP addresses</p>
+                          </div>
+                        </div>
+
+                        {/* Right Column: Scopes */}
+                        <div>
+                          <label className="block text-sm font-bold text-white mb-3">Permissions (Scopes)</label>
+                          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                            {AVAILABLE_SCOPES.map(scope => (
+                              <div 
+                                key={scope.id}
+                                onClick={() => !isCreating && toggleScope(scope.id)}
+                                className={cn(
+                                  "p-3 rounded-xl border cursor-pointer transition-all flex items-start gap-3",
+                                  selectedScopes.includes(scope.id) 
+                                    ? "bg-teal/10 border-teal/30" 
+                                    : "bg-[#09090b]/5 border-white/10 hover:border-white/20 opacity-60 hover:opacity-100"
+                                )}
+                              >
+                                <div className={cn("w-4 h-4 mt-0.5 rounded flex items-center justify-center flex-shrink-0 border", selectedScopes.includes(scope.id) ? "bg-teal border-teal text-white" : "bg-transparent border-white/20")}>
+                                  {selectedScopes.includes(scope.id) && <Check className="w-3 h-3" />}
+                                </div>
+                                <div>
+                                  <div className={cn("text-sm font-bold", selectedScopes.includes(scope.id) ? "text-teal" : "text-white")}>{scope.label}</div>
+                                  <div className="text-xs text-white/50 mt-0.5">{scope.desc}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {selectedScopes.length === 0 && (
+                            <p className="text-xs text-semantic-error mt-3 font-semibold">Please select at least one scope.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
+                        <button 
+                          type="button"
+                          onClick={closeCreateModal}
+                          disabled={isCreating}
+                          className="px-5 py-2.5 rounded-lg text-white font-bold hover:bg-[#09090b]/10 transition-colors disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          type="submit"
+                          disabled={isCreating || selectedScopes.length === 0 || !newKeyName.trim()}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-teal text-ink font-bold hover:bg-teal-ice transition-colors shadow-lg shadow-teal/20 disabled:opacity-50 disabled:cursor-wait"
+                        >
+                          {isCreating ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" /> Creating...
+                            </>
+                          ) : (
+                            'Generate Key'
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </>
+                )}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </Portal>
 
       {/* Roll Key Modal */}
-      <AnimatePresence>
-        {isRollModalOpen && keyToRoll && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-ink/80 backdrop-blur-sm"
-              onClick={() => !isCreating && setIsRollModalOpen(false)}
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md glass bg-ink rounded-2xl shadow-2xl overflow-hidden border-white/10"
-            >
-              <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-[#09090b]/5">
-                <h3 className="font-bold text-white text-lg flex items-center gap-2">
-                  <RotateCw className="w-5 h-5 text-semantic-warning" /> 
-                  Roll Key: {keyToRoll.name}
-                </h3>
-              </div>
-              <div className="p-6">
-                <p className="text-sm text-white/70 leading-relaxed mb-6">
-                  Rolling a key allows you to rotate secrets with <strong>zero downtime</strong>. 
-                  A new key will be generated immediately with the same permissions, and the old key will continue to work for a <strong>24-hour grace period</strong> before expiring.
-                </p>
-                <div className="bg-[#09090b] border border-white/10 rounded-xl p-4 mb-6 shadow-inner">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-white/40 font-bold uppercase tracking-widest">New Key</span>
-                    <span className="text-xs font-bold text-semantic-success">Active immediately</span>
+      <Portal>
+        <AnimatePresence>
+          {isRollModalOpen && keyToRoll && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-ink/80 backdrop-blur-sm"
+                onClick={() => !isCreating && setIsRollModalOpen(false)}
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-md glass bg-ink rounded-2xl shadow-2xl overflow-hidden border-white/10"
+              >
+                <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between bg-[#09090b]/5">
+                  <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                    <RotateCw className="w-5 h-5 text-semantic-warning" /> 
+                    Roll Key: {keyToRoll.name}
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <p className="text-sm text-white/70 leading-relaxed mb-6">
+                    Rolling a key allows you to rotate secrets with <strong>zero downtime</strong>. 
+                    A new key will be generated immediately with the same permissions, and the old key will continue to work for a <strong>24-hour grace period</strong> before expiring.
+                  </p>
+                  <div className="bg-[#09090b] border border-white/10 rounded-xl p-4 mb-6 shadow-inner">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-white/40 font-bold uppercase tracking-widest">New Key</span>
+                      <span className="text-xs font-bold text-semantic-success">Active immediately</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Old Key</span>
+                      <span className="text-xs font-bold text-semantic-warning">Expires in 24h</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/40 font-bold uppercase tracking-widest">Old Key</span>
-                    <span className="text-xs font-bold text-semantic-warning">Expires in 24h</span>
+                  <div className="flex items-center justify-end gap-3">
+                    <button 
+                      type="button"
+                      onClick={() => setIsRollModalOpen(false)}
+                      disabled={isCreating}
+                      className="px-5 py-2.5 rounded-lg text-white font-bold hover:bg-[#09090b]/10 transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleRollKey}
+                      disabled={isCreating}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-semantic-warning text-white font-bold hover:bg-semantic-warning/80 transition-colors shadow-lg shadow-semantic-warning/20 disabled:opacity-70 disabled:cursor-wait"
+                    >
+                      {isCreating ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Rolling...</>
+                      ) : (
+                        'Confirm Rotation'
+                      )}
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-end gap-3">
-                  <button 
-                    type="button"
-                    onClick={() => setIsRollModalOpen(false)}
-                    disabled={isCreating}
-                    className="px-5 py-2.5 rounded-lg text-white font-bold hover:bg-[#09090b]/10 transition-colors disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={handleRollKey}
-                    disabled={isCreating}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-semantic-warning text-white font-bold hover:bg-semantic-warning/80 transition-colors shadow-lg shadow-semantic-warning/20 disabled:opacity-70 disabled:cursor-wait"
-                  >
-                    {isCreating ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Rolling...</>
-                    ) : (
-                      'Confirm Rotation'
-                    )}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </Portal>
     </div>
   );
 }

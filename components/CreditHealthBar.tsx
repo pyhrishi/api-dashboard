@@ -35,11 +35,11 @@ export function CreditHealthBar() {
           
           {/* Bar & Text */}
           <div className="flex-1 min-w-0 pr-2">
-            <div className="flex justify-between items-end mb-1.5">
-              <span className={`text-xs font-bold ${isDanger ? 'text-semantic-error' : 'text-white'}`}>
+            <div className="flex justify-between items-end mb-1.5 gap-2">
+              <span className={`text-xs font-bold whitespace-nowrap ${isDanger ? 'text-semantic-error' : 'text-white'}`}>
                 API Fuel
               </span>
-              <span className="text-[10px] font-mono text-white/50">{creditBalance.toLocaleString()} left</span>
+              <span className="text-[10px] font-mono text-white/50 whitespace-nowrap">{creditBalance.toLocaleString()} left</span>
             </div>
             
             {/* Progress Track */}

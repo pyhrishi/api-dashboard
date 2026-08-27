@@ -10,6 +10,7 @@ import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, ChevronRig
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { Portal } from '@/components/Portal';
 
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -87,68 +88,70 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     <div className="fixed inset-0 z-50 flex bg-ink overflow-hidden font-sans selection:bg-teal selection:text-ink">
       
       {/* Create Org Modal */}
-      <AnimatePresence>
-        {isCreateOrgModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-              onClick={() => setIsCreateOrgModalOpen(false)}
-            />
-            
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-10"
-            >
-              <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-teal" />
-                  New Organization
-                </h3>
-                <button onClick={() => setIsCreateOrgModalOpen(false)} className="text-white/40 hover:text-white transition-colors">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+      <Portal>
+        <AnimatePresence>
+          {isCreateOrgModalOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                onClick={() => setIsCreateOrgModalOpen(false)}
+              />
               
-              <form onSubmit={handleCreateOrg} className="p-6 space-y-6">
-                <div>
-                  <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-2">
-                    Organization Name
-                  </label>
-                  <input 
-                    type="text"
-                    required
-                    autoFocus
-                    value={newOrgName}
-                    onChange={e => setNewOrgName(e.target.value)}
-                    placeholder="e.g. Acme Corp"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/50 transition-all"
-                  />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-md bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-10"
+              >
+                <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-teal" />
+                    New Organization
+                  </h3>
+                  <button onClick={() => setIsCreateOrgModalOpen(false)} className="text-white/40 hover:text-white transition-colors">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
                 
-                <div className="flex gap-3 pt-2">
-                  <button 
-                    type="button"
-                    onClick={() => setIsCreateOrgModalOpen(false)}
-                    className="flex-1 py-3 rounded-xl font-bold bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    disabled={!newOrgName.trim()}
-                    className="flex-1 py-3 rounded-xl font-bold bg-white text-ink hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Create
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+                <form onSubmit={handleCreateOrg} className="p-6 space-y-6">
+                  <div>
+                    <label className="block text-xs font-black text-white/40 uppercase tracking-widest mb-2">
+                      Organization Name
+                    </label>
+                    <input 
+                      type="text"
+                      required
+                      autoFocus
+                      value={newOrgName}
+                      onChange={e => setNewOrgName(e.target.value)}
+                      placeholder="e.g. Acme Corp"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/50 transition-all"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3 pt-2">
+                    <button 
+                      type="button"
+                      onClick={() => setIsCreateOrgModalOpen(false)}
+                      className="flex-1 py-3 rounded-xl font-bold bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={!newOrgName.trim()}
+                      className="flex-1 py-3 rounded-xl font-bold bg-white text-ink hover:bg-neutral-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Create
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </Portal>
 
       {/* Mobile Overlay Background */}
       <AnimatePresence>
