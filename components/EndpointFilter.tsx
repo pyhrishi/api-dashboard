@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ENDPOINTS } from '@/app/console/page';
+import { ENDPOINTS } from '@/lib/constants';
 
 interface EndpointFilterProps {
   selected: string;

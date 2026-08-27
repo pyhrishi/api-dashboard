@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Activity, Clock, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, BarChart, Legend, LineChart } from 'recharts';
-import { ENDPOINTS } from '../page';
+import { ENDPOINTS } from '@/lib/constants';
 import { EndpointFilter } from '@/components/EndpointFilter';
 
 export default function AnalyticsPage() {
