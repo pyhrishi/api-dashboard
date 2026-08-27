@@ -29,7 +29,7 @@ const mockInvoices = [
 ];
 
 export default function BillingPage() {
-  const { creditBalance, usageAlerts, addUsageAlert, toggleUsageAlert, deleteUsageAlert } = useStore();
+  const { environment, creditBalance, usageAlerts, addUsageAlert, toggleUsageAlert, deleteUsageAlert } = useStore();
   const toast = useToast();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isAlertFormOpen, setIsAlertFormOpen] = useState(false);
@@ -78,6 +78,20 @@ export default function BillingPage() {
   
   const COLORS_RL = ['#FFB020', '#1A1924']; // Yellow for rate limit consumed
   const COLORS_QUOTA = ['#46BDC6', '#1A1924']; // Teal for quota consumed
+
+  if (environment === 'sandbox') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-in fade-in duration-500">
+        <div className="w-20 h-20 bg-teal/10 rounded-full flex items-center justify-center mb-6">
+          <CreditCard className="w-10 h-10 text-teal" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Billing not required</h2>
+        <p className="text-white/60 max-w-md">
+          Billing, invoices, and quotas are not applicable in the Sandbox environment. Switch to Live mode to manage your production billing settings.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-12 pb-12 font-sans text-white">

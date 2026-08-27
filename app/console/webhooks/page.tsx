@@ -16,7 +16,9 @@ const AVAILABLE_EVENTS = [
 ];
 
 export default function WebhooksPage() {
-  const { webhooks, webhookLogs, webhookRetryQueue, addWebhook, deleteWebhook, logWebhookEvent, removeWebhookRetry, updateWebhookRetry } = useStore();
+  const { environment, webhooks, webhookLogs, webhookRetryQueue, addWebhook, deleteWebhook, logWebhookEvent, removeWebhookRetry, updateWebhookRetry } = useStore();
+  const filteredWebhooks = webhooks.filter(w => w.environment === environment);
+  
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [endpointUrl, setEndpointUrl] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
@@ -137,7 +139,7 @@ export default function WebhooksPage() {
       >
         <div>
           <h1 className="text-2xl font-display font-bold text-white">Webhooks</h1>
-          <p className="text-white/60 mt-1">Receive real-time HTTPS pushes for background events.</p>
+          <p className="text-white/60 mt-1">Configure {environment === 'sandbox' ? 'test' : 'production'} endpoints to receive real-time data events.</p>
         </div>
         <RoleGuard allowedRoles={['admin', 'developer']}>
           <button 
@@ -172,8 +174,8 @@ export default function WebhooksPage() {
             </thead>
             <tbody className="divide-y divide-white/5">
               <AnimatePresence>
-                {webhooks.length === 0 ? (
-                  <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {filteredWebhooks.length === 0 ? (
+                  <tr>
                     <td colSpan={3} className="px-6 py-16 text-center text-white/40">
                       <div className="flex flex-col items-center justify-center space-y-4">
                         <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
@@ -181,7 +183,7 @@ export default function WebhooksPage() {
                         </div>
                         <div>
                           <h4 className="text-white font-bold text-lg">No Webhooks Configured</h4>
-                          <p className="text-white/40 text-sm mt-1 max-w-sm mx-auto">Set up endpoints to receive real-time HTTP push notifications for background events.</p>
+                          <p className="text-white/40 text-sm mt-1 max-w-sm mx-auto">Set up endpoints for the {environment} environment to receive real-time HTTP push notifications.</p>
                         </div>
                         <button 
                           onClick={() => setIsAddModalOpen(true)}
@@ -191,9 +193,9 @@ export default function WebhooksPage() {
                         </button>
                       </div>
                     </td>
-                  </motion.tr>
+                  </tr>
                 ) : (
-                  webhooks.map((endpoint, idx) => (
+                  filteredWebhooks.map((endpoint, idx) => (
                     <motion.tr 
                       key={endpoint.id}
                       initial={{ opacity: 0, y: 10 }}

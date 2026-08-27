@@ -11,6 +11,7 @@ export interface MockKey {
   scopes: string[];
   allowedIps?: string[];
   status: 'active' | 'expiring_soon' | 'expired' | 'revoked';
+  environment: 'sandbox' | 'live';
 }
 
 export interface Organization {
@@ -49,6 +50,7 @@ export interface AuditLog {
   action: string;
   resource: string;
   timestamp: string;
+  environment: 'sandbox' | 'live';
 }
 
 export interface UsageAlert {
@@ -77,6 +79,7 @@ export interface WebhookEndpoint {
   events: string[];
   status: 'active' | 'failing';
   createdAt: string;
+  environment: 'sandbox' | 'live';
 }
 
 export interface WebhookLog {
@@ -215,7 +218,8 @@ export const useStore = create<AppState>()(
         key: 'sk_test_demo_key',
         createdAt: new Date().toISOString(),
         scopes: ['all'],
-        status: 'active'
+        status: 'active',
+        environment: 'sandbox'
       }],
       user: { email: 'demo@example.com', company: 'Acme Corp', role: 'admin' },
       organizations: [
@@ -248,8 +252,8 @@ export const useStore = create<AppState>()(
         { id: 'sess_3', device: 'Windows Desktop', browser: 'Firefox', location: 'London, UK', ip: '10.0.0.5', lastActive: new Date(Date.now() - 86400000).toISOString(), isCurrent: false }
       ],
       auditLogs: [
-        { id: 'aud_1', actorEmail: 'admin@example.com', action: 'Created API Key', resource: 'Production Key', timestamp: new Date(Date.now() - 3600000).toISOString() },
-        { id: 'aud_2', actorEmail: 'developer@example.com', action: 'Created Webhook', resource: 'https://api.acme.com/hooks', timestamp: new Date(Date.now() - 86400000).toISOString() }
+        { id: 'aud_1', actorEmail: 'admin@example.com', action: 'Created API Key', resource: 'Production Key', timestamp: new Date(Date.now() - 3600000).toISOString(), environment: 'live' },
+        { id: 'aud_2', actorEmail: 'developer@example.com', action: 'Created Webhook', resource: 'https://api.acme.com/hooks', timestamp: new Date(Date.now() - 86400000).toISOString(), environment: 'live' }
       ],
       usageAlerts: [
         { id: 'alert_1', thresholdPercentage: 80, channels: ['email'], isActive: true },
@@ -285,14 +289,14 @@ export const useStore = create<AppState>()(
       
       addKey: (key) => set((state) => {
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created API Key', resource: key.name, timestamp: new Date().toISOString() };
-        return { activeKeys: [key, ...state.activeKeys], auditLogs: [log, ...state.auditLogs] };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created API Key', resource: key.name, timestamp: new Date().toISOString(), environment: state.environment };
+        return { activeKeys: [{ ...key, environment: state.environment }, ...state.activeKeys], auditLogs: [log, ...state.auditLogs] };
       }),
       
       revokeKey: (id) => set((state) => {
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
         const key = state.activeKeys.find(k => k.id === id);
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Revoked API Key', resource: key?.name || id, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Revoked API Key', resource: key?.name || id, timestamp: new Date().toISOString(), environment: state.environment };
         return { activeKeys: state.activeKeys.map(k => k.id === id ? { ...k, status: 'revoked' as const } : k), auditLogs: [log, ...state.auditLogs] };
       }),
 
@@ -300,8 +304,8 @@ export const useStore = create<AppState>()(
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
         
         const oldKey = state.activeKeys.find(k => k.id === id);
-        const revokeLog: AuditLog = { id: `aud_${Date.now()}_1`, actorEmail: state.user?.email || 'System', action: 'Rolled API Key (Revoked Old)', resource: oldKey?.name || id, timestamp: new Date().toISOString() };
-        const createLog: AuditLog = { id: `aud_${Date.now()}_2`, actorEmail: state.user?.email || 'System', action: 'Rolled API Key (Created New)', resource: newKey.name, timestamp: new Date().toISOString() };
+        const revokeLog: AuditLog = { id: `aud_${Date.now()}_1`, actorEmail: state.user?.email || 'System', action: 'Rolled API Key (Revoked Old)', resource: oldKey?.name || id, timestamp: new Date().toISOString(), environment: state.environment };
+        const createLog: AuditLog = { id: `aud_${Date.now()}_2`, actorEmail: state.user?.email || 'System', action: 'Rolled API Key (Created New)', resource: newKey.name, timestamp: new Date().toISOString(), environment: state.environment };
         
         return { 
           activeKeys: [newKey, ...state.activeKeys.map(k => k.id === id ? { ...k, status: 'revoked' as const } : k)],
@@ -337,7 +341,8 @@ export const useStore = create<AppState>()(
           createdAt: new Date().toISOString(),
           scopes: ['people:read', 'company:read', 'webhooks:write'],
           status: 'active',
-          lastUsed: new Date().toISOString()
+          lastUsed: new Date().toISOString(),
+          environment: 'sandbox'
         };
         
         return {
@@ -377,7 +382,7 @@ export const useStore = create<AppState>()(
           name,
           role: 'admin'
         };
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created Organization', resource: name, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created Organization', resource: name, timestamp: new Date().toISOString(), environment: state.environment };
         
         return { 
           organizations: [...state.organizations, newOrg],
@@ -396,21 +401,21 @@ export const useStore = create<AppState>()(
           status: 'pending',
           joinedAt: new Date().toISOString()
         };
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Invited Team Member', resource: email, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Invited Team Member', resource: email, timestamp: new Date().toISOString(), environment: state.environment };
         return { teamMembers: [...state.teamMembers, newMember], auditLogs: [log, ...state.auditLogs] };
       }),
 
       removeTeamMember: (id) => set((state) => {
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
         const member = state.teamMembers.find(m => m.id === id);
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Removed Team Member', resource: member?.email || id, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Removed Team Member', resource: member?.email || id, timestamp: new Date().toISOString(), environment: state.environment };
         return { teamMembers: state.teamMembers.filter(m => m.id !== id), auditLogs: [log, ...state.auditLogs] };
       }),
 
       updateTeamMemberRole: (id, role) => set((state) => {
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
         const member = state.teamMembers.find(m => m.id === id);
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Changed Role', resource: `${member?.email || id} to ${role}`, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Changed Role', resource: `${member?.email || id} to ${role}`, timestamp: new Date().toISOString(), environment: state.environment };
         return { teamMembers: state.teamMembers.map(m => m.id === id ? { ...m, role } : m), auditLogs: [log, ...state.auditLogs] };
       }),
 
@@ -428,7 +433,7 @@ export const useStore = create<AppState>()(
           channels,
           isActive: true
         };
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created Usage Alert', resource: `${thresholdPercentage}%`, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created Usage Alert', resource: `${thresholdPercentage}%`, timestamp: new Date().toISOString(), environment: state.environment };
         return { usageAlerts: [...state.usageAlerts, newAlert], auditLogs: [log, ...state.auditLogs] };
       }),
 
@@ -439,18 +444,18 @@ export const useStore = create<AppState>()(
 
       deleteUsageAlert: (id) => set((state) => {
         if (state.user?.role !== 'admin' && state.user?.role !== 'billing') throw new Error('Unauthorized');
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Deleted Usage Alert', resource: id, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Deleted Usage Alert', resource: id, timestamp: new Date().toISOString(), environment: state.environment };
         return { usageAlerts: state.usageAlerts.filter(a => a.id !== id), auditLogs: [log, ...state.auditLogs] };
       }),
       
       addIpWhitelist: (ip) => set((state) => {
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Added IP to Whitelist', resource: ip, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Added IP to Whitelist', resource: ip, timestamp: new Date().toISOString(), environment: state.environment };
         return { ipWhitelist: [...state.ipWhitelist, ip], auditLogs: [log, ...state.auditLogs] };
       }),
       removeIpWhitelist: (ip) => set((state) => {
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Removed IP from Whitelist', resource: ip, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Removed IP from Whitelist', resource: ip, timestamp: new Date().toISOString(), environment: state.environment };
         return { ipWhitelist: state.ipWhitelist.filter(i => i !== ip), auditLogs: [log, ...state.auditLogs] };
       }),
 
@@ -478,9 +483,10 @@ export const useStore = create<AppState>()(
           url,
           events,
           status: 'active',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          environment: state.environment
         };
-        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created Webhook', resource: url, timestamp: new Date().toISOString() };
+        const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Created Webhook', resource: url, timestamp: new Date().toISOString(), environment: state.environment };
         return { webhooks: [newEndpoint, ...state.webhooks], auditLogs: [log, ...state.auditLogs] };
       }),
 

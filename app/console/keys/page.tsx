@@ -17,7 +17,8 @@ const AVAILABLE_SCOPES = [
 ];
 
 export default function ApiKeysPage() {
-  const { environment, activeKeys, addKey, revokeKey, rollKey } = useStore();
+  const { environment, activeKeys, addKey, revokeKey, rollKey, user } = useStore();
+  const filteredKeys = activeKeys.filter(k => k.environment === environment);
   
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -40,10 +41,6 @@ export default function ApiKeysPage() {
   // Loading states
   const [isCreating, setIsCreating] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
-
-  const filteredKeys = activeKeys.filter(k => 
-    environment === 'live' ? k.key.startsWith('sk_live_') : k.key.startsWith('sk_test_')
-  );
 
   const toggleScope = (scopeId: string) => {
     setSelectedScopes(prev => 
@@ -78,7 +75,8 @@ export default function ApiKeysPage() {
       status: 'active',
       allowedIps: allowedIps.trim() ? allowedIps.split(',').map(ip => ip.trim()) : undefined,
       expiresAt,
-      lastUsed: null
+      lastUsed: null,
+      environment: environment
     };
     
     addKey(newKey);
@@ -110,7 +108,8 @@ export default function ApiKeysPage() {
       status: 'active',
       allowedIps: keyToRoll.allowedIps,
       expiresAt: keyToRoll.expiresAt,
-      lastUsed: null
+      lastUsed: null,
+      environment: environment
     };
 
     rollKey(keyToRoll.id, replacementKey);
@@ -160,7 +159,7 @@ export default function ApiKeysPage() {
       >
         <div>
           <h1 className="text-2xl font-display font-bold text-white">API Keys</h1>
-          <p className="text-white/60 mt-1">Manage granular access to your {environment} environment.</p>
+          <p className="text-white/60 mt-1">Manage your {environment === 'sandbox' ? 'test' : 'production'} API keys. Keep them secure.</p>
         </div>
         <RoleGuard allowedRoles={['admin']}>
           <button 

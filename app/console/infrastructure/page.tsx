@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Activity, Server, Zap, ArrowUpRight, CheckCircle2, Loader2, ShieldCheck, AlertTriangle, PowerOff, Power } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStore } from '@/lib/store';
 
 interface Node {
   id: string;
@@ -14,6 +15,7 @@ interface Node {
 const REGIONS = ['us-east-1', 'eu-west-1', 'ap-south-1'];
 
 export default function InfrastructurePage() {
+  const { environment } = useStore();
   const [isStressTesting, setIsStressTesting] = useState(false);
   const [outageRegions, setOutageRegions] = useState<string[]>([]);
   const [traffic, setTraffic] = useState<number[]>(Array(40).fill(10));
@@ -167,6 +169,20 @@ export default function InfrastructurePage() {
       prev.includes(region) ? prev.filter(r => r !== region) : [...prev, region]
     );
   };
+
+  if (environment === 'sandbox') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-in fade-in duration-500">
+        <div className="w-20 h-20 bg-teal/10 rounded-full flex items-center justify-center mb-6">
+          <Server className="w-10 h-10 text-teal" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Shared Infrastructure</h2>
+        <p className="text-white/60 max-w-md">
+          The Sandbox environment runs on a shared testing cluster. Switch to Live mode to view and manage your dedicated production infrastructure and edge routing.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

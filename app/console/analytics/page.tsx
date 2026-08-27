@@ -5,7 +5,8 @@ import { useStore } from '@/lib/store';
 import { motion } from 'framer-motion';
 import { Activity, Clock, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, BarChart, Legend, LineChart } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, Cell, ComposedChart, Bar, BarChart, Legend } from 'recharts';
+import Link from 'next/link';
 import { ENDPOINTS } from '@/lib/constants';
 import { EndpointFilter } from '@/components/EndpointFilter';
 
@@ -330,9 +331,9 @@ export default function AnalyticsPage() {
             <h3 className="text-lg font-bold text-white">Endpoint Health</h3>
             <p className="text-sm text-white/40 mt-1">Performance breakdown by specific API routes</p>
           </div>
-          <button className="flex items-center gap-2 text-xs font-bold text-teal hover:text-teal-ice transition-colors">
+          <Link href="/docs" className="flex items-center gap-2 text-xs font-bold text-teal hover:text-teal-ice transition-colors">
             View API Reference <ArrowUpRight className="w-4 h-4" />
-          </button>
+          </Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
