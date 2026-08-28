@@ -174,6 +174,7 @@ interface AppState extends FirstCallState {
   v2DarkLaunchEnabled: boolean;
   signals: SignalFeedback[];
   
+  addSignal: (feedback: Omit<SignalFeedback, 'id' | 'timestamp'>) => void;
   toggleEnvironment: () => void;
   toggleV2DarkLaunch: (enabled: boolean) => void;
   dismissChecklist: () => void;
