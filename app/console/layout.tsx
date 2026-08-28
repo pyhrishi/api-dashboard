@@ -57,6 +57,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Billing', href: '/console/billing', icon: <CreditCard className="w-5 h-5" />, roles: ['admin', 'billing'] },
     { name: 'Webhooks', href: '/console/webhooks', icon: <Webhook className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Features', href: '/console/features', icon: <MessageSquare className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Signals', href: '/console/signals', icon: <MessageSquare className="w-5 h-5" />, roles: ['admin'] },
     { name: 'Docs', href: '/docs', icon: <BookOpen className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Support', href: '/console/support', icon: <LifeBuoy className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Legal', href: '/console/legal', icon: <Scale className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },

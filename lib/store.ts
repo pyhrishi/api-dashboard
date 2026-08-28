@@ -110,6 +110,15 @@ export interface LastRequestDetails {
   timestamp: number;
 }
 
+export interface SignalFeedback {
+  id: string;
+  timestamp: string;
+  url: string;
+  comment: string;
+  screenshotUrl: string;
+  user: string;
+}
+
 // First-Call Optimization State
 export interface FirstCallState {
   // Checklist progress
@@ -163,6 +172,7 @@ interface AppState extends FirstCallState {
   usageAlerts: UsageAlert[];
   ipWhitelist: string[];
   v2DarkLaunchEnabled: boolean;
+  signals: SignalFeedback[];
   
   toggleEnvironment: () => void;
   toggleV2DarkLaunch: (enabled: boolean) => void;
@@ -263,6 +273,7 @@ export const useStore = create<AppState>()(
         { id: 'alert_2', thresholdPercentage: 100, channels: ['email', 'webhook'], isActive: true }
       ],
       ipWhitelist: ['192.168.1.1', '10.0.0.0/24'],
+      signals: [],
 
 
       // First-Call State
@@ -463,6 +474,14 @@ export const useStore = create<AppState>()(
         const log: AuditLog = { id: `aud_${Date.now()}`, actorEmail: state.user?.email || 'System', action: 'Removed IP from Whitelist', resource: ip, timestamp: new Date().toISOString(), environment: state.environment };
         return { ipWhitelist: state.ipWhitelist.filter(i => i !== ip), auditLogs: [log, ...state.auditLogs] };
       }),
+      
+      addSignal: (feedback) => set((state) => ({
+        signals: [{ 
+          ...feedback, 
+          id: `sig_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          timestamp: new Date().toISOString()
+        }, ...state.signals]
+      })),
 
       logout: () => set({
         user: null,
@@ -609,6 +628,7 @@ export const useStore = create<AppState>()(
         activeSessions: state.activeSessions,
         auditLogs: state.auditLogs,
         usageAlerts: state.usageAlerts,
+        signals: state.signals,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
         isFirstCallMade: state.isFirstCallMade,

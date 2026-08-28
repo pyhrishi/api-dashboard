@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/Toast";
+import { SignalsWidget } from "@/components/SignalsWidget";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
             <main className="flex-grow">
               {children}
             </main>
+            <SignalsWidget />
           </ToastProvider>
         </ThemeProvider>
       </body>
