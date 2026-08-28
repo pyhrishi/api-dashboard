@@ -475,7 +475,7 @@ export const useStore = create<AppState>()(
         return { ipWhitelist: state.ipWhitelist.filter(i => i !== ip), auditLogs: [log, ...state.auditLogs] };
       }),
       
-      addSignal: (feedback) => set((state) => ({
+      addSignal: (feedback: Omit<SignalFeedback, 'id' | 'timestamp'>) => set((state) => ({
         signals: [{ 
           ...feedback, 
           id: `sig_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
