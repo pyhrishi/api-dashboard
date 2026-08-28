@@ -1,17 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { HeroCodeShowcase } from '@/components/HeroCodeShowcase';
+import { HeroLiveDemo } from '@/components/HeroLiveDemo';
 import { IntegrationTerminal } from '@/components/IntegrationTerminal';
 import { CapabilitiesShowcase } from '@/components/CapabilitiesShowcase';
 import { ShieldCheck, Search, Users, PhoneCall, KeyRound, Building2, SearchCheck, Check, ArrowRight, Zap, Network, Database, Cloud, FileCode, Workflow, ArrowRightLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { PricingSliderModal } from '@/components/PricingSliderModal';
 import { motion, Variants } from 'framer-motion';
 import { Logo } from '@/components/Logo';
+import { useStore } from '@/lib/store';
 
 export default function ApiLandingPage() {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated, user } = useStore();
 
   const endpoints = [
     { title: "Find Phone by Email", icon: <PhoneCall className="w-5 h-5" />, desc: "Convert any corporate email address into a direct-dial phone number." },
@@ -64,9 +68,15 @@ export default function ApiLandingPage() {
           </div>
           <div className="flex items-center gap-4 md:gap-6">
             <Link href="/docs" className="text-sm font-medium text-ink dark:text-white/70 hover:text-ink dark:text-white transition-colors hidden sm:block">Documentation</Link>
-            <button onClick={() => setIsPricingModalOpen(true)} className="text-sm font-bold bg-teal text-ink px-4 md:px-6 py-2.5 rounded-full hover:bg-teal-ice transition-all shadow-[0_8px_28px_-10px_rgba(70,189,198,0.7)] hover:-translate-y-0.5">
-              zinbit Console
-            </button>
+            {isAuthenticated ? (
+              <button onClick={() => router.push('/console')} className="text-sm font-bold bg-teal text-ink px-4 md:px-6 py-2.5 rounded-full hover:bg-teal-ice transition-all shadow-[0_8px_28px_-10px_rgba(70,189,198,0.7)] hover:-translate-y-0.5">
+                Go to Console
+              </button>
+            ) : (
+              <button onClick={() => setIsPricingModalOpen(true)} className="text-sm font-bold bg-teal text-ink px-4 md:px-6 py-2.5 rounded-full hover:bg-teal-ice transition-all shadow-[0_8px_28px_-10px_rgba(70,189,198,0.7)] hover:-translate-y-0.5">
+                Start Building
+              </button>
+            )}
           </div>
         </div>
       </nav>
@@ -88,9 +98,9 @@ export default function ApiLandingPage() {
                 Identity Infrastructure for the AI Era.
               </motion.div>
               
-              <motion.h1 variants={fadeUp} className="font-display text-4xl sm:text-5xl lg:text-[4rem] leading-[1.1] tracking-[-0.02em] text-ink dark:text-white font-extrabold mb-6">
-                One API.<br/>
-                <span className="relative text-teal">400M+ B2B Identities.
+              <motion.h1 variants={fadeUp} className="font-display text-4xl sm:text-5xl lg:text-[4.5rem] leading-[1.05] tracking-[-0.02em] text-ink dark:text-white font-extrabold mb-6">
+                The Developer API for <br/>
+                <span className="relative text-teal">B2B Identity.
                   <svg viewBox="0 0 300 12" className="absolute -bottom-2 left-0 w-full text-teal/40 hidden sm:block" fill="none" stroke="currentColor" strokeWidth="2" preserveAspectRatio="none" aria-hidden="true">
                     <path d="M2 9c60-6 180-8 296-4" strokeLinecap="round" />
                   </svg>
@@ -98,13 +108,19 @@ export default function ApiLandingPage() {
               </motion.h1>
               
               <motion.p variants={fadeUp} className="text-[18px] leading-[1.65] text-ink dark:text-white/65 max-w-lg mb-10">
-                Enrich contacts, verify corporate entities, and orchestrate high-trust onboarding workflows with a single integration. Grounded in live MCA registry data.
+                Enrich companies, verify contacts, and orchestrate compliance workflows with a single endpoint. Grounded in live MCA registry data and a 400M+ contact graph.
               </motion.p>
               
               <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <button onClick={() => setIsPricingModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-full bg-teal px-8 py-4 text-[16px] font-bold text-ink shadow-[0_10px_36px_-10px_rgba(70,189,198,0.65)] transition-all duration-300 hover:bg-teal-ice hover:shadow-[0_14px_44px_-10px_rgba(70,189,198,0.8)] hover:-translate-y-0.5 w-full sm:w-auto">
-                  Start Building for Free <ArrowRight className="w-4 h-4" />
-                </button>
+                {isAuthenticated ? (
+                  <button onClick={() => router.push('/console')} className="inline-flex items-center justify-center gap-2 rounded-full bg-teal px-8 py-4 text-[16px] font-bold text-ink shadow-[0_10px_36px_-10px_rgba(70,189,198,0.65)] transition-all duration-300 hover:bg-teal-ice hover:shadow-[0_14px_44px_-10px_rgba(70,189,198,0.8)] hover:-translate-y-0.5 w-full sm:w-auto">
+                    Go to Console, {user?.email?.split('@')[0] || 'Developer'} <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button onClick={() => setIsPricingModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-full bg-teal px-8 py-4 text-[16px] font-bold text-ink shadow-[0_10px_36px_-10px_rgba(70,189,198,0.65)] transition-all duration-300 hover:bg-teal-ice hover:shadow-[0_14px_44px_-10px_rgba(70,189,198,0.8)] hover:-translate-y-0.5 w-full sm:w-auto">
+                    Start Building for Free <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
                 <Link href="/contact" className="inline-flex items-center justify-center gap-2 rounded-full bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 px-8 py-4 text-[16px] font-bold text-ink dark:text-white transition-all duration-300 hover:bg-white/10 w-full sm:w-auto">
                   Contact Sales
                 </Link>
@@ -122,12 +138,9 @@ export default function ApiLandingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-              className="relative w-full h-[400px] sm:h-[500px]"
+              className="relative w-full lg:w-[110%] -mr-10 h-auto"
             >
-              <div className="absolute inset-0 rounded-[40px] bg-teal/10 blur-[60px] sm:blur-[80px] -z-10 pointer-events-none" />
-              <div className="w-full h-full rounded-2xl bg-white/40 dark:glass border-black/5 p-1 overflow-hidden">
-                <HeroCodeShowcase />
-              </div>
+              <HeroLiveDemo />
             </motion.div>
             
           </div>
