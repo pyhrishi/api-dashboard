@@ -14,6 +14,7 @@ describe('enrichment registry', () => {
     }
     expect(getPresetById('person')).toBeDefined();
     expect(getPresetById('company')).toBeDefined();
+    expect(getPresetById('reverse-ip')).toBeDefined();
   });
 
   it('detects the input kind', () => {
@@ -21,6 +22,8 @@ describe('enrichment registry', () => {
     expect(detectInputKind('stripe.com')).toBe('domain');
     expect(detectInputKind('https://www.linkedin.com/in/jane')).toBe('linkedin');
     expect(detectInputKind('+1 415 555 0132')).toBe('phone');
+    expect(detectInputKind('8.8.8.8')).toBe('ip');
+    expect(detectInputKind('2001:db8::1')).toBe('ip');
   });
 
   it('validates per-kind input', () => {

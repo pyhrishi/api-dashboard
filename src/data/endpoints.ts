@@ -676,6 +676,43 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/webhooks',
       },
     ],
+  },
+
+  {
+    id: 'ip-to-company',
+    name: 'Reverse IP to Company',
+    description: 'Identify the company behind an anonymous website visitor by their IP — with a network classification (corporate egress vs. datacenter / VPN / consumer / mobile), ISP, ASN, and geo.',
+    method: 'GET',
+    path: '/v1/enrichment/ip',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'ip',
+        type: 'string',
+        required: true,
+        description: 'IPv4 or IPv6 address of the visitor',
+        example: '52.38.104.17',
+        placeholder: '203.0.113.42',
+        maxLength: 45,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'ip-company-people',
+        title: 'People at this company',
+        description: 'List employees for the company behind a corporate IP.',
+        category: 'logging',
+        link: '/console/explorer?endpoint=company-employees',
+      },
+      {
+        id: 'ip-webhooks',
+        title: 'Deanonymize traffic live',
+        description: 'Stream identified visitors to your CRM with webhooks.',
+        category: 'webhooks',
+        link: '/console/webhooks',
+      },
+    ],
   }
 ];
 

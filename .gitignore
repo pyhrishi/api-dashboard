@@ -45,3 +45,4 @@ next-env.d.ts
 
 # verification build output (kept separate from dev .next)
 /.next-verify/
+/.next-dev/

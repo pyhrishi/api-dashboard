@@ -8,6 +8,7 @@ import { Endpoint } from '@/data/endpoints';
 import { useStore } from '@/lib/store';
 import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
+import { resolveCompanyFromIp } from '@/lib/ip-resolver';
 import { verifyPhoneForEmail } from '@/lib/phone-verifier';
 
 export interface APIRequest {
@@ -573,6 +574,15 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         employees: 450,
         industry: 'Software Engineering',
       };
+
+    case 'ip-to-company': {
+      // Deterministic reverse IP → company intelligence (single source of truth).
+      const intel = resolveCompanyFromIp(String(parameters.ip || '8.8.8.8'));
+      if (!intel) {
+        return { success: false, error: { code: 'INVALID_IP', message: 'Provide a valid IPv4 or IPv6 address.' } };
+      }
+      return { success: true, ip_intel: intel, confidence: intel.confidence };
+    }
 
     case 'din-to-phone':
       return {

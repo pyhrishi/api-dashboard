@@ -11,7 +11,7 @@ import { getEndpointById, type Endpoint } from '@/data/endpoints';
 import type { ResolvedPerson } from '@/lib/person-resolver';
 import type { EnrichedCompany } from '@/lib/company-resolver';
 
-export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'auto';
+export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'auto';
 export type EnrichmentCategory = 'person' | 'company' | 'identity';
 
 interface PresetConfig {
@@ -55,6 +55,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'linkedin-to-profile', endpointId: 'linkedin-to-profile', param: 'linkedin_url', inputKind: 'linkedin', icon: 'UserSearch', category: 'person', examples: ['linkedin.com/in/janedoe'], label: 'LinkedIn → profile' },
   { id: 'linkedin-to-contact', endpointId: 'linkedin-to-contact', param: 'linkedin_url', inputKind: 'linkedin', icon: 'Mail', category: 'person', examples: ['linkedin.com/in/janedoe'], label: 'LinkedIn → contact' },
   { id: 'reverse', endpointId: 'reverse-enrichment', param: 'query', inputKind: 'auto', icon: 'Sparkles', category: 'identity', examples: ['jane@acme.com', 'stripe.com'], label: 'Reverse enrichment' },
+  { id: 'reverse-ip', endpointId: 'ip-to-company', param: 'ip', inputKind: 'ip', icon: 'Network', category: 'identity', examples: ['52.38.104.17', '104.18.32.7', '8.8.8.8'], label: 'Reverse IP → company' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -88,6 +89,8 @@ const RE = {
   phone: /^\+?[\d\s().-]{7,}$/,
   cin: /^[LUu]\d{5}[A-Za-z]{2}\d{4}[A-Za-z]{3}\d{6}$/,
   domain: /^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i,
+  ipv4: /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/,
+  ipv6: /^[0-9a-fA-F]{0,4}(:[0-9a-fA-F]{0,4}){2,7}$/,
 };
 
 export function detectInputKind(raw: string): InputKind {
@@ -96,6 +99,7 @@ export function detectInputKind(raw: string): InputKind {
   if (RE.email.test(v)) return 'email';
   if (RE.linkedin.test(v)) return 'linkedin';
   if (RE.cin.test(v)) return 'cin';
+  if (RE.ipv4.test(v) || RE.ipv6.test(v)) return 'ip';
   if (RE.phone.test(v) && /\d{7,}/.test(v.replace(/\D/g, ''))) return 'phone';
   if (RE.domain.test(v.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0])) return 'domain';
   return 'auto';
@@ -110,6 +114,7 @@ export function validateInput(kind: InputKind, raw: string): boolean {
     case 'phone': return RE.phone.test(v) && v.replace(/\D/g, '').length >= 7;
     case 'cin': return v.length >= 8;
     case 'domain': return RE.domain.test(v.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]);
+    case 'ip': return RE.ipv4.test(v) || RE.ipv6.test(v);
     case 'din': return v.length >= 4;
     case 'auto': return v.length >= 2;
     default: return v.length > 0;
@@ -237,6 +242,41 @@ function phoneToResult(d: Record<string, unknown>): EnrichmentResult {
 }
 
 /** Normalize any endpoint response body's `data` into one view-model. */
+/** Reverse IP → company intelligence: the company behind an IP plus network context. */
+function ipToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const isCorporate = d.is_corporate === true;
+  const company = isRecord(d.company) ? (d.company as unknown as EnrichedCompany) : null;
+  const ipType = str('ip_type');
+  const typeLabel = titleCase(ipType);
+  const title = isCorporate && company ? company.name : (str('organization') || str('ip'));
+  const badges = [typeLabel, isCorporate ? 'Corporate visitor' : 'Not a company'].filter(Boolean);
+  const fields: EnrichmentField[] = [
+    { label: 'IP', value: str('ip'), mono: true },
+    { label: 'Type', value: typeLabel || '—' },
+    { label: 'Organization', value: str('organization') || '—' },
+    { label: 'ISP', value: str('isp') || '—' },
+    { label: 'ASN', value: str('asn') || '—', mono: true },
+    { label: 'Hostname', value: str('hostname') || '—', mono: true },
+    { label: 'Location', value: [str('city'), str('country')].filter(Boolean).join(', ') || '—' },
+  ];
+  if (isCorporate && company) {
+    fields.push({ label: 'Company', value: `${company.industry} · ${company.employee_band} employees` });
+  }
+  const provenance = Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined;
+  return {
+    kind: isCorporate ? 'company' : 'generic',
+    title, subtitle: isCorporate && company ? `${company.domain} · ${company.industry}` : `${typeLabel} network`,
+    avatar: isCorporate && company ? company.logo_initials : initialsOf(title),
+    badges, fields,
+    confidence: typeof d.confidence === 'number' ? d.confidence : undefined,
+    provenance,
+    lastVerified: str('last_verified') || undefined,
+    links: isCorporate && company ? [{ label: 'LinkedIn', href: company.linkedin_url }] : undefined,
+    raw: d,
+  };
+}
+
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
@@ -245,6 +285,7 @@ export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.line_type === 'string' && typeof data.verification_status === 'string') {
     return phoneToResult(data);
   }
+  if (isRecord(data.ip_intel)) return ipToResult(data.ip_intel as Record<string, unknown>);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

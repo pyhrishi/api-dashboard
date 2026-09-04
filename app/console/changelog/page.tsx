@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.8', date: 'September 2026', headline: 'Reverse IP → company',
+    changes: [
+      { kind: 'feature', text: 'Reverse IP → company — identify the company behind an anonymous website visitor from their IP, with a network classification that tells you whether it is a genuine corporate egress or datacenter / VPN / consumer / mobile noise. Returns ISP, ASN, org, hostname, and geo, plus the full company dossier for corporate IPs, each field with provenance. New GET /v1/enrichment/ip endpoint (2 credits), shipped as a Studio preset.' },
+      { kind: 'improvement', text: 'IP intelligence is deterministic — the same IP always resolves to the same company and classification across the Studio, Explorer, and CLI (a single reverse-IP resolver).' },
+    ],
+  },
+  {
     version: 'v4.7', date: 'September 2026', headline: 'Phone append & verification',
     changes: [
       { kind: 'feature', text: 'Phone append & verification — the Email → phone lookup now returns a fully verified number: line type (mobile / direct-dial / landline / VoIP), live-status verification, carrier, region, a reachability score, and Do-Not-Call (DNC) standing, each with per-field provenance (carrier HLR lookup, number intelligence, DNC registry check). Renders in the Enrichment Studio with a DNC-safe badge and confidence.' },

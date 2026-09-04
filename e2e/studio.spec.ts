@@ -25,6 +25,12 @@ test.describe('Enrichment Studio', () => {
     await page.getByRole('button', { name: /^Run/i }).click();
     await expect(page.getByText('Tech stack', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
 
+    // Switch to Reverse IP and identify the company behind an IP.
+    await page.getByRole('button', { name: /Reverse IP/i }).click();
+    await page.getByLabel(/input/i).fill('8.8.8.8');
+    await page.getByRole('button', { name: /^Run/i }).click();
+    await expect(page.getByText('ASN', { exact: true }).first()).toBeVisible({ timeout: 20_000 });
+
     // Unified history holds both.
     await expect(page.getByText(/Recent enrichments/i)).toBeVisible();
 
@@ -32,6 +38,7 @@ test.describe('Enrichment Studio', () => {
     await page.goto('/console/logs');
     await expect(page.getByText('/v1/people').first()).toBeVisible();
     await expect(page.getByText('/v1/companies/enrich').first()).toBeVisible();
+    await expect(page.getByText('/v1/enrichment/ip').first()).toBeVisible();
 
     // History persists across a reload.
     await page.goto('/console/studio');
