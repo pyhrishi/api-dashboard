@@ -1,7 +1,20 @@
-import { PhoneCall, Building2, SearchCheck, Fingerprint, MapPin, Landmark, FileCheck2, Globe2, Briefcase, MailSearch } from 'lucide-react';
+import { PhoneCall, Mail, Globe2, SearchCheck, Building2, Landmark, Users, Fingerprint, Briefcase } from 'lucide-react';
 import React from 'react';
+import { ENDPOINTS, type Endpoint } from '@/data/endpoints';
+import { generateCodeSamples } from '@/lib/codeSampleGenerator';
 
-export type ApiCategory = 'identity' | 'enrichment' | 'financial' | 'signals' | 'vehicle';
+/**
+ * Landing-page API catalog for the IntegrationTerminal "IDE".
+ *
+ * This is a DERIVED view of the single source of truth (src/data/endpoints.ts):
+ * the endpoint names, paths and code snippets come straight from the real
+ * catalog + generator, so the marketing surface can never drift from the docs,
+ * console Explorer, OpenAPI spec, or CLI. We only curate here which endpoints to
+ * feature, their category grouping, an icon, an illustrative response, and a
+ * latency badge for the terminal theatre.
+ */
+
+export type ApiCategory = 'people' | 'company' | 'identity';
 
 export interface CodeSnippets {
   curl: string;
@@ -21,310 +34,182 @@ export interface ApiEndpoint {
 }
 
 export const CATEGORIES: { id: ApiCategory; name: string }[] = [
-  { id: 'enrichment', name: 'B2B Enrichment' },
-  { id: 'identity', name: 'Identity & KYC' },
-  { id: 'financial', name: 'Financial Verification' },
-  { id: 'signals', name: 'Signals & Webhooks' }
+  { id: 'people', name: 'People Intelligence' },
+  { id: 'company', name: 'Company Intelligence' },
+  { id: 'identity', name: 'Identity Resolution' }
 ];
 
-export const API_CATALOG: ApiEndpoint[] = [
-  // CATEGORY: ENRICHMENT
-  {
-    id: 'email-to-phone',
-    categoryId: 'enrichment',
-    name: 'Reverse Email Lookup',
-    icon: <PhoneCall className="w-4 h-4" />,
-    desc: 'Input a corporate email, get a direct-dial phone number and contact profile.',
-    latency: '85ms',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/b2b2b/v1/email-to-phone/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "emails": ["ceo@example.com"]
-  }'`,
-      node: `const response = await fetch('https://api.zintlr.com/b2b2b/v1/email-to-phone/', {
-  method: 'POST',
-  headers: {
-    'Access-Token': 'sk_live_••••••',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ emails: ['ceo@example.com'] })
-});
-const data = await response.json();`,
-      python: `import requests
-
-url = "https://api.zintlr.com/b2b2b/v1/email-to-phone/"
-headers = {
-    "Access-Token": "sk_live_••••••",
-    "Content-Type": "application/json"
+/** Per-featured-endpoint presentation data. Keyed by the real endpoint `id`. */
+interface FeatureMeta {
+  categoryId: ApiCategory;
+  icon: React.ReactNode;
+  latency: string;
+  response: string;
 }
-payload = { "emails": ["ceo@example.com"] }
 
-response = requests.post(url, json=payload, headers=headers)
-print(response.json())`
-    },
+const FEATURED: Record<string, FeatureMeta> = {
+  'email-to-phone': {
+    categoryId: 'people',
+    icon: <PhoneCall className="w-4 h-4" />,
+    latency: '85ms',
     response: `{
   "status": "success",
-  "data": [
-    {
-      "email": "ceo@example.com",
-      "person_name": "Jane Doe",
-      "direct_dial": "+1 (555) 123-4567",
-      "confidence_score": 0.99
-    }
-  ],
-  "meta": { "credits_used": 1 }
+  "credits_charged": 2,
+  "data": {
+    "email": "ceo@example.com",
+    "person_name": "Jane Doe",
+    "phone": "+1 (555) 123-4567",
+    "line_type": "mobile",
+    "confidence_score": 0.98
+  }
 }`
   },
-  {
-    id: 'domain-to-company',
-    categoryId: 'enrichment',
-    name: 'Domain to Company Info',
+  'phone-to-email': {
+    categoryId: 'people',
+    icon: <Mail className="w-4 h-4" />,
+    latency: '92ms',
+    response: `{
+  "status": "success",
+  "credits_charged": 2,
+  "data": {
+    "phone": "+1 (555) 123-4567",
+    "email": "jane.doe@example.com",
+    "email_verified": true,
+    "confidence_score": 0.95
+  }
+}`
+  },
+  'linkedin-to-profile': {
+    categoryId: 'people',
     icon: <Globe2 className="w-4 h-4" />,
-    desc: 'Input a domain, get enriched firmographics (size, industry, revenue).',
-    latency: '110ms',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/b2b2b/v1/domain-to-company/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -d '{"domain": "stripe.com"}'`,
-      node: `// Node.js implementation
-const response = await fetch('https://api.zintlr.com/b2b2b/v1/domain-to-company/', {
-  method: 'POST',
-  headers: { 'Access-Token': 'sk_live_••••••' },
-  body: JSON.stringify({ domain: 'stripe.com' })
-});`,
-      python: `# Python implementation
-import requests
-requests.post('https://api.zintlr.com/b2b2b/v1/domain-to-company/', 
-  json={"domain": "stripe.com"}, 
-  headers={"Access-Token": "sk_live_••••••"}
-)`
-    },
+    latency: '140ms',
     response: `{
   "status": "success",
+  "credits_charged": 3,
   "data": {
-    "company_name": "Stripe",
-    "industry": "Financial Services",
-    "employee_count": 8500,
-    "headquarters": "San Francisco, CA"
+    "full_name": "Jane Doe",
+    "headline": "VP of Engineering at Example Inc",
+    "location": "San Francisco, CA",
+    "current_company": "Example Inc",
+    "experience_years": 12
   }
 }`
   },
-  {
-    id: 'person-search',
-    categoryId: 'enrichment',
-    name: 'Graph Search (People)',
+  'people-ai-search': {
+    categoryId: 'people',
     icon: <SearchCheck className="w-4 h-4" />,
-    desc: 'Query 400M+ profiles using natural criteria (Title + Location).',
-    latency: '145ms',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/b2b2b/v1/person-search/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "title": "CTO",
-    "location": "Bangalore"
-  }'`,
-      node: `const response = await fetch('https://api.zintlr.com/b2b2b/v1/person-search/', {
-  method: 'POST',
-  headers: {
-    'Access-Token': 'sk_live_••••••',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    title: 'CTO',
-    location: 'Bangalore'
-  })
-});`,
-      python: `import requests
-payload = { "title": "CTO", "location": "Bangalore" }
-response = requests.post("https://api.zintlr.com/b2b2b/v1/person-search/", json=payload, headers={"Access-Token": "sk_live_••••••"})`
-    },
+    latency: '210ms',
     response: `{
   "status": "success",
+  "credits_charged": 5,
+  "query": "VPs of Sales at SaaS startups in Bangalore",
+  "result_count": 42,
   "data": [
-    {
-      "name": "John Smith",
-      "title": "CTO",
-      "company": "TechCorp",
-      "location": "Bangalore, India"
-    }
-  ],
-  "meta": { "total_results": 1450 }
-}`
-  },
-  
-  // CATEGORY: IDENTITY & KYC
-  {
-    id: 'aadhaar-verify',
-    categoryId: 'identity',
-    name: 'Aadhaar Verification',
-    icon: <Fingerprint className="w-4 h-4" />,
-    desc: 'Verify Aadhaar via OTP or XML for seamless digital onboarding.',
-    latency: '600ms',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/identity/v1/aadhaar/generate-otp/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -d '{"aadhaar_number": "XXXX-XXXX-1234"}'`,
-      node: `const response = await fetch('https://api.zintlr.com/identity/v1/aadhaar/generate-otp/', {
-  method: 'POST',
-  headers: { 'Access-Token': 'sk_live_••••••' },
-  body: JSON.stringify({ aadhaar_number: 'XXXX-XXXX-1234' })
-});`,
-      python: `import requests
-requests.post('https://api.zintlr.com/identity/v1/aadhaar/generate-otp/', 
-  json={"aadhaar_number": "XXXX-XXXX-1234"}, 
-  headers={"Access-Token": "sk_live_••••••"}
-)`
-    },
-    response: `{
-  "status": "success",
-  "data": {
-    "reference_id": "req_8f7d6a5b4c3d",
-    "message": "OTP sent successfully to registered mobile number ending with 9876."
-  }
-}`
-  },
-  {
-    id: 'pan-verify',
-    categoryId: 'identity',
-    name: 'PAN Comprehensive Check',
-    icon: <FileCheck2 className="w-4 h-4" />,
-    desc: 'Verify Permanent Account Number (PAN) details directly with NSDL.',
-    latency: '300ms',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/identity/v1/pan/verify/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -d '{"pan_number": "ABCDE1234F"}'`,
-      node: `const response = await fetch('https://api.zintlr.com/identity/v1/pan/verify/', {
-  method: 'POST',
-  headers: { 'Access-Token': 'sk_live_••••••' },
-  body: JSON.stringify({ pan_number: 'ABCDE1234F' })
-});`,
-      python: `import requests
-requests.post('https://api.zintlr.com/identity/v1/pan/verify/', 
-  json={"pan_number": "ABCDE1234F"}, 
-  headers={"Access-Token": "sk_live_••••••"}
-)`
-    },
-    response: `{
-  "status": "success",
-  "data": {
-    "pan_number": "ABCDE1234F",
-    "status": "VALID",
-    "full_name": "JOHN DOE",
-    "category": "Individual"
-  }
-}`
-  },
-  {
-    id: 'domain-to-cin',
-    categoryId: 'identity',
-    name: 'MCA Verification (Domain to CIN)',
-    icon: <Building2 className="w-4 h-4" />,
-    desc: 'Input a domain, get verified MCA registry data (Corporate Identification).',
-    latency: '250ms',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/identity/v1/domain-to-cin/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -d '{"domain_list": ["example.in"]}'`,
-      node: `const response = await fetch('https://api.zintlr.com/identity/v1/domain-to-cin/', {
-  method: 'POST',
-  headers: { 'Access-Token': 'sk_live_••••••' },
-  body: JSON.stringify({ domain_list: ['example.in'] })
-});`,
-      python: `import requests
-requests.post('https://api.zintlr.com/identity/v1/domain-to-cin/', 
-  json={"domain_list": ["example.in"]}, 
-  headers={"Access-Token": "sk_live_••••••"}
-)`
-    },
-    response: `{
-  "status": "success",
-  "data": [
-    {
-      "domain": "example.in",
-      "cin": "U72900KA2021PTC142000",
-      "legal_name": "Example India Pvt Ltd",
-      "status": "Active"
-    }
+    { "name": "Arjun Mehta", "title": "VP Sales", "company": "CloudScale" }
   ]
 }`
   },
-
-  // CATEGORY: FINANCIAL
-  {
-    id: 'penny-drop',
-    categoryId: 'financial',
-    name: 'Bank Validation (Penny Drop)',
-    icon: <Landmark className="w-4 h-4" />,
-    desc: 'Verify bank account existence and account holder name by depositing ₹1.',
-    latency: '1.2s',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/financial/v1/penny-drop/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -d '{
-    "account_number": "1234567890",
-    "ifsc_code": "HDFC0001234"
-  }'`,
-      node: `const response = await fetch('https://api.zintlr.com/financial/v1/penny-drop/', {
-  method: 'POST',
-  headers: { 'Access-Token': 'sk_live_••••••' },
-  body: JSON.stringify({ account_number: '1234567890', ifsc_code: 'HDFC0001234' })
-});`,
-      python: `import requests
-requests.post('https://api.zintlr.com/financial/v1/penny-drop/', 
-  json={"account_number": "1234567890", "ifsc_code": "HDFC0001234"}, 
-  headers={"Access-Token": "sk_live_••••••"}
-)`
-    },
+  'domain-to-cin': {
+    categoryId: 'company',
+    icon: <Building2 className="w-4 h-4" />,
+    latency: '76ms',
     response: `{
   "status": "success",
+  "credits_charged": 1,
   "data": {
-    "account_exists": true,
-    "name_at_bank": "JOHN DOE",
-    "utr_number": "N1234567890123"
+    "domain": "example.in",
+    "cin": "U72900KA2021PTC142000",
+    "legal_name": "Example India Pvt Ltd",
+    "status": "Active"
   }
 }`
   },
-  
-  // CATEGORY: SIGNALS
-  {
-    id: 'funding-alert',
-    categoryId: 'signals',
-    name: 'Funding Event Webhook',
-    icon: <Briefcase className="w-4 h-4" />,
-    desc: 'Register a webhook to receive real-time alerts when targeted companies raise capital.',
-    latency: 'Event',
-    snippets: {
-      curl: `curl -X POST https://api.zintlr.com/signals/v1/webhooks/ \\
-  -H "Access-Token: sk_live_••••••" \\
-  -d '{
-    "event": "company.funding_raised",
-    "target_url": "https://your-server.com/webhooks/zintlr"
-  }'`,
-      node: `const response = await fetch('https://api.zintlr.com/signals/v1/webhooks/', {
-  method: 'POST',
-  headers: { 'Access-Token': 'sk_live_••••••' },
-  body: JSON.stringify({ 
-    event: 'company.funding_raised', 
-    target_url: 'https://your-server.com/webhooks/zintlr' 
-  })
-});`,
-      python: `import requests
-requests.post('https://api.zintlr.com/signals/v1/webhooks/', 
-  json={"event": "company.funding_raised", "target_url": "https://your-server.com/webhooks/zintlr"}, 
-  headers={"Access-Token": "sk_live_••••••"}
-)`
-    },
+  'cin-to-company-data': {
+    categoryId: 'company',
+    icon: <Landmark className="w-4 h-4" />,
+    latency: '110ms',
     response: `{
   "status": "success",
+  "credits_charged": 3,
   "data": {
-    "webhook_id": "wh_9x8y7z",
-    "status": "active",
-    "secret": "whsec_••••••••••••"
+    "cin": "U72900KA2021PTC142000",
+    "legal_name": "Example India Pvt Ltd",
+    "incorporation_date": "2021-03-14",
+    "paid_up_capital": "₹1,00,00,000",
+    "directors": 3
+  }
+}`
+  },
+  'company-employees': {
+    categoryId: 'company',
+    icon: <Users className="w-4 h-4" />,
+    latency: '155ms',
+    response: `{
+  "status": "success",
+  "credits_charged": 2,
+  "pagination": { "next_cursor": "ZXlKdi...", "has_more": true },
+  "data": [
+    { "name": "Priya Nair", "title": "Staff Engineer", "department": "Engineering" }
+  ]
+}`
+  },
+  'identity-resolve': {
+    categoryId: 'identity',
+    icon: <Fingerprint className="w-4 h-4" />,
+    latency: '95ms',
+    response: `{
+  "status": "success",
+  "credits_charged": 3,
+  "input_type": "email",
+  "data": {
+    "resolved": true,
+    "person_id": "prs_9f2c8a",
+    "name": "Jane Doe",
+    "company": "Example Inc"
+  }
+}`
+  },
+  'din-to-phone': {
+    categoryId: 'identity',
+    icon: <Briefcase className="w-4 h-4" />,
+    latency: '120ms',
+    response: `{
+  "status": "success",
+  "credits_charged": 2,
+  "data": {
+    "din": "09876543",
+    "director_name": "Rahul Verma",
+    "phone": "+91 98765 43210",
+    "associated_companies": 4
   }
 }`
   }
-];
+};
+
+/** Build canonical curl/node/python snippets for an endpoint from its example params. */
+function buildSnippets(endpoint: Endpoint): CodeSnippets {
+  const parameters = Object.fromEntries(
+    endpoint.parameters
+      .filter(p => p.required)
+      .map(p => [p.name, p.example])
+  );
+  const samples = generateCodeSamples({ endpoint, parameters, apiKey: 'sk_live_••••••' });
+  return { curl: samples.curl, node: samples.nodejs, python: samples.python };
+}
+
+export const API_CATALOG: ApiEndpoint[] = Object.entries(FEATURED)
+  .map(([id, meta]) => {
+    const endpoint = ENDPOINTS.find(e => e.id === id);
+    if (!endpoint) return null;
+    return {
+      id: endpoint.id,
+      categoryId: meta.categoryId,
+      name: endpoint.name,
+      icon: meta.icon,
+      desc: endpoint.description,
+      snippets: buildSnippets(endpoint),
+      response: meta.response,
+      latency: meta.latency
+    };
+  })
+  .filter((e): e is ApiEndpoint => e !== null);

@@ -2,7 +2,7 @@
 // CRITICAL: Generate completely synthetic payload responses. ABSOLUTELY NO real PII.
 
 export const mockEndpoints = {
-  emailToPhone: (payload: any) => ({
+  emailToPhone: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     data: {
@@ -21,7 +21,7 @@ export const mockEndpoints = {
     }
   }),
 
-  phoneToEmail: (payload: any) => ({
+  phoneToEmail: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     data: {
@@ -33,7 +33,7 @@ export const mockEndpoints = {
     }
   }),
 
-  linkedinUrlToProfileData: (payload: any) => ({
+  linkedinUrlToProfileData: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     data: {
@@ -48,7 +48,7 @@ export const mockEndpoints = {
     }
   }),
 
-  linkedinUrlToPhoneEmail: (payload: any) => ({
+  linkedinUrlToPhoneEmail: () => ({
     status: 'success',
     cost: { credits_charged: 2 },
     data: {
@@ -57,7 +57,7 @@ export const mockEndpoints = {
     }
   }),
 
-  peopleSearch: (payload: any) => ({
+  peopleSearch: () => ({
     status: 'success',
     cost: { credits_charged: 10 },
     pagination: { page: 1, count: 10, total: 142 },
@@ -77,7 +77,7 @@ export const mockEndpoints = {
     ]
   }),
 
-  peopleAiSearch: (payload: any) => ({
+  peopleAiSearch: () => ({
     status: 'success',
     cost: { credits_charged: 10 },
     parsed_intent: {
@@ -96,7 +96,7 @@ export const mockEndpoints = {
     ]
   }),
 
-  domainToCin: (payload: any) => ({
+  domainToCin: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     summary: { input: 1, found: 1, not_found: 0 },
@@ -112,7 +112,7 @@ export const mockEndpoints = {
     not_found: []
   }),
 
-  cinToCompanyData: (payload: any) => ({
+  cinToCompanyData: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     data: {
@@ -129,7 +129,7 @@ export const mockEndpoints = {
     }
   }),
 
-  domainToLinkedinUrl: (payload: any) => ({
+  domainToLinkedinUrl: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     data: {
@@ -142,7 +142,7 @@ export const mockEndpoints = {
     }
   }),
 
-  contactToLinkedinUrl: (payload: any) => ({
+  contactToLinkedinUrl: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     data: {
@@ -155,7 +155,7 @@ export const mockEndpoints = {
     }
   }),
 
-  reverseEnrichment: (payload: any) => ({
+  reverseEnrichment: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     results: [
@@ -168,7 +168,7 @@ export const mockEndpoints = {
     ]
   }),
 
-  dinToPhone: (payload: any) => ({
+  dinToPhone: () => ({
     status: 'success',
     cost: { credits_charged: 1 },
     data: {
