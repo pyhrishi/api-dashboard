@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.6', date: 'September 2026', headline: 'Enrichment Studio — one workspace for every lookup',
+    changes: [
+      { kind: 'feature', text: 'Enrichment Studio — a single, catalog-driven workspace for every enrichment lookup: resolve a person, enrich a company, email↔phone, LinkedIn, CIN, or auto-detect any identifier. Each result renders with a confidence score and per-field provenance, and every lookup shares one tenant-scoped history.' },
+      { kind: 'improvement', text: 'Adding a new lookup is now a catalog entry, not a new page — future enrichment endpoints appear as Studio presets automatically.' },
+      { kind: 'improvement', text: 'Resolve and Enrich are now Studio presets; /console/resolve and /console/enrich redirect there so existing links keep working.' },
+    ],
+  },
+  {
     version: 'v4.5', date: 'September 2026', headline: 'Domain → Company Enrichment',
     changes: [
       { kind: 'feature', text: 'Domain → Company Enrichment — turn a bare domain into a full firmographic dossier (industry, headcount, revenue band, founded year, HQ, tech stack, and funding), each field tagged with its source and confidence. New GET /v1/companies/enrich endpoint (2 credits); results carry a "people at this company" bridge, a tenant-scoped re-runnable history, and copy-as-JSON/cURL.' },

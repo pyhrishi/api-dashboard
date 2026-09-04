@@ -1,5 +1,7 @@
 # PRD: Domain → Company Enrichment
 
+> **Now a preset in the Enrichment Studio** (see `enrichment-studio.md`). This lookup ships at `/console/studio`; `/console/resolve` and `/console/enrich` redirect there. The data layer described below is unchanged.
+
 **Status:** Built (prototype is the spec) · **Roadmap:** F-002 (Now) · **Route:** `/console/enrich`
 **Owner:** Product · **Last updated:** 2026-09-04
 

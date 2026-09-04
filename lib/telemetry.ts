@@ -21,6 +21,8 @@ export type TelemetryEventName =
   | 'person_resolution_failed'
   | 'company_enriched'
   | 'company_enrichment_failed'
+  | 'enrichment_run'
+  | 'enrichment_failed'
   | 'feature_viewed'
   // monetization
   | 'quota_threshold_reached'

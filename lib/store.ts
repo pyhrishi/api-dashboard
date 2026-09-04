@@ -1,31 +1,21 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { TelemetryEventRecord } from '@/lib/telemetry';
-import type { ResolvedPerson } from '@/lib/person-resolver';
-import type { EnrichedCompany } from '@/lib/company-resolver';
+import type { EnrichmentResult } from '@/data/enrichments';
 
-/** One domain→company enrichment, persisted per tenant so history survives reloads. */
-export interface CompanyEnrichmentRecord {
+/**
+ * One enrichment run in the Enrichment Studio (any preset/endpoint), persisted per
+ * tenant so history survives reloads. Replaces the per-feature resolve/enrich slices —
+ * one generic record for all lookups.
+ */
+export interface EnrichmentRecord {
   id: string;
-  domain: string;
-  company: EnrichedCompany | null;
-  status: 'enriched' | 'not_found' | 'error';
-  environment: 'sandbox' | 'live';
-  confidence: number;
-  creditCost: number;
-  requestId: string | null;
-  durationMs: number;
-  timestamp: number;
-  message?: string;
-}
-
-/** One email→person resolution, persisted per tenant so history survives reloads. */
-export interface ResolutionRecord {
-  id: string;
-  email: string;
-  /** Populated on a successful resolve; null for not-found / error outcomes. */
-  person: ResolvedPerson | null;
-  status: 'resolved' | 'not_found' | 'error';
+  presetId: string;
+  endpointId: string;
+  input: string;
+  /** Normalized view-model on success; null for not-found / error outcomes. */
+  result: EnrichmentResult | null;
+  status: 'ok' | 'not_found' | 'error';
   environment: 'sandbox' | 'live';
   /** Overall confidence 0..1 (0 when unresolved). */
   confidence: number;
@@ -502,8 +492,7 @@ export interface TenantState {
   autoRechargeEnabled: boolean;
   invoices: Invoice[];
   bulkJobs: BulkJob[];
-  resolvedPeople: ResolutionRecord[];
-  enrichedCompanies: CompanyEnrichmentRecord[];
+  enrichments: EnrichmentRecord[];
 }
 
 export const extractTenantState = (state: AppState): TenantState => ({
@@ -545,8 +534,7 @@ export const extractTenantState = (state: AppState): TenantState => ({
   autoRechargeEnabled: state.autoRechargeEnabled,
   invoices: state.invoices,
   bulkJobs: state.bulkJobs,
-  resolvedPeople: state.resolvedPeople,
-  enrichedCompanies: state.enrichedCompanies,
+  enrichments: state.enrichments,
 });
 
 export const defaultTenantState = (): TenantState => ({
@@ -588,8 +576,7 @@ export const defaultTenantState = (): TenantState => ({
   autoRechargeEnabled: false,
   invoices: [],
   bulkJobs: [],
-  resolvedPeople: [],
-  enrichedCompanies: [],
+  enrichments: [],
 });
 
 interface AppState extends FirstCallState, TenantState {
@@ -615,17 +602,12 @@ interface AppState extends FirstCallState, TenantState {
   /** Resets failed rows to pending and queues the job again. */
   retryBulkJobFailures: (id: string) => void;
   deleteBulkJob: (id: string) => void;
-  // Email→person resolutions (tenant-scoped history)
-  resolvedPeople: ResolutionRecord[];
-  /** Records a resolution at the head of history (capped). Newest first. */
-  addResolution: (record: ResolutionRecord) => void;
-  removeResolution: (id: string) => void;
-  clearResolutions: () => void;
-  // Domain→company enrichments (tenant-scoped history)
-  enrichedCompanies: CompanyEnrichmentRecord[];
-  addCompanyEnrichment: (record: CompanyEnrichmentRecord) => void;
-  removeCompanyEnrichment: (id: string) => void;
-  clearCompanyEnrichments: () => void;
+  // Enrichment Studio history (tenant-scoped; every preset/endpoint)
+  enrichments: EnrichmentRecord[];
+  /** Records an enrichment at the head of history (capped). Newest first. */
+  addEnrichment: (record: EnrichmentRecord) => void;
+  removeEnrichment: (id: string) => void;
+  clearEnrichments: () => void;
   webhooks: WebhookEndpoint[];
   webhookLogs: WebhookLog[];
   webhookRetryQueue: WebhookRetryItem[];
@@ -836,8 +818,7 @@ export const useStore = create<AppState>()(
       themeMode: 'dark' as const,
       telemetryEvents: [],
       bulkJobs: [],
-      resolvedPeople: [],
-      enrichedCompanies: [],
+      enrichments: [],
       webhooks: [],
       webhookLogs: [],
       webhookRetryQueue: [],
@@ -2497,27 +2478,19 @@ export const useStore = create<AppState>()(
         return { bulkJobs: state.bulkJobs.filter(j => j.id !== id), auditLogs: [log, ...state.auditLogs] };
       }),
 
-      addResolution: (record) => set((state) => ({
-        resolvedPeople: [record, ...state.resolvedPeople.filter(r => r.id !== record.id)].slice(0, RESOLUTION_CAP),
+      addEnrichment: (record) => set((state) => ({
+        enrichments: [record, ...state.enrichments.filter(r => r.id !== record.id)].slice(0, RESOLUTION_CAP),
       })),
-      removeResolution: (id) => set((state) => ({
-        resolvedPeople: state.resolvedPeople.filter(r => r.id !== id),
+      removeEnrichment: (id) => set((state) => ({
+        enrichments: state.enrichments.filter(r => r.id !== id),
       })),
-      clearResolutions: () => set(() => ({ resolvedPeople: [] })),
-
-      addCompanyEnrichment: (record) => set((state) => ({
-        enrichedCompanies: [record, ...state.enrichedCompanies.filter(r => r.id !== record.id)].slice(0, RESOLUTION_CAP),
-      })),
-      removeCompanyEnrichment: (id) => set((state) => ({
-        enrichedCompanies: state.enrichedCompanies.filter(r => r.id !== id),
-      })),
-      clearCompanyEnrichments: () => set(() => ({ enrichedCompanies: [] })),
+      clearEnrichments: () => set(() => ({ enrichments: [] })),
     }),
     {
       name: 'zinbit-storage',
       // v2: added multi-tenant `tenants` persistence + realigned analytics metric
       // paths. The version bump discards stale v1 state so demos re-seed cleanly.
-      version: 2,
+      version: 3,
       partialize: (state) => ({
         // Persist both app and first-call state
         environment: state.environment,
@@ -2550,8 +2523,7 @@ export const useStore = create<AppState>()(
         themeMode: state.themeMode,
         telemetryEvents: state.telemetryEvents,
         bulkJobs: state.bulkJobs,
-        resolvedPeople: state.resolvedPeople,
-        enrichedCompanies: state.enrichedCompanies,
+        enrichments: state.enrichments,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
         isFirstCallMade: state.isFirstCallMade,

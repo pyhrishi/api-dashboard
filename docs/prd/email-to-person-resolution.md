@@ -1,5 +1,7 @@
 # PRD: Email → Person Resolution
 
+> **Now a preset in the Enrichment Studio** (see `enrichment-studio.md`). This lookup ships at `/console/studio`; `/console/resolve` and `/console/enrich` redirect there. The data layer described below is unchanged.
+
 **Status:** Built (prototype is the spec) · **Roadmap:** F-001 (Now) · **Route:** `/console/resolve`
 **Owner:** Product · **Last updated:** 2026-09-04
 
