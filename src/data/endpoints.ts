@@ -639,6 +639,43 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/docs/v2-migration'
       }
     ]
+  },
+
+  {
+    id: 'company-enrich',
+    name: 'Company Enrichment',
+    description: 'Enrich a bare domain into a full company profile — firmographics, headcount, revenue band, tech stack, and funding.',
+    method: 'GET',
+    path: '/v1/companies/enrich',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'Company domain (with or without protocol/www)',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 100,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'company-people',
+        title: 'People at this company',
+        description: 'List employees for an enriched company with the employees endpoint.',
+        category: 'logging',
+        link: '/console/explorer?endpoint=company-employees',
+      },
+      {
+        id: 'company-webhooks',
+        title: 'Monitor company changes',
+        description: 'Get notified when firmographics or funding change with webhooks.',
+        category: 'webhooks',
+        link: '/console/webhooks',
+      },
+    ],
   }
 ];
 

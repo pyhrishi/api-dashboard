@@ -63,6 +63,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'API Keys', href: '/console/keys', icon: <Key className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Endpoint Explorer', href: '/console/explorer', icon: <Compass className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Resolve', href: '/console/resolve', icon: <UserSearch className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Enrich', href: '/console/enrich', icon: <Building2 className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Bulk Jobs', href: '/console/jobs', icon: <Layers className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Growth', href: '/console/growth', icon: <TrendingUp className="w-5 h-5" />, roles: ['admin', 'billing'] },

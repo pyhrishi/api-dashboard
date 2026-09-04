@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.5', date: 'September 2026', headline: 'Domain → Company Enrichment',
+    changes: [
+      { kind: 'feature', text: 'Domain → Company Enrichment — turn a bare domain into a full firmographic dossier (industry, headcount, revenue band, founded year, HQ, tech stack, and funding), each field tagged with its source and confidence. New GET /v1/companies/enrich endpoint (2 credits); results carry a "people at this company" bridge, a tenant-scoped re-runnable history, and copy-as-JSON/cURL.' },
+      { kind: 'improvement', text: 'Company data is now deterministic — the same domain always returns the same dossier across the Enrich console, Explorer, Identity Resolution, and CLI (a single domain→company resolver).' },
+    ],
+  },
+  {
     version: 'v4.4', date: 'September 2026', headline: 'Email → Person Resolution with confidence & provenance',
     changes: [
       { kind: 'feature', text: 'Email → Person Resolution — turn a work email into a full verified profile (role, seniority, company, verified contacts, socials) with a confidence score and per-field provenance showing exactly which signal produced each field. Runs against the live gateway, bills like production, and keeps a tenant-scoped history you can re-run.' },

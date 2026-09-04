@@ -7,6 +7,7 @@
 import { Endpoint } from '@/data/endpoints';
 import { useStore } from '@/lib/store';
 import { resolvePersonFromEmail } from '@/lib/person-resolver';
+import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -315,15 +316,16 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
       else if (q.includes('.')) type = 'domain';
       
       if (type === 'domain') {
+        const company = resolveCompanyFromDomain(q);
         return {
           type: 'company',
           resolved_from: 'domain',
           profile: {
-            id: `comp_${Date.now()}`,
-            name: `${q.split('.')[0].toUpperCase()} Corp`,
+            id: company?.id ?? `comp_${q}`,
+            name: company?.name ?? q,
             domain: q,
-            industry: 'Technology',
-            headquarters: 'San Francisco, CA'
+            industry: company?.industry ?? 'Technology',
+            headquarters: company ? `${company.hq_city}, ${company.hq_country}` : 'San Francisco, CA',
           }
         };
       } else {
@@ -509,6 +511,15 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         ],
         company: 'Acme Corporation',
       };
+
+    case 'company-enrich': {
+      // Deterministic domain → company enrichment (single source of truth).
+      const company = resolveCompanyFromDomain(String(parameters.domain || 'acme.com'));
+      if (!company) {
+        return { success: false, error: { code: 'INVALID_DOMAIN', message: 'That domain could not be enriched. Provide a valid company domain.' } };
+      }
+      return { success: true, company, confidence: company.confidence };
+    }
 
     case 'domain-to-cin':
       return {

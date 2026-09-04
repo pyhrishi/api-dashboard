@@ -2,6 +2,22 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { TelemetryEventRecord } from '@/lib/telemetry';
 import type { ResolvedPerson } from '@/lib/person-resolver';
+import type { EnrichedCompany } from '@/lib/company-resolver';
+
+/** One domain→company enrichment, persisted per tenant so history survives reloads. */
+export interface CompanyEnrichmentRecord {
+  id: string;
+  domain: string;
+  company: EnrichedCompany | null;
+  status: 'enriched' | 'not_found' | 'error';
+  environment: 'sandbox' | 'live';
+  confidence: number;
+  creditCost: number;
+  requestId: string | null;
+  durationMs: number;
+  timestamp: number;
+  message?: string;
+}
 
 /** One email→person resolution, persisted per tenant so history survives reloads. */
 export interface ResolutionRecord {
@@ -487,6 +503,7 @@ export interface TenantState {
   invoices: Invoice[];
   bulkJobs: BulkJob[];
   resolvedPeople: ResolutionRecord[];
+  enrichedCompanies: CompanyEnrichmentRecord[];
 }
 
 export const extractTenantState = (state: AppState): TenantState => ({
@@ -529,6 +546,7 @@ export const extractTenantState = (state: AppState): TenantState => ({
   invoices: state.invoices,
   bulkJobs: state.bulkJobs,
   resolvedPeople: state.resolvedPeople,
+  enrichedCompanies: state.enrichedCompanies,
 });
 
 export const defaultTenantState = (): TenantState => ({
@@ -571,6 +589,7 @@ export const defaultTenantState = (): TenantState => ({
   invoices: [],
   bulkJobs: [],
   resolvedPeople: [],
+  enrichedCompanies: [],
 });
 
 interface AppState extends FirstCallState, TenantState {
@@ -602,6 +621,11 @@ interface AppState extends FirstCallState, TenantState {
   addResolution: (record: ResolutionRecord) => void;
   removeResolution: (id: string) => void;
   clearResolutions: () => void;
+  // Domain→company enrichments (tenant-scoped history)
+  enrichedCompanies: CompanyEnrichmentRecord[];
+  addCompanyEnrichment: (record: CompanyEnrichmentRecord) => void;
+  removeCompanyEnrichment: (id: string) => void;
+  clearCompanyEnrichments: () => void;
   webhooks: WebhookEndpoint[];
   webhookLogs: WebhookLog[];
   webhookRetryQueue: WebhookRetryItem[];
@@ -813,6 +837,7 @@ export const useStore = create<AppState>()(
       telemetryEvents: [],
       bulkJobs: [],
       resolvedPeople: [],
+      enrichedCompanies: [],
       webhooks: [],
       webhookLogs: [],
       webhookRetryQueue: [],
@@ -2479,6 +2504,14 @@ export const useStore = create<AppState>()(
         resolvedPeople: state.resolvedPeople.filter(r => r.id !== id),
       })),
       clearResolutions: () => set(() => ({ resolvedPeople: [] })),
+
+      addCompanyEnrichment: (record) => set((state) => ({
+        enrichedCompanies: [record, ...state.enrichedCompanies.filter(r => r.id !== record.id)].slice(0, RESOLUTION_CAP),
+      })),
+      removeCompanyEnrichment: (id) => set((state) => ({
+        enrichedCompanies: state.enrichedCompanies.filter(r => r.id !== id),
+      })),
+      clearCompanyEnrichments: () => set(() => ({ enrichedCompanies: [] })),
     }),
     {
       name: 'zinbit-storage',
@@ -2518,6 +2551,7 @@ export const useStore = create<AppState>()(
         telemetryEvents: state.telemetryEvents,
         bulkJobs: state.bulkJobs,
         resolvedPeople: state.resolvedPeople,
+        enrichedCompanies: state.enrichedCompanies,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
         isFirstCallMade: state.isFirstCallMade,

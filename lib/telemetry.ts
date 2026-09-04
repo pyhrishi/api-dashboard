@@ -19,6 +19,8 @@ export type TelemetryEventName =
   | 'explorer_run'
   | 'person_resolved'
   | 'person_resolution_failed'
+  | 'company_enriched'
+  | 'company_enrichment_failed'
   | 'feature_viewed'
   // monetization
   | 'quota_threshold_reached'

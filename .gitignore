@@ -42,3 +42,6 @@ next-env.d.ts
 
 # claude code — personal, machine-local permission grants
 .claude/settings.local.json
+
+# verification build output (kept separate from dev .next)
+/.next-verify/
