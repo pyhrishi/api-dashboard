@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ENDPOINTS } from '@/src/data/endpoints';
+import { API_BASE_URL } from '@/lib/api-config';
 
 export async function GET() {
   const collection = {
@@ -11,7 +12,7 @@ export async function GET() {
     variable: [
       {
         key: "baseUrl",
-        value: "https://api.zintlr.com",
+        value: API_BASE_URL,
         type: "string"
       },
       {
@@ -42,7 +43,7 @@ export async function GET() {
       
       let body = undefined;
       if (ep.method !== 'GET') {
-        const rawBody: any = {};
+        const rawBody: Record<string, unknown> = {};
         ep.parameters.forEach(param => {
           rawBody[param.name] = param.example;
         });

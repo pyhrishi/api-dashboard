@@ -2,33 +2,155 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   ZINBIT DESIGN TOKENS — CSS Custom Properties
+   Light values set on :root, Dark values override in .dark
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --color-surface:     #F8F9FA;
+  --color-surface-2:   #FFFFFF;
+  --color-surface-3:   #F0F1F3;
+  --color-surface-4:   #E8EAED;
+
+  /* Borders */
+  --color-border:         rgba(0, 0, 0, 0.10);
+  --color-border-subtle:  rgba(0, 0, 0, 0.05);
+  --color-border-strong:  rgba(0, 0, 0, 0.20);
+
+  /* Foreground / Text */
+  --color-fg:         rgba(0, 0, 0, 0.87);
+  --color-fg-muted:   rgba(0, 0, 0, 0.50);
+  --color-fg-subtle:  rgba(0, 0, 0, 0.30);
+
+  /* Glass / Overlays */
+  --color-glass:   rgba(0, 0, 0, 0.04);
+  --color-glass-2: rgba(0, 0, 0, 0.06);
+  --color-overlay: rgba(0, 0, 0, 0.40);
+
+  /* Grid pattern */
+  --grid-color: rgba(0, 0, 0, 0.05);
+
+  /* Teal stays the same — only lightness shifts slightly */
+  --color-brand:     #46BDC6;
+  --color-brand-ice: #7AE2E9;
+  --color-brand-deep:#207C82;
+
+  /* Scrollbar */
+  --scrollbar-bg:     #E8EAED;
+  --scrollbar-thumb:  #BABAC4;
+
+  /* Shadow intensity */
+  --shadow-strength: 0.08;
+}
+
+.dark {
+  /* Surfaces */
+  --color-surface:     #09090B;
+  --color-surface-2:   #111115;
+  --color-surface-3:   #18181B;
+  --color-surface-4:   #1D1C39;
+
+  /* Borders */
+  --color-border:         rgba(255, 255, 255, 0.10);
+  --color-border-subtle:  rgba(255, 255, 255, 0.05);
+  --color-border-strong:  rgba(255, 255, 255, 0.20);
+
+  /* Foreground / Text */
+  --color-fg:         rgba(255, 255, 255, 0.90);
+  --color-fg-muted:   rgba(255, 255, 255, 0.50);
+  --color-fg-subtle:  rgba(255, 255, 255, 0.30);
+
+  /* Glass / Overlays */
+  --color-glass:   rgba(255, 255, 255, 0.05);
+  --color-glass-2: rgba(255, 255, 255, 0.08);
+  --color-overlay: rgba(0, 0, 0, 0.80);
+
+  /* Grid pattern */
+  --grid-color: rgba(255, 255, 255, 0.05);
+
+  /* Scrollbar */
+  --scrollbar-bg:     #18181B;
+  --scrollbar-thumb:  #3E3D47;
+
+  /* Shadow intensity */
+  --shadow-strength: 0.3;
+}
+
+/* ============================================================
+   GLOBAL TRANSITIONS — Smooth theme crossfade
+   ============================================================ */
+*, *::before, *::after {
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+}
+/* Disable transitions on elements that shouldn't animate */
+.no-transition, .no-transition * {
+  transition: none !important;
+}
+
+/* ============================================================
+   BASE LAYER
+   ============================================================ */
 @layer base {
   body {
-    @apply bg-ink text-white/90;
+    background-color: var(--color-surface);
+    color: var(--color-fg);
+    @apply font-sans;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface-2);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-brand);
   }
 }
 
+/* ============================================================
+   UTILITY LAYER
+   ============================================================ */
 @layer utilities {
-  .grid-dark {
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  /* ── Grid backgrounds ── */
+  .grid-dark, .theme-grid {
+    background-image:
+      linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
     background-size: 24px 24px;
   }
-  
+
   .grid-light {
     background-image: linear-gradient(to right, rgba(9, 9, 11, 0.05) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(9, 9, 11, 0.05) 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
+  /* ── Glass effects ── */
   .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
-  }
-  
-  .glass-inner {
-    @apply bg-white/5 border border-white/10;
+    background-color: var(--color-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, var(--shadow-strength));
   }
 
+  .glass-inner {
+    background-color: var(--color-glass);
+    border: 1px solid var(--color-border);
+  }
+
+  /* ── Gradient border ── */
   .border-gradient {
     position: relative;
   }
@@ -43,5 +165,38 @@
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
+  }
+
+  /* ── Semantic surface classes ── */
+  .bg-surface   { background-color: var(--color-surface); }
+  .bg-surface-2 { background-color: var(--color-surface-2); }
+  .bg-surface-3 { background-color: var(--color-surface-3); }
+  .bg-glass     { background-color: var(--color-glass); }
+  .bg-glass-2   { background-color: var(--color-glass-2); }
+  .bg-overlay   { background-color: var(--color-overlay); }
+
+  .text-fg        { color: var(--color-fg); }
+  .text-fg-muted  { color: var(--color-fg-muted); }
+  .text-fg-subtle { color: var(--color-fg-subtle); }
+
+  .border-border         { border-color: var(--color-border); }
+  .border-border-subtle  { border-color: var(--color-border-subtle); }
+  .border-border-strong  { border-color: var(--color-border-strong); }
+
+  /* ── Hover utilities ── */
+  .hover\:bg-glass:hover     { background-color: var(--color-glass); }
+  .hover\:bg-glass-2:hover   { background-color: var(--color-glass-2); }
+  .hover\:text-fg:hover      { color: var(--color-fg); }
+  .hover\:bg-surface-2:hover { background-color: var(--color-surface-2); }
+
+  /* ── No scrollbar ── */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* ── Light mode chart card wrapper ── */
+  .chart-card {
+    background-color: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
   }
 }

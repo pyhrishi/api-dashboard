@@ -36,14 +36,39 @@ function hashKey(key: string): string {
   return createHash('sha256').update(key).digest('hex');
 }
 
+/**
+ * Default billing plan for a lazily-provisioned key, inferred from its prefix.
+ * Live keys get a pre-paid balance (so calls deduct and can eventually 402);
+ * test/sandbox keys get a generous metered allowance (effectively free).
+ */
+function provisionRecord(key: string, hash: string): ApiKeyRecord | undefined {
+  if (key.startsWith('sk_live_')) {
+    return { hash, plan: 'prepaid', credits: 1000, usage: 0, status: 'ACTIVE', msaStatus: 'ACTIVE', dpaStatus: 'ACTIVE' };
+  }
+  if (key.startsWith('sk_test_')) {
+    return { hash, plan: 'metered', credits: 0, usage: 0, monthlyLimit: 100000, status: 'ACTIVE', msaStatus: 'ACTIVE', dpaStatus: 'NOT_APPLICABLE' };
+  }
+  return undefined;
+}
+
 export function getApiKeyRecord(key: string): ApiKeyRecord | undefined {
   if (!key) return undefined;
   const hash = hashKey(key);
-  return apiKeys[hash];
+  if (apiKeys[hash]) return apiKeys[hash];
+
+  // Lazily provision a record for any well-formed key created in the console,
+  // so dashboard-generated keys authenticate and bill against the real gateway
+  // (closes the console <-> gateway seam). Pre-seeded demo keys are untouched.
+  const provisioned = provisionRecord(key, hash);
+  if (provisioned) {
+    apiKeys[hash] = provisioned;
+    return provisioned;
+  }
+  return undefined;
 }
 
 export function calculateVolumeDiscount(key: string, baseCost: number): { cost: number, discountPct: number } {
-  const record = apiKeys[hashKey(key)];
+  const record = getApiKeyRecord(key);
   if (!record) return { cost: baseCost, discountPct: 0 };
 
   // Volume discounts are based on cumulative usage in the current billing cycle
@@ -64,8 +89,8 @@ export function calculateVolumeDiscount(key: string, baseCost: number): { cost: 
 }
 
 export function deductCredits(key: string, cost: number): { success: boolean, remaining: number, error?: string } {
-  const record = apiKeys[hashKey(key)];
-  
+  const record = getApiKeyRecord(key);
+
   if (!record) {
     return { success: false, remaining: 0, error: 'Invalid API Key' };
   }

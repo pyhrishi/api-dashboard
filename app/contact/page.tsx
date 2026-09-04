@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Phone, Building2, User, MessageSquare, Send, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Mail, Building2, User, Send, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 
@@ -47,7 +47,7 @@ export default function ContactPage() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal to-blue-500">specialists.</span>
             </h1>
             <p className="text-lg text-white/60 leading-relaxed max-w-md">
-              Whether you need custom SLA commitments, OEM licensing for your SaaS, or multi-region data residency, we're here to help you scale.
+              Whether you need custom SLA commitments, OEM licensing for your SaaS, or multi-region data residency, we&apos;re here to help you scale.
             </p>
 
             <div className="space-y-6 pt-4">

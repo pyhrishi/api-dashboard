@@ -54,7 +54,7 @@ export function validateApiKey(authHeader: string | null): AuthResult {
       }
 
       return { isValid: true, apiKey: mappedApiKey };
-    } catch (err) {
+    } catch {
       return {
         isValid: false,
         error: 'Invalid or malformed JWT token',

@@ -37,7 +37,15 @@ const OptOutRegistry = new Set([
   'charlie.williams@acme.com' // Opted out via GDPR Right to be Forgotten
 ]);
 
-export function enforceOptOutPropagation(data: any): { sanitizedData: any; optOutsRemoved: number } {
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const optedOutEmail = (v: unknown): boolean => {
+  const email = isRecord(v) ? v.email : undefined;
+  return typeof email === 'string' && OptOutRegistry.has(email.toLowerCase());
+};
+
+export function enforceOptOutPropagation(data: unknown): { sanitizedData: unknown; optOutsRemoved: number } {
   let optOutsRemoved = 0;
 
   if (data === null || data === undefined) {
@@ -46,27 +54,24 @@ export function enforceOptOutPropagation(data: any): { sanitizedData: any; optOu
 
   if (Array.isArray(data)) {
     const originalLength = data.length;
-    const sanitizedArray = data.filter(item => {
-      if (item && item.email && OptOutRegistry.has(item.email.toLowerCase())) {
-        return false;
-      }
-      return true;
-    }).map(item => {
-      const result = enforceOptOutPropagation(item);
-      optOutsRemoved += result.optOutsRemoved;
-      return result.sanitizedData;
-    });
-    
+    const sanitizedArray = data
+      .filter((item: unknown) => !optedOutEmail(item))
+      .map((item: unknown) => {
+        const result = enforceOptOutPropagation(item);
+        optOutsRemoved += result.optOutsRemoved;
+        return result.sanitizedData;
+      });
+
     optOutsRemoved += (originalLength - sanitizedArray.length);
     return { sanitizedData: sanitizedArray, optOutsRemoved };
   }
 
-  if (typeof data === 'object') {
-    if (data.email && OptOutRegistry.has(data.email.toLowerCase())) {
+  if (isRecord(data)) {
+    if (optedOutEmail(data)) {
       return { sanitizedData: null, optOutsRemoved: 1 };
     }
 
-    const sanitizedObj: any = {};
+    const sanitizedObj: Record<string, unknown> = {};
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const result = enforceOptOutPropagation(data[key]);
@@ -80,33 +85,29 @@ export function enforceOptOutPropagation(data: any): { sanitizedData: any; optOu
   return { sanitizedData: data, optOutsRemoved: 0 };
 }
 
-export function applyPrivacyMasking(payload: any, framework: PrivacyFramework): any {
+export function applyPrivacyMasking(payload: unknown, framework: PrivacyFramework): unknown {
   if (framework === 'NONE' || !payload) return payload;
 
   // Deep clone to avoid mutating original cache/memory references
-  const masked = JSON.parse(JSON.stringify(payload));
+  const masked: unknown = JSON.parse(JSON.stringify(payload));
 
-  const maskObject = (obj: any) => {
+  const maskObject = (obj: unknown) => {
     if (!obj || typeof obj !== 'object') return;
-    
-    for (const key in obj) {
-      if (typeof obj[key] === 'string') {
+    const rec = obj as Record<string, unknown>;
+
+    for (const key in rec) {
+      const value = rec[key];
+      if (typeof value === 'string') {
         // Redact PII based on framework strictness
         if (framework === 'GDPR' || framework === 'DPDP') {
-          if (key.toLowerCase().includes('email')) {
-            obj[key] = maskEmail(obj[key]);
-          }
-          if (key.toLowerCase().includes('phone')) {
-            obj[key] = maskPhone(obj[key]);
-          }
+          if (key.toLowerCase().includes('email')) rec[key] = maskEmail(value);
+          if (key.toLowerCase().includes('phone')) rec[key] = maskPhone(value);
         } else if (framework === 'CCPA') {
           // CCPA specific logic (e.g. opt-out flag masking)
-          if (key.toLowerCase().includes('email')) {
-             obj[key] = maskEmail(obj[key]);
-          }
+          if (key.toLowerCase().includes('email')) rec[key] = maskEmail(value);
         }
-      } else if (typeof obj[key] === 'object') {
-        maskObject(obj[key]);
+      } else if (typeof value === 'object' && value !== null) {
+        maskObject(value);
       }
     }
   };

@@ -75,11 +75,11 @@ export function IntegrationTerminal() {
         
         {/* ACTIVITY BAR (Leftmost thin strip) */}
         <div className="w-12 bg-[#333333] flex flex-col items-center py-4 gap-6 shrink-0 border-r border-[#1e1e1e]">
-          <FileCode2 className="w-6 h-6 text-white cursor-pointer" />
-          <Search className="w-6 h-6 text-[#858585] cursor-pointer hover:text-white" />
-          <Terminal className="w-6 h-6 text-[#858585] cursor-pointer hover:text-white" />
+          <FileCode2 className="w-6 h-6 text-fg cursor-pointer" />
+          <Search className="w-6 h-6 text-[#858585] cursor-pointer hover:text-fg" />
+          <Terminal className="w-6 h-6 text-[#858585] cursor-pointer hover:text-fg" />
           <div className="mt-auto pb-2">
-            <Settings className="w-6 h-6 text-[#858585] cursor-pointer hover:text-white" />
+            <Settings className="w-6 h-6 text-[#858585] cursor-pointer hover:text-fg" />
           </div>
         </div>
 
@@ -135,7 +135,7 @@ export function IntegrationTerminal() {
                                     <button
                                       key={scenario.id}
                                       onClick={() => handleScenarioChange(scenario.id)}
-                                      className={`w-full flex items-center gap-2 px-1 py-1 text-sm truncate ${isActive ? 'bg-[#37373d] text-white' : 'hover:bg-[#2a2d2e] text-[#cccccc]'}`}
+                                      className={`w-full flex items-center gap-2 px-1 py-1 text-sm truncate ${isActive ? 'bg-[#37373d] text-fg' : 'hover:bg-[#2a2d2e] text-[#cccccc]'}`}
                                     >
                                       <FileCode2 className="w-4 h-4 text-[#519aba] shrink-0" />
                                       <span className="truncate">{scenario.id}.ts</span>
@@ -176,7 +176,7 @@ export function IntegrationTerminal() {
                       setActiveLanguage(lang);
                       setShowResponse(false);
                     }}
-                    className={`px-3 py-1 text-xs font-mono uppercase ${activeLanguage === lang ? 'bg-[#4d4d4d] text-white' : 'text-[#858585] hover:text-[#cccccc]'}`}
+                    className={`px-3 py-1 text-xs font-mono uppercase ${activeLanguage === lang ? 'bg-[#4d4d4d] text-fg' : 'text-[#858585] hover:text-[#cccccc]'}`}
                   >
                     {lang === 'node' ? 'TS' : lang === 'python' ? 'PY' : 'SH'}
                   </button>
@@ -220,7 +220,7 @@ export function IntegrationTerminal() {
               <button
                 onClick={handleRun}
                 disabled={isRunning}
-                className="bg-[#007acc] hover:bg-[#0098ff] text-white px-3 py-1.5 rounded flex items-center gap-2 text-xs font-bold transition-colors disabled:opacity-50"
+                className="bg-[#007acc] hover:bg-[#0098ff] text-fg px-3 py-1.5 rounded flex items-center gap-2 text-xs font-bold transition-colors disabled:opacity-50"
               >
                 {isRunning ? (
                   <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />

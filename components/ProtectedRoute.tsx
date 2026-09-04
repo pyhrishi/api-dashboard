@@ -31,9 +31,9 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
           <div className="absolute inset-0 border-2 border-semantic-error/20 rounded-full animate-ping-slow" />
           <ShieldAlert className="w-12 h-12 text-semantic-error" />
         </div>
-        <h1 className="text-3xl font-extrabold text-white mb-4 tracking-tight">Access Denied</h1>
-        <p className="text-white/50 max-w-md mb-8">
-          You do not have the necessary permissions to view this page. Please contact your workspace administrator to request <strong className="text-white">{allowedRoles.join(' or ')}</strong> access.
+        <h1 className="text-3xl font-extrabold text-fg mb-4 tracking-tight">Access Denied</h1>
+        <p className="text-fg-muted max-w-md mb-8">
+          You do not have the necessary permissions to view this page. Please contact your workspace administrator to request <strong className="text-fg">{allowedRoles.join(' or ')}</strong> access.
         </p>
         <Link 
           href="/console"

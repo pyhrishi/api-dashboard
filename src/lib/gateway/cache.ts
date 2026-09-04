@@ -4,7 +4,7 @@
  */
 
 interface CacheEntry {
-  payload: any;
+  payload: unknown;
   expiresAt: number;
 }
 
@@ -13,21 +13,21 @@ const cacheStore = new Map<string, CacheEntry>();
 
 export interface CacheResult {
   hit: boolean;
-  payload?: any;
+  payload?: unknown;
   isStale?: boolean;
 }
 
 /**
  * Generate a deterministic cache key from endpoint path and parameters.
  */
-export function generateCacheKey(path: string, parameters: Record<string, any>): string {
+export function generateCacheKey(path: string, parameters: Record<string, unknown>): string {
   // Sort parameters to ensure {a: 1, b: 2} matches {b: 2, a: 1}
   const sortedParams = Object.keys(parameters)
     .sort()
     .reduce((acc, key) => {
       acc[key] = parameters[key];
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, unknown>);
 
   return `${path}::${JSON.stringify(sortedParams)}`;
 }
@@ -59,7 +59,7 @@ export function checkCache(cacheKey: string, allowStale: boolean = false): Cache
 /**
  * Save a response payload to the edge cache.
  */
-export function setCache(cacheKey: string, payload: any, ttlSeconds: number = 60): void {
+export function setCache(cacheKey: string, payload: unknown, ttlSeconds: number = 60): void {
   cacheStore.set(cacheKey, {
     payload,
     expiresAt: Date.now() + ttlSeconds * 1000,
@@ -91,7 +91,7 @@ export function checkIdempotency(apiKey: string, idempotencyKey: string): CacheR
 /**
  * Store the result against an idempotency key for 24h.
  */
-export function setIdempotency(apiKey: string, idempotencyKey: string, payload: any): void {
+export function setIdempotency(apiKey: string, idempotencyKey: string, payload: unknown): void {
   const key = `${apiKey}::${idempotencyKey}`;
   idempotencyStore.set(key, {
     payload,

@@ -3,6 +3,37 @@
 import { intro, outro, text, select, spinner, isCancel, cancel } from '@clack/prompts';
 import pc from 'picocolors';
 
+// Pull the full endpoint catalog from the live OpenAPI spec so the CLI always
+// mirrors the real API (single source of truth). Falls back to a core set if
+// the dev server isn't reachable.
+async function loadEndpoints(apiBase) {
+  const fallback = [
+    { value: '/v1/people', label: 'People Search', method: 'GET', params: ['email'] },
+    { value: '/v1/people/phone', label: 'Find Phone by Email', method: 'GET', params: ['email'] },
+    { value: '/v1/companies/employees', label: 'Company Employees', method: 'GET', params: ['domain'] },
+    { value: '/v1/identity/resolve', label: 'Universal Identity Resolution', method: 'GET', params: ['query'] },
+    { value: '/v1/people/search/ai', label: 'People AI Search', method: 'POST', params: ['query'] },
+  ];
+  try {
+    const res = await fetch(`${apiBase}/docs`);
+    if (!res.ok) return fallback;
+    const spec = await res.json();
+    const list = [];
+    for (const [path, methods] of Object.entries(spec.paths || {})) {
+      for (const [method, op] of Object.entries(methods)) {
+        const m = method.toUpperCase();
+        const params = m === 'GET'
+          ? (op.parameters || []).filter(p => p.required).map(p => p.name)
+          : (op.requestBody?.content?.['application/json']?.schema?.required || []);
+        list.push({ value: path, label: op.summary || path, method: m, params });
+      }
+    }
+    return list.length ? list : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 async function main() {
   intro(pc.inverse(' Zintlr API CLI '));
 
@@ -22,14 +53,11 @@ async function main() {
     if (isCancel(apiKey)) { cancel('Operation cancelled'); return process.exit(0); }
   }
 
-  // Define endpoints available for testing
-  const endpoints = [
-    { value: '/v1/people', label: 'People Search', method: 'GET', params: ['email'] },
-    { value: '/v1/companies/employees', label: 'Company Employees', method: 'GET', params: ['domain'] },
-    { value: '/v1/people/phone', label: 'Find Phone by Email', method: 'GET', params: ['email'] },
-    { value: '/v1/identity/resolve', label: 'Universal Identity Resolution', method: 'GET', params: ['query'] },
-    { value: '/v1/people/search/ai', label: 'People AI Search', method: 'POST', params: ['query'] }
-  ];
+  // Resolve the API base (override with --url= or ZINTLR_API_URL; defaults to local dev).
+  const baseUrl = args.find(a => a.startsWith('--url='))?.split('=')[1] || process.env.ZINTLR_API_URL || 'http://localhost:3000/api';
+
+  // Load the full endpoint catalog from the live OpenAPI spec.
+  const endpoints = await loadEndpoints(baseUrl);
 
   if (!endpointPath) {
     endpointPath = await select({
@@ -59,8 +87,6 @@ async function main() {
   const s = spinner();
   s.start(`Calling ${endpoint.method} ${endpoint.value}...`);
 
-  // Target local server since we are testing in development
-  const baseUrl = 'http://localhost:3000/api';
   const url = new URL(`${baseUrl}${endpoint.value}`);
   
   if (endpoint.method === 'GET') {

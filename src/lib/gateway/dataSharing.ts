@@ -65,6 +65,17 @@ const DATASET_ROW_COUNTS: Record<DataShareDataset, number> = {
   technographics: 120_000_000,
 };
 
+// Seed a couple of established shares so the clean room isn't empty on first load.
+(function seedShares() {
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+  const seeds: DataShareRecord[] = [
+    { shareId: 'sf_share_acme_east', target: 'snowflake', accountIdentifier: 'ACME-EAST-1', dataset: 'b2b_contacts', status: 'ACTIVE', createdAt: now - 12 * day, rowsAccessible: DATASET_ROW_COUNTS.b2b_contacts, lastAccessedAt: now - 3 * 60 * 60 * 1000 },
+    { shareId: 'bq_share_globex_prod', target: 'bigquery', accountIdentifier: 'globex-analytics-prod', dataset: 'intent_signals', status: 'ACTIVE', createdAt: now - 5 * day, rowsAccessible: DATASET_ROW_COUNTS.intent_signals, lastAccessedAt: now - 40 * 60 * 1000 },
+  ];
+  seeds.forEach(s => shareRegistry.set(s.shareId, s));
+})();
+
 function generateShareId(target: DataShareTarget): string {
   const prefix = target === 'snowflake' ? 'sf_share' : 'bq_share';
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -118,8 +129,7 @@ SELECT * FROM ZINBIT_${dataset.toUpperCase()}.PUBLIC.${viewName} LIMIT 100;
  */
 function provisionBigQueryShare(
   projectId: string,
-  dataset: DataShareDataset,
-  shareId: string
+  dataset: DataShareDataset
 ): BigQueryShareConfig {
   const datasetId = `zinbit_${dataset}`;
   const authorizedViewId = `${dataset}_secure_view`;
@@ -150,7 +160,7 @@ LIMIT 1000;
  * Returns configuration to mount and query the share immediately.
  */
 export async function provisionDataShare(req: DataShareRequest): Promise<DataShareResult> {
-  const { target, accountIdentifier, dataset, apiKey } = req;
+  const { target, accountIdentifier, dataset } = req;
 
   if (!accountIdentifier || !dataset) {
     return {
@@ -180,7 +190,7 @@ export async function provisionDataShare(req: DataShareRequest): Promise<DataSha
     const shareConfig = provisionSnowflakeShare(accountIdentifier, dataset, shareId);
     return { success: true, shareId, shareConfig };
   } else {
-    const shareConfig = provisionBigQueryShare(accountIdentifier, dataset, shareId);
+    const shareConfig = provisionBigQueryShare(accountIdentifier, dataset);
     return { success: true, shareId, shareConfig };
   }
 }

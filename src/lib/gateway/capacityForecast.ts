@@ -368,10 +368,10 @@ export function generateForecastReport(
 export function getCurrentUsageSnapshot(): Record<RegionId, Record<ResourceType, number>> {
   const regions: RegionId[] = ['us-east-1', 'eu-west-1', 'ap-south-1'];
   const resources: ResourceType[] = ['cpu', 'memory', 'rps', 'egress_gb', 'cache_hit_rate', 'db_connections'];
-  const snapshot: any = {};
+  const snapshot = {} as Record<RegionId, Record<ResourceType, number>>;
 
   for (const region of regions) {
-    snapshot[region] = {};
+    snapshot[region] = {} as Record<ResourceType, number>;
     for (const resource of resources) {
       const series = generateHistoricalSeries(region, resource, 2);
       const smoothed = ewma(series.map(p => p.value), 0.2);

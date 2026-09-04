@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ENDPOINTS } from '@/src/data/endpoints';
+import { API_BASE_URL, API_SANDBOX_BASE_URL } from '@/lib/api-config';
 
 export async function GET() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,11 +101,11 @@ export async function GET() {
     },
     servers: [
       {
-        url: 'https://api.zinbit.zintlr.com/v1',
+        url: API_BASE_URL,
         description: 'Live API Server'
       },
       {
-        url: 'https://sandbox.zinbit.zintlr.com/v1',
+        url: API_SANDBOX_BASE_URL,
         description: 'Sandbox Server'
       }
     ],

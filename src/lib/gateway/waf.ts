@@ -22,7 +22,7 @@ const xssPatterns = [
   /onload\s*=/i
 ];
 
-export function inspectPayload(url: string, headers: Headers, body?: any): WafResult {
+export function inspectPayload(url: string, headers: Headers, body?: unknown): WafResult {
   // Bug Bounty Safe Harbor
   // Security researchers can bypass the WAF by supplying a registered bug bounty token,
   // allowing them to test deep application logic without getting instantly IP-banned by the Edge.
@@ -43,7 +43,7 @@ export function inspectPayload(url: string, headers: Headers, body?: any): WafRe
 
     // Combine URL, headers, and stringified body for deep inspection
     payloadString = `${url} ${JSON.stringify(headersObj)} ${body ? JSON.stringify(body) : ''}`;
-  } catch (e) {
+  } catch {
     // Fallback if parsing fails
   }
 

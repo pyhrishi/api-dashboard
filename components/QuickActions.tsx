@@ -43,7 +43,7 @@ export function QuickActions() {
         <Link 
           key={idx}
           href={action.href}
-          className="group relative flex flex-col p-6 rounded-2xl bg-[#111115] border border-white/10 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 overflow-hidden"
+          className="group relative flex flex-col p-6 rounded-2xl bg-surface-2 border border-border hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 overflow-hidden"
         >
           {/* Subtle hover gradient background */}
           <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 ${action.color.split(' ')[0]}`} />
@@ -52,10 +52,10 @@ export function QuickActions() {
             {action.icon}
           </div>
           
-          <h3 className="text-white font-bold text-lg mb-1">{action.title}</h3>
-          <p className="text-white/50 text-sm flex-1">{action.desc}</p>
+          <h3 className="text-fg font-bold text-lg mb-1">{action.title}</h3>
+          <p className="text-fg-muted text-sm flex-1">{action.desc}</p>
           
-          <div className="mt-4 flex items-center gap-1 text-sm font-bold text-white/30 group-hover:text-white transition-colors">
+          <div className="mt-4 flex items-center gap-1 text-sm font-bold text-fg-subtle group-hover:text-fg transition-colors">
             Go <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
           </div>
         </Link>

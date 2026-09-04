@@ -6,9 +6,10 @@ import RequestBuilder from './RequestBuilder';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PartyPopper, ArrowRight, Code2 } from 'lucide-react';
 import { Endpoint } from '@/data/endpoints';
+import { track } from '@/lib/telemetry';
 
 export function FirstCallWizard() {
-  const { isFirstCallMade, markFirstCallMade, activeKeys } = useStore();
+  const { isFirstCallMade, markFirstCallMade, activeKeys, environment, logApiRequest } = useStore();
   const [showCelebration, setShowCelebration] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
@@ -30,6 +31,21 @@ export function FirstCallWizard() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleExecute = (result: { endpoint: Endpoint; statusCode: number; responseTime: number; response: any; }) => {
+    // Record the first call in the shared log stream so it immediately shows up
+    // in the console Logs / Analytics (the golden-path spine).
+    logApiRequest({
+      id: `req_${Math.random().toString(36).substring(2, 9)}`,
+      environment,
+      timestamp: new Date().toISOString(),
+      method: result.endpoint.method,
+      path: result.endpoint.path,
+      status: result.statusCode,
+      duration: result.responseTime,
+      ip: '203.0.113.10',
+      request: { headers: { 'Authorization': `Bearer ${apiKey}`, 'User-Agent': 'node-fetch/1.0' }, parameters: {} },
+      response: result.response,
+    });
+
     if (result.statusCode >= 200 && result.statusCode < 300) {
       // Small delay to let them see the response in the builder
       setTimeout(() => {
@@ -40,6 +56,7 @@ export function FirstCallWizard() {
           responseTime: result.responseTime,
           response: result.response
         });
+        track('first_call_made', { endpoint: result.endpoint.id, status: result.statusCode, responseTimeMs: result.responseTime });
         setShowCelebration(true);
       }, 1500);
     }

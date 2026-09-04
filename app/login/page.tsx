@@ -199,7 +199,7 @@ export default function LoginPage() {
                     </svg>
                   </div>
                   <h3 className="text-lg font-bold text-white mb-2">Check your email</h3>
-                  <p className="text-sm text-white/60 mb-6">We've sent a password reset link to {email}.</p>
+                  <p className="text-sm text-white/60 mb-6">We&apos;ve sent a password reset link to {email}.</p>
                   <button 
                     type="button"
                     onClick={() => { setMode('login'); setResetSent(false); }}
@@ -256,7 +256,7 @@ export default function LoginPage() {
         </div>
         
         <p className="text-center text-sm font-semibold text-white mt-8">
-          Don't have an account? <Link href="/signup" className="text-teal hover:text-teal-ice transition-colors">Sign up</Link>
+          Don&apos;t have an account? <Link href="/signup" className="text-teal hover:text-teal-ice transition-colors">Sign up</Link>
         </p>
       </motion.div>
     </div>

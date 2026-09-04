@@ -32,7 +32,7 @@ const URL_REGEX = /^https?:\/\/.+\..+/;
  */
 export function validateParameter(
   parameter: EndpointParameter,
-  value: string | number | undefined | null
+  value: unknown
 ): ValidationResult {
   // Handle undefined/null values
   if (value === undefined || value === null || value === '') {
@@ -201,7 +201,7 @@ function formatParameterName(name: string): string {
  */
 export function validateAllParameters(
   parameters: EndpointParameter[],
-  values: Record<string, any>
+  values: Record<string, unknown>
 ): Record<string, string> {
   const errors: Record<string, string> = {};
 
@@ -248,8 +248,8 @@ export function sanitizeEmail(value: string): string {
 /**
  * Type guard: check if parameter type is valid
  */
-export function isValidParameterType(type: any): type is ParameterType {
-  return ['string', 'email', 'phone', 'number'].includes(type);
+export function isValidParameterType(type: unknown): type is ParameterType {
+  return typeof type === 'string' && ['string', 'email', 'phone', 'number'].includes(type);
 }
 
 /**
@@ -290,7 +290,7 @@ export function getValidationHint(parameter: EndpointParameter): string {
  */
 export function batchValidateParameters(
   parameters: EndpointParameter[],
-  valueSets: Record<string, any>[]
+  valueSets: Record<string, unknown>[]
 ): { index: number; errors: Record<string, string> }[] {
   return valueSets
     .map((values, index) => ({

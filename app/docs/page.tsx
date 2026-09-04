@@ -309,12 +309,12 @@ export default function PremiumDocsPage() {
                 </div>
                 <div className="p-6 overflow-x-auto text-white/80 leading-relaxed whitespace-pre">
                   {authTab === 'curl' && (
-`curl -X GET https://api.zinbit.zintlr.com/v1/people-search \\
+`curl -X GET https://api.zinbit.zintlr.com/v1/people \\
   -H "Authorization: Bearer ${apiKey}" \\
   -d "email=demo@example.com"`
                   )}
                   {authTab === 'node' && (
-`const response = await fetch('https://api.zinbit.zintlr.com/v1/people-search?email=demo@example.com', {
+`const response = await fetch('https://api.zinbit.zintlr.com/v1/people?email=demo@example.com', {
   method: 'GET',
   headers: {
     'Authorization': 'Bearer ${apiKey}'
@@ -327,7 +327,7 @@ console.log(data);`
                   {authTab === 'python' && (
 `import requests
 
-url = "https://api.zinbit.zintlr.com/v1/people-search"
+url = "https://api.zinbit.zintlr.com/v1/people"
 headers = {
     "Authorization": "Bearer ${apiKey}"
 }
@@ -474,7 +474,7 @@ print(response.json())`
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Errors</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  zinbit uses conventional HTTP response codes to indicate the success or failure of an API request. In general, codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">2xx</code> range indicate success, codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">4xx</code> range indicate an error that failed given the information provided, and codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">5xx</code> range indicate an error with zinbit's servers.
+                  zinbit uses conventional HTTP response codes to indicate the success or failure of an API request. In general, codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">2xx</code> range indicate success, codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">4xx</code> range indicate an error that failed given the information provided, and codes in the <code className="bg-white/10 px-1.5 py-0.5 rounded border border-white/20 text-white">5xx</code> range indicate an error with zinbit&apos;s servers.
                 </p>
               </div>
 
@@ -505,13 +505,13 @@ print(response.json())`
                     <div className="w-24 flex-shrink-0">
                       <span className="text-semantic-error font-mono font-bold bg-semantic-error/10 px-2 py-1 rounded shadow-sm border border-semantic-error/20">403</span>
                     </div>
-                    <p className="text-sm text-white/60 font-medium"><span className="text-white font-bold">Forbidden</span> - The API key doesn't have permissions to perform the request.</p>
+                    <p className="text-sm text-white/60 font-medium"><span className="text-white font-bold">Forbidden</span> - The API key doesn&apos;t have permissions to perform the request.</p>
                   </div>
                   <div className="p-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-white/5 transition-colors">
                     <div className="w-24 flex-shrink-0">
                       <span className="text-semantic-error font-mono font-bold bg-semantic-error/10 px-2 py-1 rounded shadow-sm border border-semantic-error/20">404</span>
                     </div>
-                    <p className="text-sm text-white/60 font-medium"><span className="text-white font-bold">Not Found</span> - The requested resource doesn't exist.</p>
+                    <p className="text-sm text-white/60 font-medium"><span className="text-white font-bold">Not Found</span> - The requested resource doesn&apos;t exist.</p>
                   </div>
                   <div className="p-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-white/5 transition-colors">
                     <div className="w-24 flex-shrink-0">
@@ -523,7 +523,7 @@ print(response.json())`
                     <div className="w-24 flex-shrink-0">
                       <span className="text-semantic-error font-mono font-bold bg-semantic-error/10 px-2 py-1 rounded shadow-sm border border-semantic-error/20">500</span>
                     </div>
-                    <p className="text-sm text-white/60 font-medium"><span className="text-white font-bold">Server Error</span> - Something went wrong on zinbit's end. (These are rare.)</p>
+                    <p className="text-sm text-white/60 font-medium"><span className="text-white font-bold">Server Error</span> - Something went wrong on zinbit&apos;s end. (These are rare.)</p>
                   </div>
                 </div>
               </div>
@@ -548,7 +548,7 @@ print(response.json())`
                   </div>
                   <div className="glass-inner rounded-xl p-5 border border-white/10 hover:border-white/20 transition-colors">
                     <h4 className="font-mono text-sm font-bold text-semantic-error mb-2">rate_limit_error</h4>
-                    <p className="text-xs text-white/60">Rate limit errors occur when you hit your API's rate limits. Check the headers for limit details.</p>
+                    <p className="text-xs text-white/60">Rate limit errors occur when you hit your API&apos;s rate limits. Check the headers for limit details.</p>
                   </div>
                 </div>
               </div>
@@ -559,7 +559,7 @@ print(response.json())`
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Testing & Mock Data</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  Building and testing an integration shouldn't cost you credits. You can trigger deterministic mock responses during development using specific test keys or email domains.
+                  Building and testing an integration shouldn&apos;t cost you credits. You can trigger deterministic mock responses during development using specific test keys or email domains.
                 </p>
               </div>
 
@@ -568,7 +568,7 @@ print(response.json())`
                 <p className="text-sm text-white/60 leading-relaxed">
                   Every account is provisioned with a <code className="bg-white/10 px-1 py-0.5 rounded text-white font-mono text-xs">sk_test_...</code> key. All requests made with a test key bypass billing completely and always return static synthetic data, regardless of the search parameters.
                 </p>
-                <CodeBlock code={`curl -X GET 'https://api.zinbit.zintlr.com/v1/people-search?email=realperson@example.com' \\
+                <CodeBlock code={`curl -X GET 'https://api.zinbit.zintlr.com/v1/people?email=realperson@example.com' \\
   -H "Authorization: Bearer sk_test_ab12cd34ef56gh78"
   
 # Returns synthetic John Doe profile (Credits charged: 0)`} />
@@ -599,7 +599,7 @@ print(response.json())`
                       </tr>
                       <tr className="hover:bg-white/5 transition-colors">
                         <td className="px-4 py-3 font-mono font-bold text-semantic-error">@zintlr-error.com</td>
-                        <td className="px-4 py-3 text-white/60">Forces a 500 Server Error to test your client's retry/backoff logic.</td>
+                        <td className="px-4 py-3 text-white/60">Forces a 500 Server Error to test your client&apos;s retry/backoff logic.</td>
                       </tr>
                     </tbody>
                   </table>
@@ -684,7 +684,7 @@ print(response.json())`
 }
 
 // Next Request
-GET /v1/people-search?company=apple&limit=50&cursor=eyJpZCI6IjY0YWM5M2Y...`} />
+GET /v1/people?company=apple&limit=50&cursor=eyJpZCI6IjY0YWM5M2Y...`} />
               </div>
             </section>
 
@@ -704,11 +704,11 @@ GET /v1/people-search?company=apple&limit=50&cursor=eyJpZCI6IjY0YWM5M2Y...`} />
                 </p>
 
                 <CodeBlock code={`// Safe Retry Example
-curl -X POST https://api.zinbit.zintlr.com/v1/enrich \\
-  -H "Authorization: Bearer zinbit_live_..." \\
+curl -X POST https://api.zinbit.zintlr.com/v1/batch/companies/enrich \\
+  -H "Authorization: Bearer sk_live_..." \\
   -H "Idempotency-Key: 9d214695-1f92-4913-91db-a3e20eec9502" \\
   -H "Content-Type: application/json" \\
-  -d '{"email": "tim@apple.com"}'`} />
+  -d '{"domains": ["apple.com", "stripe.com"]}'`} />
                 
                 <div className="bg-semantic-success/10 border border-semantic-success/20 p-4 rounded-lg flex items-start gap-3 mt-4">
                   <div className="text-semantic-success text-sm font-bold">Safety Guarantee:</div>
@@ -747,9 +747,9 @@ curl -X POST https://api.zinbit.zintlr.com/v1/enrich \\
                       <div className="w-8 h-8 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold text-sm shrink-0">2</div>
                       <div>
                         <h4 className="text-white font-bold mb-1">Query the zinbit API</h4>
-                        <p className="text-sm text-white/60 leading-relaxed">Pass the bare email address to the <code className="text-teal">/v1/people-search</code> endpoint to retrieve their full profile, company data, and direct-dial phone number.</p>
+                        <p className="text-sm text-white/60 leading-relaxed">Pass the bare email address to the <code className="text-teal">/v1/people</code> endpoint to retrieve their full profile, company data, and direct-dial phone number.</p>
                         
-                        <CodeBlock code={`const response = await fetch('https://api.zinbit.zintlr.com/v1/people-search?email=lead@example.com', {
+                        <CodeBlock code={`const response = await fetch('https://api.zinbit.zintlr.com/v1/people?email=lead@example.com', {
   headers: {
     'Authorization': 'Bearer sk_live_YOUR_KEY'
   }
@@ -779,7 +779,7 @@ const enrichedData = await response.json();`} />
               <div id="migration-apollo" className="scroll-mt-32">
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-4">Migrating from Apollo / Clearbit</h2>
                 <p className="text-white/60 font-medium leading-relaxed mb-6 text-lg">
-                  Transitioning from legacy enrichment providers to zinbit is a matter of updating endpoints and response mapping. zinbit provides a 1-to-1 data parity with Clearbit's Person and Company Enrichment APIs, but at 10x the speed and deterministic scale.
+                  Transitioning from legacy enrichment providers to zinbit is a matter of updating endpoints and response mapping. zinbit provides a 1-to-1 data parity with Clearbit&apos;s Person and Company Enrichment APIs, but at 10x the speed and deterministic scale.
                 </p>
                 <div className="glass-inner rounded-xl border border-white/10 p-6 space-y-6">
                   <h3 className="text-xl font-bold text-white tracking-tight">Endpoint Mapping</h3>
@@ -794,7 +794,7 @@ const enrichedData = await response.json();`} />
                       <tbody className="divide-y divide-white/5 text-white/80">
                         <tr className="hover:bg-white/5 transition-colors">
                           <td className="px-4 py-3 font-mono text-white/40 line-through">GET person.clearbit.com/v2/people/find</td>
-                          <td className="px-4 py-3 font-mono font-bold text-teal">GET /v1/people-search</td>
+                          <td className="px-4 py-3 font-mono font-bold text-teal">GET /v1/people</td>
                         </tr>
                         <tr className="hover:bg-white/5 transition-colors">
                           <td className="px-4 py-3 font-mono text-white/40 line-through">GET company.clearbit.com/v2/companies/find</td>
@@ -802,7 +802,7 @@ const enrichedData = await response.json();`} />
                         </tr>
                         <tr className="hover:bg-white/5 transition-colors">
                           <td className="px-4 py-3 font-mono text-white/40 line-through">POST api.apollo.io/v1/people/match</td>
-                          <td className="px-4 py-3 font-mono font-bold text-teal">POST /v1/people-search/batch</td>
+                          <td className="px-4 py-3 font-mono font-bold text-teal">POST /v1/people/batch</td>
                         </tr>
                       </tbody>
                     </table>
@@ -825,7 +825,7 @@ const enrichedData = await response.json();`} />
                     </li>
                     <li className="flex gap-3">
                       <div className="w-5 h-5 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">2</div>
-                      <span><strong>Intent Data:</strong> ZoomInfo returns intent signals natively in the enterprise search endpoint. In zinbit, intent is managed exclusively through Real-time Webhooks (via Kafka) to ensure you aren't paying for stale intent data.</span>
+                      <span><strong>Intent Data:</strong> ZoomInfo returns intent signals natively in the enterprise search endpoint. In zinbit, intent is managed exclusively through Real-time Webhooks (via Kafka) to ensure you aren&apos;t paying for stale intent data.</span>
                     </li>
                     <li className="flex gap-3">
                       <div className="w-5 h-5 rounded-full bg-teal/20 text-teal flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">3</div>
@@ -845,7 +845,7 @@ const enrichedData = await response.json();`} />
                     <MethodBadge method={endpoint.method} />
                     <div className="ml-auto flex-shrink-0">
                       <a 
-                        href={`https://god.gw.postman.com/run-collection?url=${encodeURIComponent('https://api.zintlr.com/api/docs/postman')}`}
+                        href={`https://god.gw.postman.com/run-collection?url=${encodeURIComponent('https://api.zinbit.zintlr.com/api/docs/postman')}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-[11px] font-bold text-[#FF6C37] px-3 py-1.5 rounded-lg border border-[#FF6C37]/20 bg-[#FF6C37]/10 hover:bg-[#FF6C37]/20 transition-colors flex items-center gap-2 shadow-sm"
@@ -1019,7 +1019,7 @@ const enrichedData = await response.json();`} />
                   <ul className="space-y-3">
                     <li className="flex gap-3 text-sm text-white/70">
                       <span className="text-semantic-success font-bold mt-0.5">Added</span>
-                      <span>Support for batch processing up to 10,000 records in <code className="text-white font-mono text-xs bg-white/10 px-1 py-0.5 rounded">/v1/people-search/batch</code>.</span>
+                      <span>Support for batch processing up to 10,000 records in <code className="text-white font-mono text-xs bg-white/10 px-1 py-0.5 rounded">/v1/people/batch</code>.</span>
                     </li>
                     <li className="flex gap-3 text-sm text-white/70">
                       <span className="text-semantic-success font-bold mt-0.5">Added</span>

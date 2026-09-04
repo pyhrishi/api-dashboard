@@ -75,14 +75,14 @@ export function CapabilitiesShowcase() {
   const activeCapability = capabilities.find(c => c.id === activeTab) || capabilities[0];
 
   return (
-    <div className="glass rounded-3xl border border-white/10 overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
+    <div className="glass rounded-3xl border border-border overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
       <div className="grid lg:grid-cols-[400px_1fr]">
         
         {/* LEFT PANE: Clickable List */}
-        <div className="bg-[#111115]/90 border-r border-white/5 flex flex-col backdrop-blur-xl p-6 gap-3">
+        <div className="bg-surface-2/90 border-r border-border-subtle flex flex-col backdrop-blur-xl p-6 gap-3">
           <div className="mb-4">
-            <h3 className="text-xl font-display font-bold text-white mb-2">Core Capabilities</h3>
-            <p className="text-white/40 text-sm">Select an API to see how it transforms your data.</p>
+            <h3 className="text-xl font-display font-bold text-fg mb-2">Core Capabilities</h3>
+            <p className="text-fg-muted text-sm">Select an API to see how it transforms your data.</p>
           </div>
           
           <div className="flex flex-col gap-2">
@@ -96,7 +96,7 @@ export function CapabilitiesShowcase() {
                   className={`w-full text-left p-4 rounded-xl transition-all duration-300 group relative overflow-hidden ${
                     isActive 
                       ? 'bg-teal/10 border-teal/30 shadow-[inset_0_0_20px_rgba(70,189,198,0.1)]' 
-                      : 'bg-white/5 border-transparent hover:bg-white/10'
+                      : 'bg-glass border-transparent hover:bg-glass-2'
                   } border`}
                 >
                   {isActive && (
@@ -106,14 +106,14 @@ export function CapabilitiesShowcase() {
                     />
                   )}
                   <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-2 rounded-lg ${isActive ? 'bg-teal/20 text-teal' : 'bg-white/10 text-white/60 group-hover:text-white/90'}`}>
+                    <div className={`p-2 rounded-lg ${isActive ? 'bg-teal/20 text-teal' : 'bg-white/10 text-fg-muted group-hover:text-fg'}`}>
                       <Icon className="w-5 h-5" />
                     </div>
-                    <span className={`font-bold ${isActive ? 'text-white' : 'text-white/70 group-hover:text-white'}`}>
+                    <span className={`font-bold ${isActive ? 'text-fg' : 'text-fg-muted group-hover:text-fg'}`}>
                       {cap.title}
                     </span>
                   </div>
-                  <p className={`text-xs leading-relaxed ${isActive ? 'text-white/70' : 'text-white/40 group-hover:text-white/60'}`}>
+                  <p className={`text-xs leading-relaxed ${isActive ? 'text-fg-muted' : 'text-fg-muted group-hover:text-fg-muted'}`}>
                     {cap.shortDesc}
                   </p>
                 </button>
@@ -143,31 +143,31 @@ export function CapabilitiesShowcase() {
                     return <ActiveIcon className="w-8 h-8" />;
                   })()}
                 </div>
-                <h2 className="text-3xl font-display font-bold text-white">{activeCapability.title}</h2>
+                <h2 className="text-3xl font-display font-bold text-fg">{activeCapability.title}</h2>
               </div>
 
               <div className="grid md:grid-cols-2 gap-8 mb-12">
                 <div>
                   <h4 className="text-teal text-sm font-bold uppercase tracking-wider mb-3">Why Use It</h4>
-                  <p className="text-white/70 leading-relaxed">{activeCapability.whyUseIt}</p>
+                  <p className="text-fg-muted leading-relaxed">{activeCapability.whyUseIt}</p>
                 </div>
                 <div>
                   <h4 className="text-teal text-sm font-bold uppercase tracking-wider mb-3">How It Helps</h4>
-                  <p className="text-white/70 leading-relaxed">{activeCapability.howItHelps}</p>
+                  <p className="text-fg-muted leading-relaxed">{activeCapability.howItHelps}</p>
                 </div>
               </div>
 
               {/* Data Transformation Visualization */}
-              <div className="flex-1 bg-[#111115] rounded-2xl border border-white/10 p-6 flex flex-col mb-8 relative">
-                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#111115] px-4 py-1 border border-white/10 rounded-full text-xs font-bold text-white/50 tracking-widest uppercase">
+              <div className="flex-1 bg-surface-2 rounded-2xl border border-border p-6 flex flex-col mb-8 relative">
+                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface-2 px-4 py-1 border border-border rounded-full text-xs font-bold text-fg-muted tracking-widest uppercase">
                    Data Transformation
                  </div>
                  <div className="grid md:grid-cols-[1fr_auto_1fr] gap-6 items-center h-full">
                     
                     {/* Input */}
-                    <div className="bg-black/50 border border-white/5 rounded-xl p-4 h-full flex flex-col">
-                      <div className="text-white/30 text-xs font-bold mb-3 uppercase tracking-wider">Input Request</div>
-                      <pre className="text-white/80 font-mono text-sm whitespace-pre-wrap flex-1">
+                    <div className="bg-overlay border border-border-subtle rounded-xl p-4 h-full flex flex-col">
+                      <div className="text-fg-subtle text-xs font-bold mb-3 uppercase tracking-wider">Input Request</div>
+                      <pre className="text-fg font-mono text-sm whitespace-pre-wrap flex-1">
                         {activeCapability.input}
                       </pre>
                     </div>
@@ -200,7 +200,7 @@ export function CapabilitiesShowcase() {
                 <Link href="/contact" className="px-6 py-3 bg-teal text-ink font-bold rounded-lg hover:bg-teal-ice transition-colors flex items-center gap-2">
                   Contact Sales <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link href="/docs" className="px-6 py-3 bg-white/5 text-white font-semibold rounded-lg hover:bg-white/10 transition-colors border border-white/10">
+                <Link href="/docs" className="px-6 py-3 bg-glass text-fg font-semibold rounded-lg hover:bg-glass-2 transition-colors border border-border">
                   Read Documentation
                 </Link>
               </div>

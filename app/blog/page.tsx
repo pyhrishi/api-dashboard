@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Terminal, Database, ShieldCheck, Cpu, ArrowRight, BookOpen } from 'lucide-react';
+import { ShieldCheck, ArrowRight, BookOpen } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { Logo } from '@/components/Logo';
 

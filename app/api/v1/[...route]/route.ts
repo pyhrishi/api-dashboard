@@ -2,16 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveEndpoint } from '@/lib/gateway/router';
 import { logRequest } from '@/lib/gateway/logger';
 import { checkCache, setCache, generateCacheKey, checkIdempotency, setIdempotency } from '@/lib/gateway/cache';
-import { callSandboxAPI, isAPIError } from '@/lib/sandboxAPI';
+import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure } from '@/lib/gateway/circuitBreaker';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
 import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
 import { enforceSOC2Controls, attachISO27001Headers, enforceDDoSProtection, enforceMSAControls, enforceDPAControls, enforceFraudDetection } from '@/lib/gateway/security';
 import { inspectPayload } from '@/lib/gateway/waf';
 import { Logger } from '@/lib/gateway/logger';
-import { provisionDataShare, listDataShares, revokeDataShare } from '@/lib/gateway/dataSharing';
+import { provisionDataShare, listDataShares, revokeDataShare, type DataShareDataset } from '@/lib/gateway/dataSharing';
 import { getAllPartners, getPartnerDashboard, lookupPartner, attributeReferral, recordRevenueEvent, processMonthEndPayouts } from '@/lib/gateway/partnerRevenue';
-import { generateForecastReport, forecastCapacity, getCurrentUsageSnapshot } from '@/lib/gateway/capacityForecast';
+import { generateForecastReport, forecastCapacity, getCurrentUsageSnapshot, type ForecastHorizon, type RegionId, type ResourceType } from '@/lib/gateway/capacityForecast';
+import { API_BASE_URL } from '@/lib/api-config';
 
 async function handleRequest(request: NextRequest, { params }: { params: { route: string[] } }) {
   const startTime = Date.now();
@@ -80,7 +81,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   const selectedNode = nodes[Math.floor(Math.random() * nodes.length)];
   const serverNodeId = `${selectedRegion}-${selectedNode}`;
 
-  const responseHeaders = {
+  const responseHeaders: Record<string, string> = {
     'X-RateLimit-Limit': limit,
     'X-RateLimit-Remaining': remaining,
     'X-RateLimit-Reset': reset,
@@ -125,13 +126,13 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
 
     // Provision: POST /v1/data-shares/{target}
     if (request.method === 'POST') {
-      let body: any = {};
+      let body: Record<string, unknown> = {};
       try { body = await request.json(); } catch {}
 
       const result = await provisionDataShare({
         target,
-        accountIdentifier: body.account_identifier || body.project_id || '',
-        dataset: body.dataset || 'b2b_contacts',
+        accountIdentifier: String(body.account_identifier ?? body.project_id ?? ''),
+        dataset: (typeof body.dataset === 'string' ? body.dataset : 'b2b_contacts') as DataShareDataset,
         apiKey,
       });
 
@@ -173,9 +174,9 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
 
     // POST /v1/partner/attribute — link an API key to a partner referral code
     if (sub === 'attribute' && request.method === 'POST') {
-      let body: any = {};
+      let body: Record<string, unknown> = {};
       try { body = await request.json(); } catch {}
-      const result = attributeReferral(body.api_key || '', body.referral_code || '');
+      const result = attributeReferral(String(body.api_key ?? ''), String(body.referral_code ?? ''));
       return NextResponse.json(
         { success: result.success, data: result, metadata: { requestId, timestamp: Date.now() } },
         { status: result.success ? 200 : 400, headers: responseHeaders }
@@ -199,7 +200,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     // GET /v1/infra/forecast?horizon=24h  — full multi-region report
     if (sub === 'forecast' && request.method === 'GET') {
       const qs = new URL(request.url).searchParams;
-      const horizon = (qs.get('horizon') || '24h') as any;
+      const horizon = (qs.get('horizon') || '24h') as ForecastHorizon;
       const report = generateForecastReport(horizon);
       return NextResponse.json(
         { success: true, data: report, metadata: { requestId, timestamp: Date.now() } },
@@ -219,9 +220,9 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     // GET /v1/infra/resource?region=us-east-1&resource=cpu&horizon=6h
     if (sub === 'resource' && request.method === 'GET') {
       const qs = new URL(request.url).searchParams;
-      const region = (qs.get('region') || 'us-east-1') as any;
-      const resource = (qs.get('resource') || 'cpu') as any;
-      const horizon = (qs.get('horizon') || '6h') as any;
+      const region = (qs.get('region') || 'us-east-1') as RegionId;
+      const resource = (qs.get('resource') || 'cpu') as ResourceType;
+      const horizon = (qs.get('horizon') || '6h') as ForecastHorizon;
       const fc = forecastCapacity(region, resource, horizon);
       return NextResponse.json(
         { success: true, data: fc, metadata: { requestId, timestamp: Date.now() } },
@@ -254,8 +255,8 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   }
 
   // 2. Parse Parameters
-  let parameters: Record<string, any> = {};
-  let body: any;
+  let parameters: Record<string, unknown> = {};
+  let body: unknown;
   
   try {
     if (request.method === 'GET') {
@@ -267,12 +268,12 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       try {
         const clonedReq = request.clone();
         body = await clonedReq.json();
-        parameters = body;
-      } catch (e) {
+        parameters = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
+      } catch {
         // Ignored for empty bodies
       }
     }
-  } catch (e) {
+  } catch {
     // Failed to parse body
     return NextResponse.json(
       {
@@ -300,7 +301,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
 
   // 1.5 API Abuse & Fraud Detection (Impossible Travel / Geo-Velocity)
   if (apiKey) {
-    const fraudContext = enforceFraudDetection(apiKey, selectedRegion, clientIp);
+    const fraudContext = enforceFraudDetection(apiKey, selectedRegion);
     if (!fraudContext.allowed) {
       Logger.warn(`Fraud Detected: ${fraudContext.error}`, { apiKey, clientIp, selectedRegion });
       return NextResponse.json({
@@ -384,7 +385,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   if (request.method === 'POST' && idempotencyKey) {
     const idemResult = checkIdempotency(apiKey, idempotencyKey);
     if (idemResult.hit && !simulateStatus) {
-      result = { status: 200, data: idemResult.payload, duration: 5, timestamp: Date.now() } as any;
+      result = { status: 200, data: idemResult.payload, duration: 5, timestamp: Date.now() } as APIResponse;
       isIdempotentReplay = true;
     }
   }
@@ -395,9 +396,9 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
 
   // 4. Metered Billing Engine
   if (!isIdempotentReplay && endpoint) {
-    let baseCreditCost = (endpoint as any).creditCost || 1;
+    let baseCreditCost = endpoint.creditCost || 1;
     // Scale batch requests
-    if ((endpoint as any).id === 'batch-company-enrich' && Array.isArray(parameters.domains)) {
+    if (endpoint.id === 'batch-company-enrich' && Array.isArray(parameters.domains)) {
       baseCreditCost = baseCreditCost * Math.max(1, parameters.domains.length);
     }
 
@@ -425,15 +426,15 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
             timestamp: Date.now(),
           },
         },
-        { status: 402, headers: responseHeaders as any }
+        { status: 402, headers: responseHeaders }
       );
     }
     
     // Attach billing headers to successful responses
-    (responseHeaders as any)['X-Credits-Cost'] = finalCreditCost.toString();
-    (responseHeaders as any)['X-Credits-Remaining'] = billingResult.remaining.toString();
+    responseHeaders['X-Credits-Cost'] = finalCreditCost.toString();
+    responseHeaders['X-Credits-Remaining'] = billingResult.remaining.toString();
     if (discountPct > 0) {
-      (responseHeaders as any)['X-Credits-Discount-Pct'] = discountPct.toString();
+      responseHeaders['X-Credits-Discount-Pct'] = discountPct.toString();
     }
   }
 
@@ -446,12 +447,12 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       data: {
         job_id: jobId,
         status: 'pending',
-        status_url: `https://api.zintlr.com/v1/jobs/${jobId}`,
+        status_url: `${API_BASE_URL}/v1/jobs/${jobId}`,
         message: 'Request accepted for asynchronous processing.'
       },
       duration: 1,
       timestamp: Date.now()
-    } as any;
+    } as APIResponse;
   }
 
   // Edge caching for GET
@@ -461,7 +462,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     const cacheResult = checkCache(cacheKey, false);
     
     if (cacheResult.hit && !simulateStatus && request.method === 'GET') {
-      result = { status: 200, data: cacheResult.payload, duration: 5, timestamp: Date.now() } as any;
+      result = { status: 200, data: cacheResult.payload, duration: 5, timestamp: Date.now() } as APIResponse;
       cacheHeader = 'HIT';
     } else {
       const circuitState = getCircuitState('sandboxAPI');
@@ -476,8 +477,9 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
           timestamp: Date.now(),
           duration: 0,
           requestId,
-        };
-        (responseHeaders as any)['X-Circuit-Breaker'] = 'OPEN';
+          data: null,
+        } as APIError;
+        responseHeaders['X-Circuit-Breaker'] = 'OPEN';
       } else {
         try {
           result = await callSandboxAPI({
@@ -487,21 +489,23 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
             simulateStatus,
             isIdempotentReplay,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           // If it throws an APIError (which it does for simulateStatus >= 400), catch it here
-          if (err.isAPIError) {
-            result = err;
+          const thrownApiError = typeof err === 'object' && err !== null && (err as { isAPIError?: boolean }).isAPIError;
+          if (thrownApiError) {
+            result = err as APIError;
           } else {
             result = {
               isAPIError: true,
               status: 500,
               statusText: 'Internal Server Error',
-              error: err.message,
+              error: err instanceof Error ? err.message : 'Unknown error',
               errorCode: 'INTERNAL_ERROR',
               timestamp: Date.now(),
               duration: 0,
               requestId,
-            };
+              data: null,
+            } as APIError;
           }
         }
         
@@ -517,7 +521,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       if (isAPIError(result) && result.status >= 500 && request.method === 'GET') {
         const staleCache = checkCache(cacheKey, true); // explicitly allow stale
         if (staleCache.hit) {
-          result = { status: 200, data: staleCache.payload, duration: 5, timestamp: Date.now() } as any;
+          result = { status: 200, data: staleCache.payload, duration: 5, timestamp: Date.now() } as APIResponse;
           cacheHeader = staleCache.isStale ? 'STALE' : 'HIT';
         }
       }
@@ -534,17 +538,17 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   }
 
   // Inject Cache & Idempotency Headers
-  (responseHeaders as any)['X-Cache'] = cacheHeader;
-  (responseHeaders as any)['X-Trace-Id'] = traceId;
+  responseHeaders['X-Cache'] = cacheHeader;
+  responseHeaders['X-Trace-Id'] = traceId;
   if (isIdempotentReplay) {
-    (responseHeaders as any)['X-Idempotency-Replayed'] = 'true';
+    responseHeaders['X-Idempotency-Replayed'] = 'true';
   }
 
   const duration = Date.now() - startTime;
   logRequest(requestId, request.method, path, result.status, duration);
 
   // Helper function to send compressed or uncompressed response
-  const sendResponse = (payloadObj: any, statusCode: number) => {
+  const sendResponse = (payloadObj: unknown, statusCode: number) => {
     const jsonString = JSON.stringify(payloadObj);
     const acceptEncoding = request.headers.get('accept-encoding') || '';
     
@@ -557,8 +561,8 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       });
       const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
       
-      (responseHeaders as any)['Content-Encoding'] = 'gzip';
-      (responseHeaders as any)['Content-Type'] = 'application/json';
+      responseHeaders['Content-Encoding'] = 'gzip';
+      responseHeaders['Content-Type'] = 'application/json';
       
       return new Response(compressedStream, {
         status: statusCode,
@@ -593,19 +597,30 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       payload = payload.data;
     } else if (payload.success !== undefined) {
       // If it just has success, strip it
-      const { success, ...rest } = payload;
+      const rest = { ...payload };
+      delete rest.success;
       payload = rest;
     }
   }
 
-  // Opt-out propagation (Drop Do-Not-Sell / Right-To-Be-Forgotten records completely)
-  const optOutResult = enforceOptOutPropagation(payload);
-  payload = optOutResult.sanitizedData;
+  // Privacy enforcement applies to LIVE keys only. Sandbox (sk_test_) responses
+  // are fully synthetic (no real PII) and are returned unmasked so developers can
+  // see complete example payloads while testing. Live keys get DPDP/GDPR/CCPA
+  // opt-out propagation + PII masking.
+  const isLiveKey = apiKey.startsWith('sk_live_');
+  let optOutsRemoved = 0;
+  const redactionApplied = isLiveKey && privacyFramework !== 'NONE';
+  if (isLiveKey) {
+    // Opt-out propagation (Drop Do-Not-Sell / Right-To-Be-Forgotten records completely)
+    const optOutResult = enforceOptOutPropagation(payload);
+    payload = optOutResult.sanitizedData;
+    optOutsRemoved = optOutResult.optOutsRemoved;
 
-  // Mask remaining PII based on framework
-  payload = applyPrivacyMasking(payload, privacyFramework);
-  if (privacyFramework !== 'NONE') {
-    (responseHeaders as any)['X-Privacy-Framework'] = privacyFramework;
+    // Mask remaining PII based on framework
+    payload = applyPrivacyMasking(payload, privacyFramework);
+    if (privacyFramework !== 'NONE') {
+      responseHeaders['X-Privacy-Framework'] = privacyFramework;
+    }
   }
 
   // 5. Return standard envelope
@@ -624,8 +639,8 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       compliance: {
         framework: privacyFramework,
         country_code: countryCode,
-        redaction_applied: privacyFramework !== 'NONE',
-        opt_outs_honored: optOutResult.optOutsRemoved > 0 ? optOutResult.optOutsRemoved : undefined
+        redaction_applied: redactionApplied,
+        opt_outs_honored: optOutsRemoved > 0 ? optOutsRemoved : undefined
       }
     },
   }, result.status);
@@ -645,8 +660,8 @@ async function handleRequestWithPartnerTracking(request: NextRequest, ctx: { par
   return response;
 }
 
-// Export supported methods
-export const GET = handleRequest;
-export const POST = handleRequest;
-export const PUT = handleRequest;
-export const DELETE = handleRequest;
+// Export supported methods (wrapped to attribute partner revenue on billed calls)
+export const GET = handleRequestWithPartnerTracking;
+export const POST = handleRequestWithPartnerTracking;
+export const PUT = handleRequestWithPartnerTracking;
+export const DELETE = handleRequestWithPartnerTracking;

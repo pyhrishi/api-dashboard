@@ -9,9 +9,9 @@ interface LogoProps {
 }
 
 export function Logo({ className, variant = 'auto', collapsed = false }: LogoProps) {
-  let textColor = 'text-ink dark:text-white';
+  let textColor = 'text-ink dark:text-fg';
   let subtextColor = 'text-teal-deep dark:text-teal';
-  let iconColor = 'text-ink dark:text-white';
+  let iconColor = 'text-ink dark:text-fg';
   let glowClasses = 'opacity-0 dark:group-hover:opacity-100';
 
   if (variant === 'light') {
@@ -20,9 +20,9 @@ export function Logo({ className, variant = 'auto', collapsed = false }: LogoPro
     iconColor = 'text-ink';
     glowClasses = 'hidden';
   } else if (variant === 'dark') {
-    textColor = 'text-white';
+    textColor = 'text-fg';
     subtextColor = 'text-teal';
-    iconColor = 'text-white';
+    iconColor = 'text-fg';
     glowClasses = 'opacity-0 group-hover:opacity-100';
   }
 

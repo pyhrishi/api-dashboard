@@ -1,7 +1,9 @@
 /**
  * Endpoint Metadata Structure
- * Defines all 12 API endpoints with parameters, descriptions, credit costs, and next-step recommendations.
- * Used by RequestBuilder and FirstCallWizard components.
+ * The single source of truth for the Zinbit API catalog — every endpoint with its
+ * parameters, descriptions, credit costs, and next-step recommendations.
+ * Consumed by the docs, Endpoint Explorer, code generators, OpenAPI/Postman specs,
+ * the CLI, and the landing-page catalog (lib/api-catalog.tsx).
  */
 
 export type ParameterType = 'string' | 'email' | 'phone' | 'number' | 'array';
@@ -45,7 +47,7 @@ export interface Endpoint {
 }
 
 /**
- * All 12 API Endpoints with complete metadata
+ * The complete Zinbit API endpoint catalog.
  */
 export const ENDPOINTS: Endpoint[] = [
   {
@@ -118,6 +120,9 @@ export const ENDPOINTS: Endpoint[] = [
     path: '/v1/people',
     creditCost: 1,
     isRecommendedForFirstCall: true,
+    isDeprecated: true,
+    sunsetDate: '2027-01-15T00:00:00Z',
+    replacementEndpointId: 'v2-people-search',
     parameters: [
       {
         name: 'email',

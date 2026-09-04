@@ -5,12 +5,11 @@
  */
 
 import { Endpoint } from '@/data/endpoints';
-import { generateCodeSamples } from './codeSampleGenerator';
 import { useStore } from '@/lib/store';
 
 export interface APIRequest {
   endpoint: Endpoint;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   apiKey: string;
   baseUrl?: string;
   simulateStatus?: number;
@@ -20,6 +19,7 @@ export interface APIRequest {
 export interface APIResponse {
   status: number;
   statusText: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock payload shape varies per endpoint; consumers narrow at the boundary
   data: any;
   duration: number; // milliseconds
   requestId: string;
@@ -46,6 +46,11 @@ function simulateLatency(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, latency));
 }
 
+/** Errors thrown by createAPIError carry `isAPIError: true`; narrow unknown catch values to them. */
+function isThrownAPIError(e: unknown): e is APIError & { isAPIError: true } {
+  return typeof e === 'object' && e !== null && (e as { isAPIError?: boolean }).isAPIError === true;
+}
+
 /**
  * Main sandbox API call handler
  * Validates request and returns mock response
@@ -55,12 +60,12 @@ export async function callSandboxAPI(request: APIRequest): Promise<APIResponse |
   const requestId = generateRequestId();
 
   try {
-    // Validate API key is sandbox (sk_test_)
-    if (!request.apiKey.startsWith('sk_test_')) {
+    // Validate API key format (accept both sandbox and live Zinbit keys)
+    if (!request.apiKey.startsWith('sk_test_') && !request.apiKey.startsWith('sk_live_')) {
       throw createAPIError(
         401,
         'Unauthorized',
-        'Only sandbox keys (sk_test_*) are allowed in first-call wizard',
+        'Invalid API key. Expected a Zinbit key (sk_test_* or sk_live_*).',
         'INVALID_API_KEY',
         requestId
       );
@@ -155,10 +160,10 @@ export async function callSandboxAPI(request: APIRequest): Promise<APIResponse |
       requestId,
       timestamp: Date.now(),
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     const duration = Math.round(performance.now() - startTime);
 
-    if (error.isAPIError) {
+    if (isThrownAPIError(error)) {
       return {
         ...error,
         duration,
@@ -185,7 +190,7 @@ export async function callSandboxAPI(request: APIRequest): Promise<APIResponse |
  */
 function validateRequestParameters(
   endpoint: Endpoint,
-  parameters: Record<string, any>
+  parameters: Record<string, unknown>
 ): { isValid: boolean; error?: string } {
   const allowedParamNames = new Set(endpoint.parameters.map(p => p.name));
   
@@ -307,7 +312,7 @@ function getRandomItem<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function generateMockResponse(endpoint: Endpoint, parameters: Record<string, any>): any {
+function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unknown>): Record<string, unknown> {
   switch (endpoint.id) {
     case 'identity-resolve': {
       const q = String(parameters.query || '').trim();
@@ -346,7 +351,7 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, any
       }
     }
     case 'batch-company-enrich': {
-      const domains = parameters.domains || [];
+      const domains: string[] = Array.isArray(parameters.domains) ? parameters.domains.map(String) : [];
       return {
         results: domains.map((domain: string, idx: number) => ({
           domain,
@@ -366,9 +371,9 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, any
       
       if (parameters.cursor) {
         try {
-          const decoded = JSON.parse(atob(parameters.cursor));
+          const decoded = JSON.parse(atob(String(parameters.cursor)));
           offset = decoded.offset || 0;
-        } catch(e) {
+        } catch {
           // ignore invalid cursor
         }
       }
@@ -397,16 +402,17 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, any
       // Apply Filter
       if (parameters.department) {
         allEmployees = allEmployees.filter(e => 
-          e.department.toLowerCase() === parameters.department.toLowerCase()
+          e.department.toLowerCase() === String(parameters.department).toLowerCase()
         );
       }
 
       // Apply Sort
       if (parameters.sort) {
-        const desc = parameters.sort.startsWith('-');
-        const field = desc ? parameters.sort.substring(1) : parameters.sort;
-        
-        allEmployees.sort((a: any, b: any) => {
+        const sortKey = String(parameters.sort);
+        const desc = sortKey.startsWith('-');
+        const field = (desc ? sortKey.substring(1) : sortKey) as keyof (typeof allEmployees)[number];
+
+        allEmployees.sort((a, b) => {
           if (a[field] < b[field]) return desc ? 1 : -1;
           if (a[field] > b[field]) return desc ? -1 : 1;
           return 0;

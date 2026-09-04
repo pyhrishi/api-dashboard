@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,7 +55,6 @@ const STYLES: Record<ToastVariant, string> = {
 // ─── Single Toast Item ────────────────────────────────────────────────────────
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
-  const progressRef = useRef<HTMLDivElement>(null);
   const duration = toast.duration ?? 4000;
 
   useEffect(() => {
@@ -71,7 +70,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       exit={{ opacity: 0, x: 60, scale: 0.92, transition: { duration: 0.18 } }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       className={cn(
-        'relative w-80 bg-[#111115] border rounded-xl shadow-2xl overflow-hidden',
+        'relative w-80 bg-surface-2 border rounded-xl shadow-2xl overflow-hidden',
         STYLES[toast.variant]
       )}
     >
@@ -91,9 +90,9 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       <div className="p-4 flex items-start gap-3">
         <div className="mt-0.5">{ICONS[toast.variant]}</div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white leading-snug">{toast.message}</p>
+          <p className="text-sm font-bold text-fg leading-snug">{toast.message}</p>
           {toast.description && (
-            <p className="text-xs text-white/50 mt-0.5 leading-relaxed">{toast.description}</p>
+            <p className="text-xs text-fg-muted mt-0.5 leading-relaxed">{toast.description}</p>
           )}
           {toast.action && (
             <button
@@ -106,7 +105,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
         </div>
         <button
           onClick={() => onDismiss(toast.id)}
-          className="text-white/30 hover:text-white transition-colors flex-shrink-0"
+          className="text-fg-subtle hover:text-fg transition-colors flex-shrink-0"
         >
           <X className="w-3.5 h-3.5" />
         </button>

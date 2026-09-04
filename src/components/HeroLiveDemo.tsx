@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Loader2, Code2, Terminal, Database, ArrowRight, Zap, CheckCircle2, AlertCircle, Coins } from 'lucide-react';
+import { Play, Loader2, Code2, Terminal, Database, Zap, CheckCircle2, AlertCircle, Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStore } from '@/lib/store';
+import { apiBaseUrl } from '@/lib/api-config';
 
 type EndpointType = 'domain' | 'email' | 'cin';
 
@@ -12,7 +14,7 @@ interface EndpointConfig {
   label: string;
   placeholder: string;
   defaultInput: string;
-  mockResponse: any;
+  mockResponse: Record<string, unknown>;
   method: string;
   path: string;
 }
@@ -24,7 +26,7 @@ const ENDPOINTS: Record<EndpointType, EndpointConfig> = {
     placeholder: 'Enter domain (e.g., stripe.com)',
     defaultInput: 'stripe.com',
     method: 'GET',
-    path: '/v1/companies/enrich?domain=',
+    path: '/v1/enrichment/reverse?domain=',
     mockResponse: {
       id: "comp_9238472",
       name: "Stripe",
@@ -47,7 +49,7 @@ const ENDPOINTS: Record<EndpointType, EndpointConfig> = {
     placeholder: 'Enter corporate email...',
     defaultInput: 'john@stripe.com',
     method: 'GET',
-    path: '/v1/people/lookup?email=',
+    path: '/v1/identity/resolve?query=',
     mockResponse: {
       id: "usr_445892",
       first_name: "John",
@@ -69,7 +71,7 @@ const ENDPOINTS: Record<EndpointType, EndpointConfig> = {
     placeholder: 'Enter MCA CIN...',
     defaultInput: 'U72900KA2021PTC',
     method: 'GET',
-    path: '/v1/entities/verify?cin=',
+    path: '/v1/companies?cin=',
     mockResponse: {
       cin: "U72900KA2021PTC",
       entity_name: "TECHCORP INDIA",
@@ -94,6 +96,7 @@ export function HeroLiveDemo() {
   const [activeLang, setActiveLang] = useState<Lang>('node');
   const [displayedJson, setDisplayedJson] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const { environment } = useStore();
 
   const currentEndpoint = ENDPOINTS[activeTab];
 
@@ -144,15 +147,18 @@ export function HeroLiveDemo() {
   };
 
   const getCodeSnippet = (lang: Lang) => {
-    const fullUrl = `https://api.zinbit.com${currentEndpoint.path}${input}`;
+    const baseUrl = apiBaseUrl(environment);
+    const keyStr = environment === 'live' ? 'sk_live_...' : 'sk_test_...';
+    const fullUrl = `${baseUrl}${currentEndpoint.path}${input}`;
+    
     if (lang === 'curl') {
-      return `curl -X GET "${fullUrl}" \\\n  -H "Authorization: Bearer sk_live_..."`;
+      return `curl -X GET "${fullUrl}" \\\n  -H "Authorization: Bearer ${keyStr}"`;
     }
     if (lang === 'node') {
-      return `import { Zinbit } from 'zinbit';\n\nconst client = new Zinbit('sk_live_...');\nconst res = await client.get(\n  '${currentEndpoint.path}${input}'\n);\nconsole.log(res.data);`;
+      return `import { Zinbit } from 'zinbit';\n\nconst client = new Zinbit('${keyStr}');\nconst res = await client.get(\n  '${currentEndpoint.path}${input}'\n);\nconsole.log(res.data);`;
     }
     if (lang === 'python') {
-      return `import zinbit\n\nclient = zinbit.Client('sk_live_...')\nres = client.get('${currentEndpoint.path}${input}')\nprint(res.json())`;
+      return `import zinbit\n\nclient = zinbit.Client('${keyStr}')\nres = client.get('${currentEndpoint.path}${input}')\nprint(res.json())`;
     }
     return '';
   };
@@ -210,11 +216,28 @@ export function HeroLiveDemo() {
                 <button 
                   onClick={handleRun}
                   disabled={status === 'loading'}
-                  className="bg-teal hover:bg-teal-ice text-ink p-1.5 rounded-md transition-colors disabled:opacity-50 flex items-center justify-center shrink-0"
+                  className={cn("px-4 py-1.5 rounded-md transition-colors disabled:opacity-50 flex items-center justify-center shrink-0 text-xs font-bold gap-2 text-ink shadow-lg whitespace-nowrap",
+                    environment === 'live' ? "bg-[#5D5FEF] hover:bg-[#5D5FEF]/80 text-white" : "bg-[#00F0FF] hover:bg-[#00F0FF]/80 text-[#0C0C0C]"
+                  )}
                 >
                   {status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                  {environment === 'live' ? 'Execute Live Call' : 'Test Endpoint (Free)'}
                 </button>
               </motion.div>
+              
+              <AnimatePresence>
+                {environment === 'live' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute -bottom-8 left-0 text-[10px] font-bold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20 flex items-center gap-1.5"
+                  >
+                    <AlertCircle className="w-3 h-3" />
+                    This will consume live credits
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -231,7 +254,7 @@ export function HeroLiveDemo() {
                     onClick={() => setActiveLang(lang)}
                     className={cn(
                       "text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded transition-colors",
-                      activeLang === lang ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+                      activeLang === lang ? (environment === 'live' ? "bg-[#5D5FEF] text-white" : "bg-[#00F0FF] text-[#0C0C0C]") : "text-white/40 hover:text-white/70"
                     )}
                   >
                     {lang}
@@ -265,7 +288,7 @@ export function HeroLiveDemo() {
 
           <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 bg-black/60 relative z-10">
             <div className="flex items-center gap-2">
-              <Database className="w-3.5 h-3.5 text-teal" />
+              <Database className={cn("w-3.5 h-3.5", environment === 'sandbox' ? "text-[#00F0FF]" : "text-[#5D5FEF]")} />
               <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">JSON Payload</span>
             </div>
             
@@ -281,11 +304,11 @@ export function HeroLiveDemo() {
                   <div className="flex items-center gap-1 text-[10px] font-bold text-semantic-success bg-semantic-success/10 px-2 py-0.5 rounded border border-semantic-success/20">
                     <Zap className="w-3 h-3" /> 114ms
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-teal bg-teal/10 px-2 py-0.5 rounded border border-teal/20">
+                  <div className={cn("flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border", environment === 'sandbox' ? "text-[#00F0FF] bg-[#00F0FF]/10 border-[#00F0FF]/20" : "text-[#5D5FEF] bg-[#5D5FEF]/10 border-[#5D5FEF]/20")}>
                     <CheckCircle2 className="w-3 h-3" /> 99% Conf
                   </div>
                   <div className="flex items-center gap-1 text-[10px] font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
-                    <Coins className="w-3 h-3" /> 1 Credit
+                    <Coins className="w-3 h-3" /> {environment === 'sandbox' ? '0 Credits (Test)' : '1 Credit'}
                   </div>
                 </motion.div>
               )}
@@ -312,10 +335,10 @@ export function HeroLiveDemo() {
                 <div className="h-4 w-24 bg-white/10 rounded" />
               </div>
             ) : (
-              <pre className="text-sm font-mono text-teal">
+              <pre className={cn("text-sm font-mono", environment === 'sandbox' ? "text-[#00F0FF]" : "text-[#5D5FEF]")}>
                 <code>
                   {displayedJson}
-                  {isTyping && <span className="inline-block w-2 h-4 ml-1 bg-teal animate-pulse" />}
+                  {isTyping && <span className={cn("inline-block w-2 h-4 ml-1 animate-pulse", environment === 'sandbox' ? "bg-[#00F0FF]" : "bg-[#5D5FEF]")} />}
                 </code>
               </pre>
             )}

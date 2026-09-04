@@ -15,7 +15,7 @@ const PII_PATTERNS = [
   { regex: /\b\+?1?[-.]?\(?\d{3}\)?[-.]?\d{3}[-.]?\d{4}\b/g, replacer: '[PHONE_REDACTED]' }
 ];
 
-export function redactPII(payload: any): any {
+export function redactPII(payload: unknown): unknown {
   if (payload === null || payload === undefined) {
     return payload;
   }
@@ -33,14 +33,15 @@ export function redactPII(payload: any): any {
   }
 
   if (typeof payload === 'object') {
-    const sanitizedObj: any = {};
-    for (const key in payload) {
-      if (Object.prototype.hasOwnProperty.call(payload, key)) {
+    const source = payload as Record<string, unknown>;
+    const sanitizedObj: Record<string, unknown> = {};
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
         // Redact specific sensitive keys instantly regardless of value
         if (['password', 'secret', 'token', 'apikey', 'authorization'].includes(key.toLowerCase())) {
           sanitizedObj[key] = '[SECRET_REDACTED]';
         } else {
-          sanitizedObj[key] = redactPII(payload[key]);
+          sanitizedObj[key] = redactPII(source[key]);
         }
       }
     }
@@ -51,7 +52,7 @@ export function redactPII(payload: any): any {
 }
 
 export const Logger = {
-  info: (message: string, context?: any) => {
+  info: (message: string, context?: unknown) => {
     const sanitizedContext = context ? redactPII(context) : undefined;
     console.log(JSON.stringify({
       level: 'INFO',
@@ -60,7 +61,7 @@ export const Logger = {
       context: sanitizedContext
     }));
   },
-  warn: (message: string, context?: any) => {
+  warn: (message: string, context?: unknown) => {
     const sanitizedContext = context ? redactPII(context) : undefined;
     console.warn(JSON.stringify({
       level: 'WARN',
@@ -69,7 +70,7 @@ export const Logger = {
       context: sanitizedContext
     }));
   },
-  error: (message: string, context?: any) => {
+  error: (message: string, context?: unknown) => {
     const sanitizedContext = context ? redactPII(context) : undefined;
     console.error(JSON.stringify({
       level: 'ERROR',

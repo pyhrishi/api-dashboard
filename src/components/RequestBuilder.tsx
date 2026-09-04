@@ -15,12 +15,10 @@ import { useEffect, useState } from 'react';
 import { Endpoint, getEndpointById, ENDPOINTS } from '@/data/endpoints';
 import { validateAllParameters, hasValidationErrors } from '@/lib/validation';
 import { generateCodeSamples } from '@/lib/codeSampleGenerator';
-import { callSandboxAPI, isAPIError, formatResponseForDisplay } from '@/lib/sandboxAPI';
 import { useStore } from '@/lib/store';
-import { 
-  ChevronDown, 
-  Copy, 
-  Check, 
+import {
+  Copy,
+  Check,
   Play, 
   Loader2, 
   AlertCircle,
@@ -36,7 +34,7 @@ export interface RequestBuilderProps {
     endpoint: Endpoint;
     statusCode: number;
     responseTime: number;
-    response: any;
+    response: unknown;
   }) => void;
   onStepChange?: (step: number) => void;
   hideExecuteButton?: boolean;
@@ -55,7 +53,6 @@ export default function RequestBuilder({
   mode = 'full',
   preselectedEndpointId,
   onExecute,
-  onStepChange,
   hideExecuteButton = false,
   disableEditing = false,
   apiKey = 'sk_test_demo_key',
@@ -65,7 +62,7 @@ export default function RequestBuilder({
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | undefined>(
     preselectedEndpointId
   );
-  const [parameters, setParameters] = useState<Record<string, any>>({});
+  const [parameters, setParameters] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [simulateStatus, setSimulateStatus] = useState<number>(200);
   const [activeCodeTab, setActiveCodeTab] = useState<'curl' | 'python' | 'nodejs' | 'graphql'>('curl');
@@ -77,7 +74,7 @@ export default function RequestBuilder({
   });
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState<any>(null);
+  const [response, setResponse] = useState<unknown>(null);
   const [responseHeaders, setResponseHeaders] = useState<Record<string, string>>({});
   const [responseError, setResponseError] = useState<{message: string, code?: string} | null>(null);
   const [responseTime, setResponseTime] = useState<number>(0);
@@ -207,8 +204,8 @@ export default function RequestBuilder({
           });
         }
       }
-    } catch (error: any) {
-      setResponseError({ message: error.message || 'An error occurred' });
+    } catch (error: unknown) {
+      setResponseError({ message: error instanceof Error ? error.message : 'An error occurred' });
     } finally {
       setLoading(false);
     }
@@ -221,8 +218,9 @@ export default function RequestBuilder({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Render nothing if no endpoint selected and not in preview mode
-  if (!endpoint && mode !== 'preview') {
+  // With nothing selected: editable (full) mode must still render the selector so the
+  // user can pick an endpoint; non-editable modes show a designed placeholder instead.
+  if (!endpoint && !isEditable) {
     return (
       <div className="p-6 text-center text-ink/60 dark:text-white/60">
         <Code2 className="w-8 h-8 mx-auto mb-3 opacity-30" />
@@ -379,6 +377,8 @@ export default function RequestBuilder({
                 onClick={() =>
                   copyToClipboard(codeSamples[activeCodeTab], `code-${activeCodeTab}`)
                 }
+                aria-label="Copy code sample"
+                title="Copy code sample"
                 className="absolute top-3 right-3 p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
               >
                 {copiedId === `code-${activeCodeTab}` ? (
@@ -489,7 +489,7 @@ export default function RequestBuilder({
               )}
               <div className="p-4 rounded-lg border border-ink/8 dark:border-white/10 bg-ink text-white">
                 <pre className="text-xs font-mono overflow-x-auto">
-                  <code>{formatResponseForDisplay(response)}</code>
+                  <code>{JSON.stringify(response, null, 2)}</code>
                 </pre>
               </div>
             </div>

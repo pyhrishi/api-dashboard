@@ -184,6 +184,42 @@ function seedPartners() {
 
 seedPartners();
 
+// Seed recent (this-month) revenue events so partner dashboards show live
+// activity, MTD revenue, and earnings out of the box.
+function seedRevenueEvents() {
+  const now = Date.now();
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  // Distribute events across the elapsed part of the current month so they count
+  // toward month-to-date revenue regardless of the day the demo is run.
+  const span = Math.max(now - monthStart.getTime(), 24 * 60 * 60 * 1000);
+  const samples: { partnerId: string; gross: number; frac: number; type: RevenueEventType }[] = [
+    { partnerId: 'prt_apollo_io', gross: 48_000, frac: 0.85, type: 'contract_signed' },
+    { partnerId: 'prt_apollo_io', gross: 12_500, frac: 0.55, type: 'subscription_upgrade' },
+    { partnerId: 'prt_apollo_io', gross: 3_200, frac: 0.20, type: 'api_call' },
+    { partnerId: 'prt_hubspot', gross: 9_800, frac: 0.90, type: 'renewal' },
+    { partnerId: 'prt_hubspot', gross: 2_400, frac: 0.40, type: 'api_call' },
+    { partnerId: 'prt_accel_ventures', gross: 5_000, frac: 0.70, type: 'contract_signed' },
+    { partnerId: 'prt_indie_dev_01', gross: 220, frac: 0.60, type: 'subscription_upgrade' },
+  ];
+  for (const s of samples) {
+    const partner = partnerRegistry.get(s.partnerId);
+    if (!partner) continue;
+    revenueEvents.push({
+      eventId: `evt_seed_${s.partnerId}_${Math.round(s.frac * 100)}`,
+      partnerId: s.partnerId,
+      referredApiKey: `sk_live_${s.partnerId.replace('prt_', '')}_customer`,
+      eventType: s.type,
+      grossRevenue: s.gross,
+      commissionEarned: calculateCommission(partner, s.gross),
+      timestamp: Math.round(monthStart.getTime() + s.frac * span),
+    });
+  }
+}
+
+seedRevenueEvents();
+
 // ─── Core Functions ─────────────────────────────────────────────────────────
 
 function generateId(prefix: string): string {
@@ -295,7 +331,6 @@ export function getPartnerDashboard(partnerId: string): PartnerDashboard | null 
   const partner = partnerRegistry.get(partnerId);
   if (!partner) return null;
 
-  const now = Date.now();
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -313,7 +348,7 @@ export function getPartnerDashboard(partnerId: string): PartnerDashboard | null 
   );
 
   const nextTierEntry = Object.entries(TIER_THRESHOLDS).find(
-    ([tier, threshold]) =>
+    ([tier]) =>
       TIER_THRESHOLDS[tier as PartnerTier] > partner.cumulativeRevenue && tier !== 'oem'
   );
   const nextTierAt = nextTierEntry

@@ -5,6 +5,7 @@
  */
 
 import { Endpoint } from '@/data/endpoints';
+import { API_BASE_URL, authHeaderValue } from '@/lib/api-config';
 
 export interface CodeSample {
   curl: string;
@@ -16,7 +17,7 @@ export interface CodeSample {
 
 export interface CodeSampleContext {
   endpoint: Endpoint;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   apiKey: string;
   baseUrl?: string;
 }
@@ -25,7 +26,7 @@ export interface CodeSampleContext {
  * Generate all code samples for a request
  */
 export function generateCodeSamples(context: CodeSampleContext): CodeSample {
-  const { endpoint, parameters, apiKey, baseUrl = 'https://api.zintlr.com/v1' } = context;
+  const { endpoint, parameters, apiKey, baseUrl = API_BASE_URL } = context;
 
   return {
     curl: generateCurlSample(endpoint, parameters, apiKey, baseUrl),
@@ -42,7 +43,7 @@ export function generateCodeSamples(context: CodeSampleContext): CodeSample {
  */
 export function generateCurlSample(
   endpoint: Endpoint,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   apiKey: string,
   baseUrl: string
 ): string {
@@ -52,7 +53,7 @@ export function generateCurlSample(
   let command = `curl -X ${method} "${url}"`;
 
   // Add headers
-  command += `\n  -H "Authorization: ${apiKey}"`;
+  command += `\n  -H "Authorization: ${authHeaderValue(apiKey)}"`;
   command += `\n  -H "Content-Type: application/json"`;
 
   // Add body for POST requests
@@ -70,7 +71,7 @@ export function generateCurlSample(
  */
 export function generateCliSample(
   endpoint: Endpoint,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   apiKey: string
 ): string {
   let command = `npx zintlr test ${endpoint.path} --key="${apiKey}"`;
@@ -92,7 +93,7 @@ export function generateCliSample(
  */
 export function generatePythonSample(
   endpoint: Endpoint,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   apiKey: string,
   baseUrl: string
 ): string {
@@ -103,7 +104,7 @@ export function generatePythonSample(
 
   // Setup headers
   code += `headers = {\n`;
-  code += `    "Authorization": "${apiKey}",\n`;
+  code += `    "Authorization": "${authHeaderValue(apiKey)}",\n`;
   code += `    "Content-Type": "application/json"\n`;
   code += `}\n\n`;
 
@@ -138,7 +139,7 @@ export function generatePythonSample(
  */
 export function generateNodeJsSample(
   endpoint: Endpoint,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   apiKey: string,
   baseUrl: string
 ): string {
@@ -152,7 +153,7 @@ export function generateNodeJsSample(
   code += `  method: '${method}',\n`;
   code += `  url: '${url}',\n`;
   code += `  headers: {\n`;
-  code += `    'Authorization': '${apiKey}',\n`;
+  code += `    'Authorization': '${authHeaderValue(apiKey)}',\n`;
   code += `    'Content-Type': 'application/json'\n`;
   code += `  }\n`;
 
@@ -184,7 +185,7 @@ export function generateNodeJsSample(
  */
 function buildUrl(
   endpoint: Endpoint,
-  parameters: Record<string, any>,
+  parameters: Record<string, unknown>,
   baseUrl: string
 ): string {
   let url = `${baseUrl}${endpoint.path}`;
@@ -204,7 +205,7 @@ function buildUrl(
  * Extract query parameters from form values
  * Only include non-empty values
  */
-function getQueryParameters(endpoint: Endpoint, parameters: Record<string, any>): Record<string, string> {
+function getQueryParameters(endpoint: Endpoint, parameters: Record<string, unknown>): Record<string, string> {
   const queryParams: Record<string, string> = {};
 
   endpoint.parameters.forEach(param => {
@@ -221,8 +222,8 @@ function getQueryParameters(endpoint: Endpoint, parameters: Record<string, any>)
  * Extract body parameters from form values
  * Only include non-empty values
  */
-function getBodyParameters(endpoint: Endpoint, parameters: Record<string, any>): Record<string, any> {
-  const bodyParams: Record<string, any> = {};
+function getBodyParameters(endpoint: Endpoint, parameters: Record<string, unknown>): Record<string, unknown> {
+  const bodyParams: Record<string, unknown> = {};
 
   endpoint.parameters.forEach(param => {
     const value = parameters[param.name];
@@ -237,20 +238,6 @@ function getBodyParameters(endpoint: Endpoint, parameters: Record<string, any>):
   });
 
   return bodyParams;
-}
-
-/**
- * Escape special characters in strings for safe shell usage
- */
-function escapeShellString(str: string): string {
-  return str.replace(/'/g, "'\\''");
-}
-
-/**
- * Format JSON with proper indentation
- */
-function formatJson(obj: any, indent = 2): string {
-  return JSON.stringify(obj, null, indent);
 }
 
 /**
@@ -328,7 +315,7 @@ ${endpoint.parameters.map(p => `   * - ${p.name} (${p.type})${p.required ? ' [RE
  * Useful for showing developers what to expect
  */
 export function getExampleResponse(endpoint: Endpoint): string {
-  let dataPayload: any = { example: 'response' };
+  let dataPayload: Record<string, unknown> = { example: 'response' };
 
   switch (endpoint.id) {
     case 'people-search':
@@ -443,12 +430,12 @@ export function generateInlineCodeSnippet(endpoint: Endpoint, language: 'curl' |
  */
 export function generateGraphQLSample(
   endpoint: Endpoint,
-  parameters: Record<string, any>
+  parameters: Record<string, unknown>
 ): string {
   // Simple GraphQL query generator based on parameters
   const queryName = endpoint.name.replace(/[^a-zA-Z0-9]/g, '');
   const args = Object.entries(parameters)
-    .filter(([_, value]) => value !== undefined && value !== '')
+    .filter(([, value]) => value !== undefined && value !== '')
     .map(([key, value]) => {
       const type = endpoint.parameters.find(p => p.name === key)?.type;
       const formattedValue = type === 'number' ? value : `"${value}"`;

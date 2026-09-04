@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ShieldCheck, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { track } from '@/lib/telemetry';
+import { authHeaderValue } from '@/lib/api-config';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [error, setError] = useState('');
+  const [referralCode, setReferralCode] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +48,26 @@ export default function SignupPage() {
 
     // Update global state
     signup(email, company);
-    
+    const code = referralCode.trim().toUpperCase();
+    track('signup_completed', { hasCompany: Boolean(company), hasReferral: Boolean(code) });
+
+    // PLG (expand): attribute this account to a partner via referral code. Reuses the
+    // real gateway attribution API with the freshly provisioned sandbox key.
+    if (code) {
+      setStatusText('Applying partner code...');
+      const newKey = useStore.getState().activeKeys[0]?.key;
+      try {
+        const res = await fetch('/api/v1/partner/attribute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: authHeaderValue(newKey || 'sk_test_signup') },
+          body: JSON.stringify({ api_key: newKey, referral_code: code }),
+        });
+        track('referral_code_applied', { code, success: res.ok });
+      } catch {
+        track('referral_code_applied', { code, success: false });
+      }
+    }
+
     // Redirect to keys
     router.push('/console?new=true');
   };
@@ -151,10 +173,27 @@ export default function SignupPage() {
               />
             </div>
 
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="referralCode" className="block text-xs font-semibold text-white/60 uppercase tracking-wider">Referral or Partner Code</label>
+                <span className="text-[10px] uppercase font-bold text-white/30 tracking-wider">Optional</span>
+              </div>
+              <input
+                id="referralCode"
+                type="text"
+                value={referralCode}
+                onChange={e => setReferralCode(e.target.value)}
+                disabled={isSubmitting}
+                autoComplete="off"
+                className="w-full bg-[#09090B] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/50 transition-all disabled:opacity-50 font-mono uppercase"
+                placeholder="e.g. APOLLO2026"
+              />
+            </div>
+
             <div className="flex items-center gap-2 mt-2">
-              <input 
-                type="checkbox" 
-                id="keepLoggedIn" 
+              <input
+                type="checkbox"
+                id="keepLoggedIn"
                 className="w-4 h-4 rounded border-white/10 bg-white/5 text-teal focus:ring-teal/50 focus:ring-offset-0" 
                 defaultChecked
               />

@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/lib/store';
-import { X, Zap, ArrowRight, ShieldCheck, CreditCard } from 'lucide-react';
+import { X, Zap, ShieldCheck, CreditCard } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useToast } from '@/components/Toast';
 import { Portal } from './Portal';
+import { track } from '@/lib/telemetry';
 
 interface RechargeModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
     
     // Add credits
     rechargeCredits(pack.credits + pack.bonus);
+    track('credits_recharged', { pack: pack.id, credits: pack.credits, bonus: pack.bonus });
     
     // Trigger gamified effects
     confetti({
@@ -63,7 +65,7 @@ export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="absolute inset-0 bg-overlay backdrop-blur-sm"
               onClick={onClose}
             />
             
@@ -71,21 +73,21 @@ export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-3xl bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col"
+              className="relative w-full max-w-3xl bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col"
             >
               {/* Header */}
-              <div className="p-8 border-b border-white/10 bg-gradient-to-r from-[#09090b] to-teal/10 flex items-start justify-between relative overflow-hidden">
+              <div className="p-8 border-b border-border bg-gradient-to-r from-[#09090b] to-teal/10 flex items-start justify-between relative overflow-hidden">
                 <div className="absolute right-0 top-0 w-64 h-64 bg-teal/20 blur-[100px] rounded-full pointer-events-none" />
                 <div className="relative z-10">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-teal/20 text-teal rounded-lg">
                       <Zap className="w-6 h-6" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white">Recharge Credits</h2>
+                    <h2 className="text-2xl font-bold text-fg">Recharge Credits</h2>
                   </div>
-                  <p className="text-white/60">Your current balance is <strong className="text-white">{creditBalance.toLocaleString()}</strong>. Top up your API fuel to keep building.</p>
+                  <p className="text-fg-muted">Your current balance is <strong className="text-fg">{creditBalance.toLocaleString()}</strong>. Top up your API fuel to keep building.</p>
                 </div>
-                <button onClick={onClose} className="p-2 text-white/40 hover:text-white transition-colors rounded-lg hover:bg-white/5 relative z-10">
+                <button onClick={onClose} className="p-2 text-fg-muted hover:text-fg transition-colors rounded-lg hover:bg-glass relative z-10">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -100,7 +102,7 @@ export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
                       className={`relative p-6 rounded-2xl border-2 transition-all cursor-pointer ${
                         selectedPack === pack.id 
                           ? 'border-teal bg-teal/5 shadow-[0_0_30px_rgba(70,189,198,0.15)]' 
-                          : 'border-white/10 bg-[#111115] hover:border-white/30 hover:bg-white/5'
+                          : 'border-border bg-surface-2 hover:border-white/30 hover:bg-glass'
                       }`}
                     >
                       {pack.popular && (
@@ -112,14 +114,14 @@ export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
                       )}
                       
                       <div className="text-center mb-6 mt-2">
-                        <h3 className="text-lg font-bold text-white mb-1">{pack.name}</h3>
-                        <div className="text-3xl font-black text-white">{pack.price}</div>
+                        <h3 className="text-lg font-bold text-fg mb-1">{pack.name}</h3>
+                        <div className="text-3xl font-black text-fg">{pack.price}</div>
                       </div>
                       
                       <div className="space-y-4">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-white/60">Base Credits</span>
-                          <span className="font-mono font-bold text-white">{pack.credits.toLocaleString()}</span>
+                          <span className="text-fg-muted">Base Credits</span>
+                          <span className="font-mono font-bold text-fg">{pack.credits.toLocaleString()}</span>
                         </div>
                         
                         {pack.bonus > 0 ? (
@@ -129,14 +131,14 @@ export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
                           </div>
                         ) : (
                           <div className="flex items-center justify-between text-sm opacity-30">
-                            <span className="text-white/60">Bonus</span>
-                            <span className="font-mono font-bold text-white">0</span>
+                            <span className="text-fg-muted">Bonus</span>
+                            <span className="font-mono font-bold text-fg">0</span>
                           </div>
                         )}
                         
-                        <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                          <span className="font-bold text-white">Total</span>
-                          <span className="font-mono font-black text-white text-lg">{(pack.credits + pack.bonus).toLocaleString()}</span>
+                        <div className="pt-4 border-t border-border flex items-center justify-between">
+                          <span className="font-bold text-fg">Total</span>
+                          <span className="font-mono font-black text-fg text-lg">{(pack.credits + pack.bonus).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -145,14 +147,14 @@ export function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
               </div>
 
               {/* Footer */}
-              <div className="p-6 border-t border-white/10 bg-[#111115] flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2 text-white/40 text-sm">
+              <div className="p-6 border-t border-border bg-surface-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-fg-muted text-sm">
                   <ShieldCheck className="w-4 h-4 text-teal" /> Secure Stripe checkout
                 </div>
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                   <button 
                     onClick={onClose}
-                    className="px-6 py-3 rounded-xl font-bold text-white hover:bg-white/10 transition-colors w-full sm:w-auto"
+                    className="px-6 py-3 rounded-xl font-bold text-fg hover:bg-glass-2 transition-colors w-full sm:w-auto"
                   >
                     Cancel
                   </button>

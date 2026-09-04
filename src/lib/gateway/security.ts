@@ -25,7 +25,7 @@ function hashKey(key: string): string {
 
 export function attachISO27001Headers(headers: HeadersInit) {
   // ISO 27001 Information Security Policies (ISMS)
-  const h = headers as any;
+  const h = headers as Record<string, string>;
   h['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload';
   h['X-Content-Type-Options'] = 'nosniff';
   h['X-Frame-Options'] = 'DENY';
@@ -43,7 +43,7 @@ interface FraudRecord {
 }
 const fraudTracker = new Map<string, FraudRecord>();
 
-export function enforceFraudDetection(apiKey: string, currentRegion: string, clientIp: string): SecurityResult {
+export function enforceFraudDetection(apiKey: string, currentRegion: string): SecurityResult {
   const now = Date.now();
   const record = fraudTracker.get(apiKey);
 

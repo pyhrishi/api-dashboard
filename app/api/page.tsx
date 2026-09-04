@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { HeroLiveDemo } from '@/components/HeroLiveDemo';
 import { IntegrationTerminal } from '@/components/IntegrationTerminal';
 import { CapabilitiesShowcase } from '@/components/CapabilitiesShowcase';
-import { ShieldCheck, Search, Users, PhoneCall, KeyRound, Building2, SearchCheck, Check, ArrowRight, Zap, Network, Database, Cloud, FileCode, Workflow, ArrowRightLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Users, Building2, SearchCheck, Check, ArrowRight, Zap, Network, Database, Cloud, FileCode, Workflow, ArrowRightLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PricingSliderModal } from '@/components/PricingSliderModal';
@@ -17,25 +17,10 @@ export default function ApiLandingPage() {
   const router = useRouter();
   const { isAuthenticated, user } = useStore();
 
-  const endpoints = [
-    { title: "Find Phone by Email", icon: <PhoneCall className="w-5 h-5" />, desc: "Convert any corporate email address into a direct-dial phone number." },
-    { title: "Find Email by Phone", icon: <Search className="w-5 h-5" />, desc: "Reverse lookup a mobile or landline to find the associated corporate email." },
-    { title: "LinkedIn to Profile Data", icon: <Users className="w-5 h-5" />, desc: "Extract rich, structured JSON data from a LinkedIn URL." },
-    { title: "LinkedIn to Contact", icon: <PhoneCall className="w-5 h-5" />, desc: "Resolve a LinkedIn URL to verified email addresses and direct-dials." },
-    { title: "People Search", icon: <SearchCheck className="w-5 h-5" />, desc: "Query our 400M+ contact graph using names, companies, and roles." },
-    { title: "People AI Search", icon: <Search className="w-5 h-5" />, desc: "Use natural language (e.g. 'VP of Sales at SaaS startups in Bangalore')." },
-    { title: "Domain to CIN", icon: <Building2 className="w-5 h-5" />, desc: "Map any company domain to its official Ministry of Corporate Affairs CIN." },
-    { title: "CIN to Company Data", icon: <ShieldCheck className="w-5 h-5" />, desc: "Retrieve verified financial and compliance data using a CIN." },
-    { title: "Domain to LinkedIn URL", icon: <Users className="w-5 h-5" />, desc: "Find the official company LinkedIn page from a bare domain." },
-    { title: "Contact to LinkedIn URL", icon: <Users className="w-5 h-5" />, desc: "Find a person's LinkedIn profile using their name and company." },
-    { title: "Reverse Enrichment", icon: <SearchCheck className="w-5 h-5" />, desc: "Input an IP address or partial footprint to identify the B2B visitor." },
-    { title: "DIN to Phone", icon: <KeyRound className="w-5 h-5" />, desc: "Map a Director Identification Number to direct contact information." },
-  ];
-
   const pricingTiers = [
-    { name: "Starter", limit: "10,000", price: "$99" },
-    { name: "Growth", limit: "100,000", price: "$499" },
-    { name: "Scale", limit: "1,000,000", price: "$2,999" },
+    { name: "Starter", limit: "10,000", price: "99" },
+    { name: "Growth", limit: "100,000", price: "499" },
+    { name: "Scale", limit: "1,000,000", price: "2,999" },
   ];
 
   const fadeUp: Variants = {
@@ -426,7 +411,7 @@ export default function ApiLandingPage() {
                   <div className="text-sm font-semibold text-teal bg-teal/10 px-3 py-1 rounded-full mb-6">
                     {tier.limit} Credits
                   </div>
-                  <div className="text-4xl font-black text-ink dark:text-white mb-8">{tier.price}<span className="text-lg text-ink dark:text-white/40 font-medium">/mo</span></div>
+                  <div className="text-4xl font-black text-ink dark:text-white mb-8">{tier.price}<span className="text-lg text-ink dark:text-white/40 font-medium"> Credits/mo</span></div>
                   <button onClick={() => setIsPricingModalOpen(true)} className="w-full text-center py-3 rounded-full border border-white/20 text-ink dark:text-white font-bold hover:bg-white hover:text-ink transition-colors block">
                     Get Started
                   </button>
