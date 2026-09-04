@@ -11,6 +11,7 @@ import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { resolveCompanyFromIp } from '@/lib/ip-resolver';
 import { verifyPhoneForEmail } from '@/lib/phone-verifier';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
+import { normalizeJobTitle } from '@/lib/title-normalizer';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -472,6 +473,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...social };
+    }
+
+    case 'title-normalize': {
+      // Deterministic job-title normalization (single source of truth).
+      const norm = normalizeJobTitle(String(parameters.title || ''));
+      if (!norm) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a job title to normalize.' },
+        };
+      }
+      return { success: true, ...norm };
     }
 
     case 'phone-to-email':

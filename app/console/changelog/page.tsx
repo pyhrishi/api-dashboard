@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.10', date: 'September 2026', headline: 'Job title normalization',
+    changes: [
+      { kind: 'feature', text: 'Job title normalization — turn any messy title ("Sr. SWE II", "VP, Eng", "Head of Growth") into a canonical title plus a normalized seniority, function, department, and management level, with the lexicon tokens behind each classification and a decision-maker flag for lead routing and scoring. New GET /v1/titles/normalize endpoint (1 credit), shipped as a Studio preset.' },
+      { kind: 'improvement', text: 'Seniority normalization shares one ladder (Individual Contributor → C-Suite) with person resolution, so titles line up across the whole product.' },
+    ],
+  },
+  {
     version: 'v4.9', date: 'September 2026', headline: 'Social profile discovery',
     changes: [
       { kind: 'feature', text: 'Social profile discovery — turn an email into a person\'s whole professional social footprint: LinkedIn, GitHub, X, Stack Overflow, Medium, and personal sites, each with a handle, verification status, follower/reputation signal, and per-platform match confidence. New GET /v1/people/social endpoint (2 credits), shipped as a Studio preset with clickable profile links and cross-platform provenance.' },

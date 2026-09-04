@@ -11,7 +11,7 @@ import { getEndpointById, type Endpoint } from '@/data/endpoints';
 import type { ResolvedPerson } from '@/lib/person-resolver';
 import type { EnrichedCompany } from '@/lib/company-resolver';
 
-export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'auto';
+export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
 export type EnrichmentCategory = 'person' | 'company' | 'identity';
 
 interface PresetConfig {
@@ -57,6 +57,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'reverse', endpointId: 'reverse-enrichment', param: 'query', inputKind: 'auto', icon: 'Sparkles', category: 'identity', examples: ['jane@acme.com', 'stripe.com'], label: 'Reverse enrichment' },
   { id: 'reverse-ip', endpointId: 'ip-to-company', param: 'ip', inputKind: 'ip', icon: 'Network', category: 'identity', examples: ['52.38.104.17', '104.18.32.7', '8.8.8.8'], label: 'Reverse IP → company' },
   { id: 'email-to-social', endpointId: 'email-to-social', param: 'email', inputKind: 'email', icon: 'Share2', category: 'person', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'priya.nair@zomato.in'], label: 'Social profiles' },
+  { id: 'title-normalize', endpointId: 'title-normalize', param: 'title', inputKind: 'title', icon: 'Tags', category: 'person', examples: ['VP, Engineering', 'Sr. SWE II', 'Head of Growth'], label: 'Normalize a title' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -116,6 +117,7 @@ export function validateInput(kind: InputKind, raw: string): boolean {
     case 'cin': return v.length >= 8;
     case 'domain': return RE.domain.test(v.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]);
     case 'ip': return RE.ipv4.test(v) || RE.ipv6.test(v);
+    case 'title': return v.length >= 2;
     case 'din': return v.length >= 4;
     case 'auto': return v.length >= 2;
     default: return v.length > 0;
@@ -314,6 +316,39 @@ function socialToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Job title normalization: canonical title + seniority / function / management level. */
+function titleToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const canonical = str('canonical_title') || 'Title';
+  const input = str('input');
+  const seniority = str('seniority');
+  const fn = str('function');
+  const decision = d.is_decision_maker === true;
+
+  const badges = [seniority, fn, decision ? 'Decision-maker' : ''].filter(Boolean);
+  const fields: EnrichmentField[] = [
+    { label: 'Seniority', value: seniority || '—' },
+    { label: 'Function', value: fn || '—' },
+    { label: 'Department', value: str('department') || '—' },
+    { label: 'Management level', value: str('management_level') || '—' },
+    { label: 'Decision-maker', value: decision ? 'Yes' : 'No' },
+    { label: 'Normalized from', value: input || '—', mono: true },
+  ];
+
+  return {
+    kind: 'person',
+    title: canonical,
+    subtitle: input ? `Normalized from "${input}"` : undefined,
+    avatar: initialsOf(canonical),
+    badges,
+    fields,
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.matched_signals) ? (d.matched_signals as EnrichmentProvenance[]) : undefined,
+    raw: d,
+  };
+}
+
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
@@ -325,6 +360,8 @@ export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (isRecord(data.ip_intel)) return ipToResult(data.ip_intel as Record<string, unknown>);
   // Social profile discovery: a `profiles` array + platform_count mark the shape.
   if (Array.isArray(data.profiles) && typeof data.platform_count === 'number') return socialToResult(data);
+  // Job title normalization: canonical_title + seniority mark the shape.
+  if (typeof data.canonical_title === 'string' && typeof data.seniority === 'string') return titleToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

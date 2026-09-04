@@ -749,6 +749,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/webhooks',
       },
     ],
+  },
+
+  {
+    id: 'title-normalize',
+    name: 'Normalize Job Title',
+    description: 'Normalize any raw job title into a canonical title plus seniority, function, department, and management level — with the lexicon tokens behind each. Ideal for lead routing and scoring.',
+    method: 'GET',
+    path: '/v1/titles/normalize',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'title',
+        type: 'string',
+        required: true,
+        description: 'Raw job title to normalize',
+        example: 'VP, Engineering',
+        placeholder: 'e.g. Sr. SWE II, Head of Growth',
+        maxLength: 120,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'title-to-person',
+        title: 'Resolve the person',
+        description: 'Pair a normalized title with a full person profile for scoring.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 
