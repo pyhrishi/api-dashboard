@@ -34,3 +34,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright / visual review
+/test-results/
+/playwright-report/
+/.screenshots/
+
+# claude code — personal, machine-local permission grants
+.claude/settings.local.json
