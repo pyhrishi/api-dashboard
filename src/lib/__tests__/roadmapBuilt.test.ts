@@ -4,9 +4,10 @@ describe('roadmap build status', () => {
   const allIds = new Set(ROADMAP_AREAS.flatMap((a) => a.features.map((f) => f.id)));
 
   it('every built id is a real roadmap feature (no typos)', () => {
-    for (const id of BUILT_FEATURE_IDS) {
+    // Set is not spreadable under the project's tsconfig target — iterate with forEach.
+    BUILT_FEATURE_IDS.forEach((id) => {
       expect(allIds.has(id)).toBe(true);
-    }
+    });
   });
 
   it('ROADMAP_BUILT matches the set size and isFeatureBuilt', () => {
