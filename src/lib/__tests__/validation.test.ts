@@ -10,8 +10,6 @@ import {
   getFirstError,
   sanitizePhone,
   sanitizeEmail,
-  getValidationHint,
-  validationErrorsToArray,
 } from '../validation';
 import { EndpointParameter } from '@/data/endpoints';
 

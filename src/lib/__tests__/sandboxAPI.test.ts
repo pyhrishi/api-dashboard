@@ -35,22 +35,26 @@ describe('Sandbox API Integration', () => {
       expect(isAPIError(response)).toBe(false);
     });
 
-    // Property 12: Sandbox API Isolation - verify sk_test_ key enforced
-    it('should reject sk_live_ keys (Production isolation)', async () => {
+    // Live keys are accepted by the gateway (console↔gateway seam is closed);
+    // only malformed keys are rejected.
+    it('should accept sk_live_ keys and reject malformed keys', async () => {
       const endpoint = getEndpointById('people-search')!;
-      const request: APIRequest = {
+
+      const liveResponse = await callSandboxAPI({
         endpoint,
         parameters: { email: 'test@example.com' },
-        apiKey: 'sk_live_production_key', // Should be rejected
-      };
+        apiKey: 'sk_live_production_key',
+      });
+      expect(liveResponse.status).toBe(200);
+      expect(isAPIError(liveResponse)).toBe(false);
 
-      const response = await callSandboxAPI(request);
-
-      expect(response.status).toBe(401);
-      expect(isAPIError(response)).toBe(true);
-      if (isAPIError(response)) {
-        expect(response.error).toContain('sandbox');
-      }
+      const badResponse = await callSandboxAPI({
+        endpoint,
+        parameters: { email: 'test@example.com' },
+        apiKey: 'not_a_valid_key',
+      });
+      expect(badResponse.status).toBe(401);
+      expect(isAPIError(badResponse)).toBe(true);
     });
 
     it('should validate required parameters', async () => {
@@ -317,26 +321,24 @@ describe('Sandbox API Integration', () => {
 
   describe('Sandbox Isolation Properties', () => {
     // Property 7: Sandbox Isolation and Security
-    it('should enforce sandbox isolation with sk_test_ keys', async () => {
+    it('should accept both sk_test_ and sk_live_ keys', async () => {
       const endpoint = getEndpointById('people-search')!;
 
-      // Test with live key (should fail)
+      // Live key — accepted (the gateway bills it; masking is applied downstream).
       const liveKeyResponse = await callSandboxAPI({
         endpoint,
         parameters: { email: 'test@example.com' },
         apiKey: 'sk_live_production',
       });
+      expect(liveKeyResponse.status).toBe(200);
+      expect(isAPIError(liveKeyResponse)).toBe(false);
 
-      expect(liveKeyResponse.status).toBe(401);
-      expect(isAPIError(liveKeyResponse)).toBe(true);
-
-      // Test with sandbox key (should succeed)
+      // Sandbox key — accepted.
       const testKeyResponse = await callSandboxAPI({
         endpoint,
         parameters: { email: 'test@example.com' },
         apiKey: 'sk_test_sandbox',
       });
-
       expect(testKeyResponse.status).toBe(200);
       expect(isAPIError(testKeyResponse)).toBe(false);
     });

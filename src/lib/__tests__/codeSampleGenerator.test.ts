@@ -15,6 +15,7 @@ import {
   CodeSampleContext,
 } from '../codeSampleGenerator';
 import { getEndpointById } from '@/data/endpoints';
+import { API_BASE_URL } from '@/lib/api-config';
 
 describe('Code Sample Generator', () => {
   const testContext: CodeSampleContext = {
@@ -47,14 +48,14 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(curl).toContain('curl');
       expect(curl).toContain('-X GET');
       expect(curl).toContain('-H "Authorization:');
       expect(curl).toContain('sk_test_abc123');
-      expect(curl).toContain('email=john@example.com');
+      expect(curl).toContain('email=john%40example.com'); // URLSearchParams encodes '@'
       expect(validateGeneratedCode(curl, 'curl')).toBe(true);
     });
 
@@ -63,7 +64,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(curl).toContain('email');
@@ -77,7 +78,7 @@ describe('Code Sample Generator', () => {
         postEndpoint,
         { query: 'VP of Sales' },
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(curl).toContain('-X POST');
@@ -92,7 +93,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         'sk_test_testkey123',
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(curl).toContain('sk_test_testkey123');
@@ -106,7 +107,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(python).toContain('import requests');
@@ -124,7 +125,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(python).toContain('import requests');
@@ -138,7 +139,7 @@ describe('Code Sample Generator', () => {
         postEndpoint,
         { query: 'VP of Sales', limit: 10 },
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(python).toContain('requests.post');
@@ -153,7 +154,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(nodejs).toContain('const axios');
@@ -170,7 +171,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(nodejs).toContain('const axios = require');
@@ -186,7 +187,7 @@ describe('Code Sample Generator', () => {
         postEndpoint,
         { query: 'VP of Sales' },
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(nodejs).toContain("method: 'post'");
@@ -200,7 +201,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(validateGeneratedCode(curl, 'curl')).toBe(true);
@@ -211,7 +212,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(validateGeneratedCode(python, 'python')).toBe(true);
@@ -222,7 +223,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(validateGeneratedCode(nodejs, 'nodejs')).toBe(true);
@@ -281,7 +282,7 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         testContext.parameters,
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(curl).toContain('Authorization:');
@@ -295,14 +296,14 @@ describe('Code Sample Generator', () => {
         testContext.endpoint,
         { email: 'john@example.com' },
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       const sample2 = generateCurlSample(
         testContext.endpoint,
         { email: 'jane@example.com' },
         testContext.apiKey,
-        'https://api.zintlr.com/v1'
+        API_BASE_URL
       );
 
       expect(sample1).not.toEqual(sample2);
