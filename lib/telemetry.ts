@@ -17,6 +17,8 @@ export type TelemetryEventName =
   | 'api_key_created'
   | 'first_call_made'
   | 'explorer_run'
+  | 'person_resolved'
+  | 'person_resolution_failed'
   | 'feature_viewed'
   // monetization
   | 'quota_threshold_reached'

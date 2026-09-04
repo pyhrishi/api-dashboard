@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Layers } from 'lucide-react';
+import { UserSearch, LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Layers, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -62,6 +62,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Overview', href: '/console/overview', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'API Keys', href: '/console/keys', icon: <Key className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Endpoint Explorer', href: '/console/explorer', icon: <Compass className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Resolve', href: '/console/resolve', icon: <UserSearch className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Bulk Jobs', href: '/console/jobs', icon: <Layers className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Growth', href: '/console/growth', icon: <TrendingUp className="w-5 h-5" />, roles: ['admin', 'billing'] },
@@ -76,6 +77,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Signals', href: '/console/signals', icon: <MessageSquare className="w-5 h-5" />, roles: ['admin'] },
     { name: 'Docs', href: '/docs', icon: <BookOpen className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Changelog', href: '/console/changelog', icon: <GitBranch className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Roadmap', href: '/console/roadmap', icon: <Map className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Support', href: '/console/support', icon: <LifeBuoy className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Legal', href: '/console/legal', icon: <Scale className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Settings', href: '/console/settings', icon: <Users className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
@@ -119,7 +121,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-surface overflow-hidden font-sans selection:bg-teal selection:text-surface relative">
+    <div className="fixed inset-0 z-50 flex bg-surface overflow-hidden font-sans selection:bg-teal selection:text-surface">
       {activeOrg?.brandColor && (
         <style suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `:root { --color-brand: ${activeOrg.brandColor}; --color-brand-ice: color-mix(in srgb, ${activeOrg.brandColor} 40%, white); --color-brand-deep: color-mix(in srgb, ${activeOrg.brandColor} 60%, black); }` }} />
       )}
@@ -382,7 +384,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
               (isSidebarHovered || isMobileMenuOpen) ? 'opacity-100 max-h-12' : 'opacity-0 max-h-0'
             )}>
               <div className="mb-1">
-                <ThemeToggle variant="compact" className="w-full justify-center" />
+                <ThemeToggle variant="compact" className="w-full" />
               </div>
             </div>
             <a 

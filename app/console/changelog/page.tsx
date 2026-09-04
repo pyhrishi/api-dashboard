@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.4', date: 'September 2026', headline: 'Email → Person Resolution with confidence & provenance',
+    changes: [
+      { kind: 'feature', text: 'Email → Person Resolution — turn a work email into a full verified profile (role, seniority, company, verified contacts, socials) with a confidence score and per-field provenance showing exactly which signal produced each field. Runs against the live gateway, bills like production, and keeps a tenant-scoped history you can re-run.' },
+      { kind: 'improvement', text: 'People resolution is now deterministic — the same email always returns the same person across the Resolve console, Explorer, and CLI (a single email→person resolver replaces the old randomized mock).' },
+      { kind: 'improvement', text: 'Live keys mask PII in the resolved profile; sandbox returns full synthetic data — the masking parity a compliance reviewer expects.' },
+    ],
+  },
+  {
     version: 'v4.3', date: 'September 2026', headline: 'Bulk Enrichment Jobs & a global command palette',
     changes: [
       { kind: 'feature', text: 'Bulk Enrichment Jobs — upload a CSV (or paste a list), map columns to any GET endpoint, see the exact credit cost before you run, and watch rows enrich live through the gateway. Failed rows land in a retry queue; results download as CSV or JSON.' },

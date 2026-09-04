@@ -6,6 +6,7 @@
 
 import { Endpoint } from '@/data/endpoints';
 import { useStore } from '@/lib/store';
+import { resolvePersonFromEmail } from '@/lib/person-resolver';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -303,15 +304,6 @@ function validateRequestParameters(
 /**
  * Generate mock response based on endpoint
  */
-const FIRST_NAMES = ['Alex', 'Jordan', 'Taylor', 'Sam', 'Casey', 'Riley', 'Morgan', 'Avery', 'Quinn', 'Harper'];
-const LAST_NAMES = ['Developer', 'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez'];
-const ROLES = ['Senior Software Engineer', 'Product Manager', 'Data Scientist', 'CTO', 'VP of Engineering', 'UX Designer', 'Marketing Director', 'DevOps Engineer'];
-const COMPANIES = ['Acme Corp', 'Globex', 'Soylent', 'Initech', 'Umbrella Corp', 'Stark Industries', 'Wayne Enterprises', 'Massive Dynamic'];
-
-function getRandomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
 function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unknown>): Record<string, unknown> {
   switch (endpoint.id) {
     case 'identity-resolve': {
@@ -335,18 +327,21 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
           }
         };
       } else {
+        // Resolve deterministically from an email; synthesize one for phone/linkedin inputs.
+        const emailForResolve = type === 'email' ? q : `${q.replace(/[^a-z0-9]/gi, '').slice(0, 12) || 'contact'}@resolved.example`;
+        const person = resolvePersonFromEmail(emailForResolve);
         return {
           type: 'person',
           resolved_from: type,
           profile: {
-            id: `pers_${Date.now()}`,
-            name: `${getRandomItem(FIRST_NAMES)} ${getRandomItem(LAST_NAMES)}`,
-            title: getRandomItem(ROLES),
-            company: getRandomItem(COMPANIES),
-            email: type === 'email' ? q : `${getRandomItem(FIRST_NAMES).toLowerCase()}@${getRandomItem(COMPANIES).replace(' ', '').toLowerCase()}.com`,
-            phone: type === 'phone' ? q : `+1${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
-            linkedin_url: type === 'linkedin' ? q : `https://linkedin.com/in/${Math.random().toString(36).substring(7)}`
-          }
+            id: person?.id ?? `pers_${q}`,
+            name: person?.full_name ?? q,
+            title: person?.title ?? 'Unknown',
+            company: person?.company ?? 'Unknown',
+            email: type === 'email' ? q : person?.email ?? emailForResolve,
+            phone: type === 'phone' ? q : person?.phone ?? 'unavailable',
+            linkedin_url: type === 'linkedin' ? q : person?.linkedin_url ?? '',
+          },
         };
       }
     }
@@ -438,21 +433,17 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
     }
 
     case 'people-search':
-      return {
-        success: true,
-        person: {
-          id: 'person_' + Math.random().toString(36).substring(2, 9),
-          email: parameters.email || 'user@example.com',
-          first_name: parameters.first_name || 'John',
-          last_name: parameters.last_name || 'Doe',
-          phone: '+1-555-0123',
-          company: 'Acme Corporation',
-          title: 'Senior Software Engineer',
-          location: 'San Francisco, CA',
-          linkedin_url: 'https://www.linkedin.com/in/johndoe',
-          confidence: 0.92,
-        },
-      };
+    case 'v2-people-search': {
+      // Deterministic email → person resolution (single source of truth).
+      const person = resolvePersonFromEmail(String(parameters.email || 'user@example.com'));
+      if (!person) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No person could be resolved for that email address.' },
+        };
+      }
+      return { success: true, person, confidence: person.confidence };
+    }
 
     case 'email-to-phone':
       return {

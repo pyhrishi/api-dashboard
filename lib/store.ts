@@ -1,6 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { TelemetryEventRecord } from '@/lib/telemetry';
+import type { ResolvedPerson } from '@/lib/person-resolver';
+
+/** One email→person resolution, persisted per tenant so history survives reloads. */
+export interface ResolutionRecord {
+  id: string;
+  email: string;
+  /** Populated on a successful resolve; null for not-found / error outcomes. */
+  person: ResolvedPerson | null;
+  status: 'resolved' | 'not_found' | 'error';
+  environment: 'sandbox' | 'live';
+  /** Overall confidence 0..1 (0 when unresolved). */
+  confidence: number;
+  creditCost: number;
+  requestId: string | null;
+  durationMs: number;
+  timestamp: number;
+  /** Present on error/not-found to explain what happened. */
+  message?: string;
+}
 
 export interface MockKey {
   id: string;
@@ -426,6 +445,7 @@ export interface BulkJob {
 
 export const BULK_JOB_ROW_CAP = 2000;
 export const BULK_JOB_CAP = 50;
+export const RESOLUTION_CAP = 100;
 
 export interface TenantState {
   environment: 'sandbox' | 'live';
@@ -466,6 +486,7 @@ export interface TenantState {
   autoRechargeEnabled: boolean;
   invoices: Invoice[];
   bulkJobs: BulkJob[];
+  resolvedPeople: ResolutionRecord[];
 }
 
 export const extractTenantState = (state: AppState): TenantState => ({
@@ -507,6 +528,7 @@ export const extractTenantState = (state: AppState): TenantState => ({
   autoRechargeEnabled: state.autoRechargeEnabled,
   invoices: state.invoices,
   bulkJobs: state.bulkJobs,
+  resolvedPeople: state.resolvedPeople,
 });
 
 export const defaultTenantState = (): TenantState => ({
@@ -548,6 +570,7 @@ export const defaultTenantState = (): TenantState => ({
   autoRechargeEnabled: false,
   invoices: [],
   bulkJobs: [],
+  resolvedPeople: [],
 });
 
 interface AppState extends FirstCallState, TenantState {
@@ -573,6 +596,12 @@ interface AppState extends FirstCallState, TenantState {
   /** Resets failed rows to pending and queues the job again. */
   retryBulkJobFailures: (id: string) => void;
   deleteBulkJob: (id: string) => void;
+  // Email→person resolutions (tenant-scoped history)
+  resolvedPeople: ResolutionRecord[];
+  /** Records a resolution at the head of history (capped). Newest first. */
+  addResolution: (record: ResolutionRecord) => void;
+  removeResolution: (id: string) => void;
+  clearResolutions: () => void;
   webhooks: WebhookEndpoint[];
   webhookLogs: WebhookLog[];
   webhookRetryQueue: WebhookRetryItem[];
@@ -783,6 +812,7 @@ export const useStore = create<AppState>()(
       themeMode: 'dark' as const,
       telemetryEvents: [],
       bulkJobs: [],
+      resolvedPeople: [],
       webhooks: [],
       webhookLogs: [],
       webhookRetryQueue: [],
@@ -2441,6 +2471,14 @@ export const useStore = create<AppState>()(
         const log = generateAuditLog('bulk_job.deleted', job?.name || id, state.user?.email || 'System', state.environment, { changes: { before: job ? { name: job.name, rows: job.rows.length, creditsSpent: job.creditsSpent } : undefined } });
         return { bulkJobs: state.bulkJobs.filter(j => j.id !== id), auditLogs: [log, ...state.auditLogs] };
       }),
+
+      addResolution: (record) => set((state) => ({
+        resolvedPeople: [record, ...state.resolvedPeople.filter(r => r.id !== record.id)].slice(0, RESOLUTION_CAP),
+      })),
+      removeResolution: (id) => set((state) => ({
+        resolvedPeople: state.resolvedPeople.filter(r => r.id !== id),
+      })),
+      clearResolutions: () => set(() => ({ resolvedPeople: [] })),
     }),
     {
       name: 'zinbit-storage',
@@ -2479,6 +2517,7 @@ export const useStore = create<AppState>()(
         themeMode: state.themeMode,
         telemetryEvents: state.telemetryEvents,
         bulkJobs: state.bulkJobs,
+        resolvedPeople: state.resolvedPeople,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
         isFirstCallMade: state.isFirstCallMade,
