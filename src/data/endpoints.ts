@@ -179,7 +179,7 @@ export const ENDPOINTS: Endpoint[] = [
   {
     id: 'email-to-phone',
     name: 'Find Phone by Email',
-    description: 'Convert any corporate email address into a direct-dial phone number. 99.2% coverage on US B2B contacts.',
+    description: 'Append a verified phone number to any corporate email — with line type, live-status verification, carrier, region, and Do-Not-Call (DNC) standing. 99.2% coverage on US B2B contacts.',
     method: 'GET',
     path: '/v1/people/phone',
     creditCost: 2,

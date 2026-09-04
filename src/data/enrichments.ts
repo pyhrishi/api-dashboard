@@ -192,11 +192,59 @@ function genericToResult(data: Record<string, unknown>): EnrichmentResult {
   return { kind: 'generic', title, avatar: initialsOf(title), badges: [], fields, confidence, raw: data };
 }
 
+/** Phone append & verification: line type, live status, carrier, DNC, reachability. */
+function phoneToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const bool = (k: string) => d[k] === true;
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+
+  const phone = str('phone') || str('phone_national');
+  const lineLabel = titleCase(str('line_type'));
+  const statusLabel = titleCase(str('verification_status'));
+  const reach = num('reachability');
+
+  const badges = [
+    statusLabel,
+    lineLabel,
+    bool('dnc_safe') ? 'DNC-safe' : 'On DNC',
+  ].filter(Boolean);
+
+  const fields: EnrichmentField[] = [
+    { label: 'Phone', value: phone, verified: bool('verified'), masked: true, mono: true },
+    { label: 'Line type', value: lineLabel || '—' },
+    { label: 'Carrier', value: str('carrier') || '—' },
+    { label: 'Region', value: [str('region'), str('country')].filter(Boolean).join(' · ') || '—' },
+    { label: 'Reachability', value: reach !== undefined ? `${Math.round(reach * 100)}%` : '—' },
+    { label: 'Do-Not-Call', value: bool('dnc') ? 'On registry — do not auto-dial' : 'Clear to dial' },
+  ];
+
+  const provenance = Array.isArray(d.provenance)
+    ? (d.provenance as EnrichmentProvenance[])
+    : undefined;
+
+  return {
+    kind: 'person',
+    title: phone || 'Phone',
+    subtitle: [str('carrier'), lineLabel].filter(Boolean).join(' · ') || undefined,
+    avatar: 'PH',
+    badges,
+    fields,
+    confidence: num('confidence'),
+    provenance,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 /** Normalize any endpoint response body's `data` into one view-model. */
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
   if (isRecord(data.company)) return companyToResult(data.company as unknown as EnrichedCompany);
+  // Phone append & verification: line_type + verification_status mark the shape.
+  if (typeof data.line_type === 'string' && typeof data.verification_status === 'string') {
+    return phoneToResult(data);
+  }
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

@@ -8,6 +8,7 @@ import { Endpoint } from '@/data/endpoints';
 import { useStore } from '@/lib/store';
 import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
+import { verifyPhoneForEmail } from '@/lib/phone-verifier';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -447,14 +448,17 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
       return { success: true, person, confidence: person.confidence };
     }
 
-    case 'email-to-phone':
-      return {
-        success: true,
-        email: parameters.email || 'user@example.com',
-        phone: '+1-555-0123',
-        confidence: 0.95,
-        carrier: 'Verizon',
-      };
+    case 'email-to-phone': {
+      // Deterministic phone append + verification (single source of truth).
+      const pv = verifyPhoneForEmail(String(parameters.email || 'user@example.com'));
+      if (!pv) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No phone number could be appended for that email address.' },
+        };
+      }
+      return { success: true, ...pv };
+    }
 
     case 'phone-to-email':
       return {
