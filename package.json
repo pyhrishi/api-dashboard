@@ -13,7 +13,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "predev": "node scripts/predev-guard.mjs"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
