@@ -52,9 +52,15 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   // Load Balancer Simulation
   const regions = ['us-east-1', 'eu-west-1', 'ap-south-1'];
   const nodes = ['a', 'b', 'c'];
-  
+
+  // A key's "home region" is deterministic (stable per account), NOT random per request.
+  // Random regions made consecutive calls look like impossible travel and spuriously locked
+  // the key via the fraud detector — breaking normal repeated use (e.g. the Enrichment Studio).
+  const keyHash = Array.from(apiKey).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 0);
+  const homeRegionIndex = Math.abs(keyHash) % regions.length;
+
   // Data Localization & Residency Check
-  let selectedRegion = regions[Math.floor(Math.random() * regions.length)];
+  let selectedRegion = regions[homeRegionIndex];
   const forcedRegion = request.headers.get('x-force-region');
 
   if (keyRecord?.dataResidency) {
@@ -78,7 +84,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   } else if (forcedRegion && regions.includes(forcedRegion)) {
     selectedRegion = forcedRegion;
   }
-  const selectedNode = nodes[Math.floor(Math.random() * nodes.length)];
+  const selectedNode = nodes[Math.abs(keyHash >> 4) % nodes.length];
   const serverNodeId = `${selectedRegion}-${selectedNode}`;
 
   const responseHeaders: Record<string, string> = {
