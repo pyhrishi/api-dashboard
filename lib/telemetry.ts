@@ -37,6 +37,8 @@ export type TelemetryEventName =
   | 'feature_abandoned'
   // navigation & workspace
   | 'command_palette_used'
+  | 'roadmap_viewed'
+  | 'roadmap_view_changed'
   | 'org_updated'
   | 'org_deleted'
   | 'ownership_transferred'
