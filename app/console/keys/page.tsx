@@ -43,6 +43,14 @@ function KeyCountdown({ expiresAt }: { expiresAt: string }) {
   );
 }
 
+/** Display-only masking. The stored key is a real, header-safe ASCII token; never render it whole. */
+function maskKey(key: string): string {
+  if (!key) return '';
+  const dash = key.lastIndexOf('_');
+  const prefix = dash >= 0 ? key.slice(0, dash + 1) : key.slice(0, 8);
+  return `${prefix}••••••••${key.slice(-4)}`;
+}
+
 export default function ApiKeysPage() {
   const { environment, activeKeys, addKey, revokeKey, rollKey, generateFirstKey, clearRawToken, simulateKeyLeak, expireKeys, apiLogs, updateKey } = useStore();
   const filteredKeys = activeKeys.filter(k => k.environment === environment);
@@ -129,7 +137,7 @@ export default function ApiKeysPage() {
     const newKey: MockKey = {
       id: `key_${Date.now()}`,
       name: newKeyName || 'Untitled Key',
-      key: `${prefix}••••••••${raw.slice(-4)}`,
+      key: raw, // real token; masked at display via maskKey()
       rawToken: raw, // Temporary plain text token, will be cleared by UI on close
       createdAt: new Date().toISOString(),
       scopes: finalScopes,
@@ -169,7 +177,7 @@ export default function ApiKeysPage() {
     const replacementKey: MockKey = {
       id: `key_${Date.now()}`,
       name: keyToRoll.name, // Inherit name
-      key: `${prefix}••••••••${raw.slice(-4)}`,
+      key: raw, // real token; masked at display via maskKey()
       rawToken: raw,
       createdAt: new Date().toISOString(),
       scopes: keyToRoll.scopes, // Inherit scopes
@@ -356,7 +364,7 @@ export default function ApiKeysPage() {
                               )}
                             </div>
                             <div className={cn("font-mono text-xs mt-1 bg-surface/5 px-2 py-0.5 rounded-md inline-block border border-border tracking-wider", ['revoked', 'compromised', 'expired'].includes(k.status || 'active') ? 'text-fg-subtle' : 'text-fg-muted')}>
-                              {k.key}
+                              {maskKey(k.key)}
                             </div>
                           </div>
                         </div>

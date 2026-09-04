@@ -379,7 +379,7 @@ export default function BillingPage() {
                       <td className="px-4 py-5 font-mono text-xs text-fg-muted">{new Date().toISOString().split('T')[0]}</td>
                       <td className="px-4 py-5 font-semibold text-fg">
                         {key.name}
-                        <span className="block text-[10px] text-fg-muted font-mono mt-0.5">{key.key}</span>
+                        <span className="block text-[10px] text-fg-muted font-mono mt-0.5">{key.key.length > 14 ? `${key.key.slice(0, key.key.lastIndexOf('_') + 1)}••••${key.key.slice(-4)}` : key.key}</span>
                       </td>
                       <td className="px-4 py-5 font-mono text-right font-medium text-fg-muted">{(key.creditsUsed || 0).toLocaleString()}</td>
                       <td className="px-4 py-5 font-mono text-right text-semantic-error">-{(key.creditsUsed || 0).toLocaleString()}</td>

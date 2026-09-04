@@ -1025,7 +1025,7 @@ export const useStore = create<AppState>()(
         const newKey: MockKey = {
           id: `key_${Math.random().toString(36).substring(2, 9)}`,
           name: `Default ${isLive ? 'Live' : 'Test'} Key`,
-          key: `${prefix}••••••••${raw.slice(-4)}`,
+          key: raw, // the real, usable token — masking is a display concern (never store bullets; they break HTTP headers)
           rawToken: raw, 
           scopes: ['identity:read', 'corporate:read', 'search:execute'],
           createdAt: new Date().toISOString(),
@@ -1089,7 +1089,7 @@ export const useStore = create<AppState>()(
         const replacementKey: MockKey = {
           id: `key_${Date.now()}`,
           name: `${oldKey.name} (Auto-Rolled)`,
-          key: `${prefix}••••••••${raw.slice(-4)}`,
+          key: raw, // the real, usable token — masking is a display concern (never store bullets; they break HTTP headers)
           scopes: oldKey.scopes,
           createdAt: new Date().toISOString(),
           status: 'active',
@@ -2488,9 +2488,27 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'zinbit-storage',
-      // v2: added multi-tenant `tenants` persistence + realigned analytics metric
-      // paths. The version bump discards stale v1 state so demos re-seed cleanly.
-      version: 3,
+      // v2: added multi-tenant `tenants` persistence + realigned analytics metric paths.
+      // v4: repair legacy keys whose `key` was stored as a masked string with bullet chars
+      // (non-Latin1) — those break the Authorization header. migrate() replaces them with a
+      // real token in place, preserving the rest of the persisted state (no full re-seed).
+      version: 4,
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as { activeKeys?: MockKey[] } & Record<string, unknown>;
+        if (version < 4 && state && Array.isArray(state.activeKeys)) {
+          state.activeKeys = state.activeKeys.map((k) => {
+            // A bullet (or any non-Latin1 char) means this is a legacy masked value.
+            if (typeof k.key === 'string' && /[^ -ÿ]/.test(k.key)) {
+              const usableRaw = typeof k.rawToken === 'string' && /^[ -ÿ]*$/.test(k.rawToken) ? k.rawToken : '';
+              const prefix = k.environment === 'live' ? 'sk_live_' : 'sk_test_';
+              const fresh = `${prefix}${Math.random().toString(36).substring(2, 16)}${Math.random().toString(36).substring(2, 8)}`;
+              return { ...k, key: usableRaw || fresh };
+            }
+            return k;
+          });
+        }
+        return state;
+      },
       partialize: (state) => ({
         // Persist both app and first-call state
         environment: state.environment,
