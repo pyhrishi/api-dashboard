@@ -1010,3 +1010,29 @@ export function roadmapBuildPhaseSummaries(): BuildPhaseSummary[] {
     };
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Build status — which roadmap features are actually shipped in the prototype.
+//
+// Criterion: the feature has a working, verifiable surface today — a live gateway
+// endpoint + Enrichment Studio preset, or a dedicated console feature. Keep this
+// set honest; add an id only once its capability truly ships. This is the single
+// source of truth the roadmap UI reads.
+// ─────────────────────────────────────────────────────────────────────────────
+export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
+  'F-001', // Email-to-person resolution — Studio "Resolve a person" (GET /v1/people)
+  'F-002', // Domain-to-company enrichment — Studio "Enrich a company" (GET /v1/companies/enrich)
+  'F-003', // Phone append & verification — Studio "Email → phone" (GET /v1/people/phone)
+  'F-004', // Reverse IP-to-company — Studio "Reverse IP → company" (GET /v1/enrichment/ip)
+  'F-007', // Social profile discovery — Studio "Email → socials" (GET /v1/people/social)
+  'F-019', // Bulk list enrichment — Bulk Enrichment Jobs console feature
+  'F-023', // Deterministic match keys — identity-resolve auto-detect on exact email/domain/phone
+  'F-025', // Confidence score on every field — per-field confidence + provenance on every result
+]);
+
+export function isFeatureBuilt(id: string): boolean {
+  return BUILT_FEATURE_IDS.has(id);
+}
+
+/** How many roadmap features are shipped today. */
+export const ROADMAP_BUILT = BUILT_FEATURE_IDS.size;

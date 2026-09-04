@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Map, Search, X, LayoutGrid, Rocket, Clock, Sparkles, ListOrdered } from 'lucide-react';
+import { Map, Search, X, LayoutGrid, Rocket, Clock, Sparkles, ListOrdered, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { track } from '@/lib/telemetry';
 import {
@@ -12,6 +12,8 @@ import {
   roadmapBuildOrder,
   roadmapBuildPhaseSummaries,
   BUILD_PHASES,
+  isFeatureBuilt,
+  ROADMAP_BUILT,
   type FeatureStage,
 } from '@/lib/roadmap';
 import {
@@ -27,6 +29,7 @@ import {
 import type { BadgeTone } from '@/components/ui';
 
 type StageFilter = 'all' | FeatureStage;
+type StatusFilter = 'all' | 'built' | 'planned';
 type ViewMode = 'area' | 'build';
 
 const STAGE_TONE: Record<FeatureStage, BadgeTone> = {
@@ -45,6 +48,7 @@ export default function RoadmapPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [stage, setStage] = useState<StageFilter>('all');
+  const [status, setStatus] = useState<StatusFilter>('all');
   const [view, setView] = useState<ViewMode>('area');
   const [activeArea, setActiveArea] = useState<string>(ROADMAP_AREAS[0]?.name ?? '');
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -66,30 +70,32 @@ export default function RoadmapPage() {
 
   const normalizedQuery = query.trim().toLowerCase();
 
-  const matchesFilters = (name: string, description: string, area: string, s: FeatureStage) => {
+  const matchesFilters = (id: string, name: string, description: string, area: string, s: FeatureStage) => {
     const matchesStage = stage === 'all' || s === stage;
+    const built = isFeatureBuilt(id);
+    const matchesStatus = status === 'all' || (status === 'built' ? built : !built);
     const matchesQuery =
       !normalizedQuery ||
       name.toLowerCase().includes(normalizedQuery) ||
       description.toLowerCase().includes(normalizedQuery) ||
       area.toLowerCase().includes(normalizedQuery);
-    return matchesStage && matchesQuery;
+    return matchesStage && matchesStatus && matchesQuery;
   };
 
   // ── Area view data ──────────────────────────────────────────────────────────
   const filteredAreas = useMemo(() => {
     return ROADMAP_AREAS.map((area) => ({
       ...area,
-      features: area.features.filter((f) => matchesFilters(f.name, f.description, area.name, f.stage)),
+      features: area.features.filter((f) => matchesFilters(f.id, f.name, f.description, area.name, f.stage)),
     })).filter((area) => area.features.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [normalizedQuery, stage]);
+  }, [normalizedQuery, stage, status]);
 
   // ── Build view data ─────────────────────────────────────────────────────────
   const filteredBuild = useMemo(
-    () => buildOrder.filter((o) => matchesFilters(o.feature.name, o.feature.description, o.area, o.feature.stage)),
+    () => buildOrder.filter((o) => matchesFilters(o.feature.id, o.feature.name, o.feature.description, o.area, o.feature.stage)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [buildOrder, normalizedQuery, stage]
+    [buildOrder, normalizedQuery, stage, status]
   );
 
   const buildByPhase = useMemo(() => {
@@ -102,7 +108,7 @@ export default function RoadmapPage() {
     ? filteredAreas.reduce((n, a) => n + a.features.length, 0)
     : filteredBuild.length;
 
-  const isFiltering = normalizedQuery.length > 0 || stage !== 'all';
+  const isFiltering = normalizedQuery.length > 0 || stage !== 'all' || status !== 'all';
 
   // Scrollspy (area view only): highlight the area whose section is in view.
   useEffect(() => {
@@ -130,6 +136,7 @@ export default function RoadmapPage() {
   const clearFilters = () => {
     setQuery('');
     setStage('all');
+    setStatus('all');
   };
 
   return (
@@ -139,19 +146,27 @@ export default function RoadmapPage() {
         title="Product Roadmap"
         description={`The full product surface for Zinbit — ${ROADMAP_TOTAL} features across ${ROADMAP_AREAS.length} areas, each staged Now, Next, or Later. Browse by area, or switch to the dependency-ordered build sequence.`}
         actions={
-          <StatusBadge tone="teal" dot pulse>
-            {ROADMAP_TOTAL} features
-          </StatusBadge>
+          <div className="flex items-center gap-2">
+            <StatusBadge tone="success">{ROADMAP_BUILT} built</StatusBadge>
+            <StatusBadge tone="teal" dot pulse>{ROADMAP_TOTAL} features</StatusBadge>
+          </div>
         }
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiTile
           label="Total features"
           value={ROADMAP_TOTAL}
           icon={<LayoutGrid />}
           hint={`${ROADMAP_AREAS.length} areas · ${BUILD_PHASES.length} build phases`}
+          loading={loading}
+        />
+        <KpiTile
+          label="Built"
+          value={ROADMAP_BUILT}
+          icon={<CheckCircle2 />}
+          hint={`${Math.round((ROADMAP_BUILT / ROADMAP_TOTAL) * 100)}% shipped · ${ROADMAP_TOTAL - ROADMAP_BUILT} to go`}
           loading={loading}
         />
         {(['Now', 'Next', 'Later'] as FeatureStage[]).map((s) => {
@@ -211,6 +226,16 @@ export default function RoadmapPage() {
               { value: 'Later', label: 'Later' },
             ]}
           />
+          <SegmentedControl<StatusFilter>
+            layoutId="roadmap-status"
+            value={status}
+            onChange={setStatus}
+            options={[
+              { value: 'all', label: 'Any' },
+              { value: 'built', label: 'Built' },
+              { value: 'planned', label: 'Planned' },
+            ]}
+          />
           <div className="text-xs font-bold text-fg-muted tabular-nums whitespace-nowrap md:ml-1">
             <span className="text-fg">{shownCount}</span> shown
           </div>
@@ -223,7 +248,7 @@ export default function RoadmapPage() {
         <EmptyState
           icon={<Search className="w-8 h-8" />}
           title="No features match"
-          description="Nothing lines up with that search and stage filter. Try a broader term or clear the filters."
+          description="Nothing lines up with that search and those filters. Try a broader term or clear the filters."
           action={<Button variant="secondary" onClick={clearFilters}>Clear filters</Button>}
         />
       ) : view === 'area' ? (
@@ -298,9 +323,12 @@ export default function RoadmapPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="text-sm font-bold text-fg leading-snug">{f.name}</h4>
-                          <StatusBadge tone={STAGE_TONE[f.stage]} className="shrink-0 mt-0.5">
-                            {f.stage}
-                          </StatusBadge>
+                          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                            {isFeatureBuilt(f.id) && (
+                              <StatusBadge tone="success"><CheckCircle2 className="w-3 h-3" /> Built</StatusBadge>
+                            )}
+                            <StatusBadge tone={STAGE_TONE[f.stage]}>{f.stage}</StatusBadge>
+                          </div>
                         </div>
                         <p className="text-xs text-fg-muted mt-1 leading-relaxed">
                           {f.description}
@@ -394,9 +422,12 @@ export default function RoadmapPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <h4 className="text-sm font-bold text-fg leading-snug">{o.feature.name}</h4>
-                            <StatusBadge tone={STAGE_TONE[o.feature.stage]} className="shrink-0 mt-0.5">
-                              {o.feature.stage}
-                            </StatusBadge>
+                            <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                              {isFeatureBuilt(o.feature.id) && (
+                                <StatusBadge tone="success"><CheckCircle2 className="w-3 h-3" /> Built</StatusBadge>
+                              )}
+                              <StatusBadge tone={STAGE_TONE[o.feature.stage]}>{o.feature.stage}</StatusBadge>
+                            </div>
                           </div>
                           <p className="text-xs text-fg-muted mt-1 leading-relaxed">
                             {o.feature.description}
