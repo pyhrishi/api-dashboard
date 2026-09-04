@@ -56,6 +56,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'linkedin-to-contact', endpointId: 'linkedin-to-contact', param: 'linkedin_url', inputKind: 'linkedin', icon: 'Mail', category: 'person', examples: ['linkedin.com/in/janedoe'], label: 'LinkedIn → contact' },
   { id: 'reverse', endpointId: 'reverse-enrichment', param: 'query', inputKind: 'auto', icon: 'Sparkles', category: 'identity', examples: ['jane@acme.com', 'stripe.com'], label: 'Reverse enrichment' },
   { id: 'reverse-ip', endpointId: 'ip-to-company', param: 'ip', inputKind: 'ip', icon: 'Network', category: 'identity', examples: ['52.38.104.17', '104.18.32.7', '8.8.8.8'], label: 'Reverse IP → company' },
+  { id: 'email-to-social', endpointId: 'email-to-social', param: 'email', inputKind: 'email', icon: 'Share2', category: 'person', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'priya.nair@zomato.in'], label: 'Social profiles' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -277,6 +278,42 @@ function ipToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Social profile discovery: a person's cross-platform professional footprint. */
+function socialToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const profiles = Array.isArray(d.profiles) ? (d.profiles as Record<string, unknown>[]) : [];
+  const name = str('full_name') || 'Social profiles';
+
+  const fmtCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
+
+  const fields: EnrichmentField[] = profiles.map((p) => {
+    const platform = typeof p.platform === 'string' ? p.platform : 'Profile';
+    const handle = typeof p.handle === 'string' ? p.handle : '';
+    const followers = typeof p.followers === 'number' ? p.followers : undefined;
+    const value = followers !== undefined ? `${handle} · ${fmtCount(followers)} followers` : handle;
+    return { label: platform, value: value || '—', verified: p.verified === true, mono: true };
+  });
+
+  const links = profiles
+    .filter((p) => typeof p.url === 'string')
+    .map((p) => ({ label: typeof p.platform === 'string' ? p.platform : 'Link', href: p.url as string }));
+
+  return {
+    kind: 'person',
+    title: name,
+    subtitle: `${profiles.length} social profile${profiles.length === 1 ? '' : 's'} discovered`,
+    avatar: initialsOf(name),
+    badges: [`${profiles.length} platform${profiles.length === 1 ? '' : 's'}`],
+    fields,
+    links,
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
@@ -286,6 +323,8 @@ export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
     return phoneToResult(data);
   }
   if (isRecord(data.ip_intel)) return ipToResult(data.ip_intel as Record<string, unknown>);
+  // Social profile discovery: a `profiles` array + platform_count mark the shape.
+  if (Array.isArray(data.profiles) && typeof data.platform_count === 'number') return socialToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

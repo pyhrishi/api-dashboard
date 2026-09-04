@@ -713,6 +713,42 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/webhooks',
       },
     ],
+  },
+
+  {
+    id: 'email-to-social',
+    name: 'Discover Social Profiles',
+    description: "Discover a person's professional social footprint from their email — LinkedIn, GitHub, X, Stack Overflow, Medium, and personal sites, each with a handle, verification, follower/reputation signal, and match confidence.",
+    method: 'GET',
+    path: '/v1/people/social',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'Corporate or personal email address',
+        example: 'jane.doe@acme.com',
+        placeholder: 'user@company.com',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'social-to-person',
+        title: 'Full person profile',
+        description: 'Resolve the same email to a complete verified profile.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+      {
+        id: 'social-webhooks',
+        title: 'Watch for profile changes',
+        description: "Get a webhook when a contact's social footprint changes.",
+        category: 'webhooks',
+        link: '/console/webhooks',
+      },
+    ],
   }
 ];
 

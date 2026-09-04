@@ -10,6 +10,7 @@ import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { resolveCompanyFromIp } from '@/lib/ip-resolver';
 import { verifyPhoneForEmail } from '@/lib/phone-verifier';
+import { discoverSocialProfiles } from '@/lib/social-resolver';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -459,6 +460,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...pv };
+    }
+
+    case 'email-to-social': {
+      // Deterministic social footprint discovery (single source of truth).
+      const social = discoverSocialProfiles(String(parameters.email || 'user@example.com'));
+      if (!social) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No social profiles could be discovered for that email address.' },
+        };
+      }
+      return { success: true, ...social };
     }
 
     case 'phone-to-email':

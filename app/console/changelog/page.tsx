@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.9', date: 'September 2026', headline: 'Social profile discovery',
+    changes: [
+      { kind: 'feature', text: 'Social profile discovery — turn an email into a person\'s whole professional social footprint: LinkedIn, GitHub, X, Stack Overflow, Medium, and personal sites, each with a handle, verification status, follower/reputation signal, and per-platform match confidence. New GET /v1/people/social endpoint (2 credits), shipped as a Studio preset with clickable profile links and cross-platform provenance.' },
+      { kind: 'improvement', text: 'Social discovery is deterministic — the same email always fans out to the same profiles across the Studio, Explorer, and CLI (a single social resolver built on the person graph).' },
+    ],
+  },
+  {
     version: 'v4.8', date: 'September 2026', headline: 'Reverse IP → company',
     changes: [
       { kind: 'feature', text: 'Reverse IP → company — identify the company behind an anonymous website visitor from their IP, with a network classification that tells you whether it is a genuine corporate egress or datacenter / VPN / consumer / mobile noise. Returns ISP, ASN, org, hostname, and geo, plus the full company dossier for corporate IPs, each field with provenance. New GET /v1/enrichment/ip endpoint (2 credits), shipped as a Studio preset.' },
