@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Scale, Shield, FileText, Clock, CheckCircle2, ChevronDown, ChevronRight, ExternalLink, AlertTriangle, Award, Globe, Lock, Download, Search, Mail } from 'lucide-react';
+import { Scale, Shield, FileText, Clock, CheckCircle2, ChevronDown, ExternalLink, AlertTriangle, Award, Globe, Lock, Download, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ─── Legal Document Data ──────────────────────────────────────────────────────
@@ -15,8 +15,8 @@ const SLA_TIERS = [
     support: 'Community + Docs',
     incident: '4 business hours',
     credits: '10% service credit',
-    color: 'border-white/10 text-white/60',
-    badge: 'bg-white/5 text-white/50',
+    color: 'border-border text-fg-muted',
+    badge: 'bg-glass text-fg-muted',
   },
   {
     tier: 'Startup',
@@ -26,7 +26,7 @@ const SLA_TIERS = [
     support: 'Email (24h SLA)',
     incident: '2 business hours',
     credits: '15% service credit',
-    color: 'border-teal/20 text-white',
+    color: 'border-teal/20 text-fg',
     badge: 'bg-teal/10 text-teal',
     highlight: true,
   },
@@ -38,7 +38,7 @@ const SLA_TIERS = [
     support: 'Dedicated CSM + Slack',
     incident: '15 minutes (24/7)',
     credits: '25% service credit + SLA breach payout',
-    color: 'border-amber-400/30 text-white',
+    color: 'border-amber-400/30 text-fg',
     badge: 'bg-amber-400/10 text-amber-400',
   },
 ];
@@ -148,17 +148,17 @@ const AUP_RULES = [
 function CollapsibleSection({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border border-white/10 rounded-xl overflow-hidden">
+    <div className="border border-border rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-glass transition-colors"
       >
-        <span className="text-sm font-bold text-white">{title}</span>
-        <ChevronDown className={cn('w-4 h-4 text-white/40 transition-transform duration-200', open && 'rotate-180')} />
+        <span className="text-sm font-bold text-fg">{title}</span>
+        <ChevronDown className={cn('w-4 h-4 text-fg-muted transition-transform duration-200', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="px-6 pb-5 pt-1 border-t border-white/5">
-          <p className="text-sm text-white/60 leading-relaxed">{children}</p>
+        <div className="px-6 pb-5 pt-1 border-t border-border-subtle">
+          <p className="text-sm text-fg-muted leading-relaxed">{children}</p>
         </div>
       )}
     </div>
@@ -169,7 +169,6 @@ function CollapsibleSection({ title, children }: { title: string; children: Reac
 
 export default function LegalPage() {
   const [activeSection, setActiveSection] = useState('sla');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const lastUpdated = 'August 26, 2026';
 
@@ -177,7 +176,7 @@ export default function LegalPage() {
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
 
       {/* ── Header ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#111115] via-[#0d1117] to-[#09090b] p-8">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-[#111115] via-[#0d1117] to-[#09090b] p-8">
         <div className="absolute inset-0 opacity-20 pointer-events-none"
           style={{ backgroundImage: 'radial-gradient(ellipse at 20% 50%, rgba(70,189,198,0.15) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.1) 0%, transparent 50%)' }} />
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -186,8 +185,8 @@ export default function LegalPage() {
               <Scale className="w-7 h-7 text-teal" />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-white tracking-tight">Legal Center</h1>
-              <p className="text-white/50 text-sm mt-0.5">SLAs, Terms of Service, Privacy Policies & Compliance Documents</p>
+              <h1 className="text-2xl font-extrabold text-fg tracking-tight">Legal Center</h1>
+              <p className="text-fg-muted text-sm mt-0.5">SLAs, Terms of Service, Privacy Policies & Compliance Documents</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -202,19 +201,7 @@ export default function LegalPage() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative mt-6 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-          <input
-            type="text"
-            placeholder="Search legal documents…"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 focus:outline-none focus:border-teal/50 focus:ring-1 focus:ring-teal/30 transition-all"
-          />
-        </div>
-
-        <div className="mt-4 flex items-center gap-2 text-xs text-white/30">
+        <div className="mt-6 flex items-center gap-2 text-xs text-fg-subtle">
           <Clock className="w-3.5 h-3.5" />
           <span>Last updated: {lastUpdated} · Effective immediately for new accounts</span>
         </div>
@@ -224,8 +211,8 @@ export default function LegalPage() {
 
         {/* ── Sidebar TOC ── */}
         <aside className="lg:w-56 flex-shrink-0">
-          <div className="sticky top-4 bg-[#111115] border border-white/10 rounded-2xl p-3 space-y-1">
-            <p className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white/30">Documents</p>
+          <div className="sticky top-4 bg-surface-2 border border-border rounded-2xl p-3 space-y-1">
+            <p className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-fg-subtle">Documents</p>
             {TOC_SECTIONS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
@@ -234,7 +221,7 @@ export default function LegalPage() {
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left',
                   activeSection === id
                     ? 'bg-teal/10 text-teal border border-teal/20'
-                    : 'text-white/50 hover:text-white hover:bg-white/5 border border-transparent'
+                    : 'text-fg-muted hover:text-fg hover:bg-glass border border-transparent'
                 )}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
@@ -242,12 +229,12 @@ export default function LegalPage() {
               </button>
             ))}
 
-            <div className="pt-3 border-t border-white/10 mt-2 space-y-2">
-              <button onClick={window.print} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+            <div className="pt-3 border-t border-border mt-2 space-y-2">
+              <button onClick={window.print} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-fg-muted hover:text-fg hover:bg-glass rounded-lg transition-colors">
                 <FileText className="w-4 h-4" /> Download PDF
               </button>
               
-              <a href="mailto:legal@zintlr.com?subject=Custom DPA Request" className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
+              <a href="mailto:legal@zintlr.com?subject=Custom DPA Request" className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-fg-muted hover:text-fg hover:bg-glass rounded-lg transition-colors">
                 <Mail className="w-4 h-4" /> Request Custom DPA
               </a>
             </div>
@@ -271,8 +258,8 @@ export default function LegalPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 {SLA_TIERS.map(tier => (
                   <div key={tier.tier} className={cn(
-                    'relative rounded-2xl border bg-[#111115] p-5 space-y-4',
-                    tier.highlight ? 'border-teal/30 shadow-[0_0_30px_rgba(70,189,198,0.08)]' : 'border-white/10'
+                    'relative rounded-2xl border bg-surface-2 p-5 space-y-4',
+                    tier.highlight ? 'border-teal/30 shadow-[0_0_30px_rgba(70,189,198,0.08)]' : 'border-border'
                   )}>
                     {tier.highlight && (
                       <div className="absolute -top-3 left-4">
@@ -280,7 +267,7 @@ export default function LegalPage() {
                       </div>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="text-base font-extrabold text-white">{tier.tier}</span>
+                      <span className="text-base font-extrabold text-fg">{tier.tier}</span>
                       <span className={cn('text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full', tier.badge)}>{tier.uptime} SLA</span>
                     </div>
                     <div className="space-y-2.5">
@@ -292,8 +279,8 @@ export default function LegalPage() {
                         { label: 'Service Credits', value: tier.credits },
                       ].map(row => (
                         <div key={row.label} className="flex items-start justify-between gap-2">
-                          <span className="text-xs text-white/40 whitespace-nowrap">{row.label}</span>
-                          <span className="text-xs text-white/80 text-right">{row.value}</span>
+                          <span className="text-xs text-fg-muted whitespace-nowrap">{row.label}</span>
+                          <span className="text-xs text-fg text-right">{row.value}</span>
                         </div>
                       ))}
                     </div>
@@ -302,8 +289,8 @@ export default function LegalPage() {
               </div>
 
               {/* SLA Terms */}
-              <div className="bg-[#111115] border border-white/10 rounded-2xl p-6 space-y-4">
-                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Credit Claim Process</h3>
+              <div className="bg-surface-2 border border-border rounded-2xl p-6 space-y-4">
+                <h3 className="text-sm font-extrabold text-fg uppercase tracking-wider">Credit Claim Process</h3>
                 <div className="grid sm:grid-cols-3 gap-4">
                   {[
                     { step: '01', title: 'Detect Incident', detail: 'Status page auto-updates at status.zinbit.zintlr.com. Subscribe to email/webhook alerts.' },
@@ -313,8 +300,8 @@ export default function LegalPage() {
                     <div key={s.step} className="flex gap-3">
                       <span className="text-2xl font-black text-teal/30 leading-none">{s.step}</span>
                       <div>
-                        <p className="text-sm font-bold text-white">{s.title}</p>
-                        <p className="text-xs text-white/50 mt-1">{s.detail}</p>
+                        <p className="text-sm font-bold text-fg">{s.title}</p>
+                        <p className="text-xs text-fg-muted mt-1">{s.detail}</p>
                       </div>
                     </div>
                   ))}
@@ -359,10 +346,10 @@ export default function LegalPage() {
               </div>
 
               {/* Contact DPO */}
-              <div className="bg-[#111115] border border-white/10 rounded-2xl p-5 flex items-center justify-between gap-4">
+              <div className="bg-surface-2 border border-border rounded-2xl p-5 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-bold text-white">Data Protection Officer</p>
-                  <p className="text-xs text-white/50 mt-1">For privacy requests, erasure requests, or DPO inquiries, contact our DPO directly.</p>
+                  <p className="text-sm font-bold text-fg">Data Protection Officer</p>
+                  <p className="text-xs text-fg-muted mt-1">For privacy requests, erasure requests, or DPO inquiries, contact our DPO directly.</p>
                 </div>
                 <a href="mailto:privacy@zintlr.com" className="flex-shrink-0 flex items-center gap-2 bg-teal/10 hover:bg-teal/20 border border-teal/20 text-teal text-xs font-bold px-4 py-2.5 rounded-xl transition-colors">
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -391,8 +378,8 @@ export default function LegalPage() {
               </div>
 
               {/* Sub-processor list */}
-              <div className="bg-[#111115] border border-white/10 rounded-2xl p-6 space-y-4">
-                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Approved Sub-Processors</h3>
+              <div className="bg-surface-2 border border-border rounded-2xl p-6 space-y-4">
+                <h3 className="text-sm font-extrabold text-fg uppercase tracking-wider">Approved Sub-Processors</h3>
                 <div className="divide-y divide-white/5">
                   {[
                     { name: 'Amazon Web Services', purpose: 'Cloud Infrastructure (EU/US/APAC)', country: 'USA', certifications: 'ISO 27001, SOC 2' },
@@ -402,12 +389,12 @@ export default function LegalPage() {
                   ].map(sp => (
                     <div key={sp.name} className="flex items-center justify-between py-3 gap-4">
                       <div>
-                        <p className="text-sm font-bold text-white">{sp.name}</p>
-                        <p className="text-xs text-white/40">{sp.purpose}</p>
+                        <p className="text-sm font-bold text-fg">{sp.name}</p>
+                        <p className="text-xs text-fg-muted">{sp.purpose}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-xs text-white/60">{sp.country}</p>
-                        <p className="text-[10px] text-white/30 mt-0.5">{sp.certifications}</p>
+                        <p className="text-xs text-fg-muted">{sp.country}</p>
+                        <p className="text-[10px] text-fg-subtle mt-0.5">{sp.certifications}</p>
                       </div>
                     </div>
                   ))}
@@ -434,15 +421,15 @@ export default function LegalPage() {
                         <span className="text-base leading-none">{rule.icon}</span>
                         <span className={cn('text-sm font-bold', isAllowed ? 'text-emerald-300' : 'text-red-300')}>{rule.label}</span>
                       </div>
-                      <p className="text-xs text-white/50 pl-7">{rule.detail}</p>
+                      <p className="text-xs text-fg-muted pl-7">{rule.detail}</p>
                     </div>
                   );
                 })}
               </div>
 
-              <div className="bg-[#111115] border border-white/10 rounded-2xl p-5 space-y-2">
-                <h3 className="text-sm font-extrabold text-white">Enforcement</h3>
-                <p className="text-sm text-white/50 leading-relaxed">Violations of this AUP may result in immediate API key suspension, account termination, or legal action without prior notice. zinbit's fraud detection and WAF systems automatically enforce rate limits and behavioral anomaly policies in real time. To report suspected abuse, email abuse@zintlr.com.</p>
+              <div className="bg-surface-2 border border-border rounded-2xl p-5 space-y-2">
+                <h3 className="text-sm font-extrabold text-fg">Enforcement</h3>
+                <p className="text-sm text-fg-muted leading-relaxed">Violations of this AUP may result in immediate API key suspension, account termination, or legal action without prior notice. zinbit&apos;s fraud detection and WAF systems automatically enforce rate limits and behavioral anomaly policies in real time. To report suspected abuse, email abuse@zintlr.com.</p>
               </div>
               <LegalFooter docName="Acceptable Use Policy" />
             </div>
@@ -459,22 +446,22 @@ function SectionHeader({ title, subtitle, effectiveDate, version }: {
   title: string; subtitle: string; effectiveDate: string; version: string;
 }) {
   return (
-    <div className="bg-[#111115] border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="bg-surface-2 border border-border rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h2 className="text-xl font-extrabold text-white">{title}</h2>
-        <p className="text-sm text-white/50 mt-1">{subtitle}</p>
+        <h2 className="text-xl font-extrabold text-fg">{title}</h2>
+        <p className="text-sm text-fg-muted mt-1">{subtitle}</p>
       </div>
       <div className="flex items-center gap-3 flex-shrink-0">
         <div className="text-right">
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Version</p>
-          <p className="text-sm font-bold text-white">{version}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Version</p>
+          <p className="text-sm font-bold text-fg">{version}</p>
         </div>
         <div className="w-px h-8 bg-white/10" />
         <div className="text-right">
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Effective</p>
-          <p className="text-xs font-bold text-white">{effectiveDate}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Effective</p>
+          <p className="text-xs font-bold text-fg">{effectiveDate}</p>
         </div>
-        <button onClick={window.print} className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors">
+        <button onClick={window.print} className="flex items-center gap-1.5 bg-glass hover:bg-glass-2 border border-border text-fg-muted hover:text-fg text-xs font-bold px-3 py-2 rounded-lg transition-colors">
           <Download className="w-3.5 h-3.5" />
           PDF
         </button>
@@ -485,7 +472,7 @@ function SectionHeader({ title, subtitle, effectiveDate, version }: {
 
 function LegalFooter({ docName }: { docName: string }) {
   return (
-    <div className="border-t border-white/5 pt-4 flex items-center justify-between text-xs text-white/30">
+    <div className="border-t border-border-subtle pt-4 flex items-center justify-between text-xs text-fg-subtle">
       <span>© {new Date().getFullYear()} zinbit by Zintlr. All rights reserved.</span>
       <span>Questions about this {docName}? <a href="mailto:legal@zintlr.com" className="text-teal hover:underline">legal@zintlr.com</a></span>
     </div>

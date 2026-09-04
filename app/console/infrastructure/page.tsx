@@ -113,7 +113,7 @@ export default function InfrastructurePage() {
           total: prev.total + 1,
           failed: prev.failed + (res.status >= 500 || outageRegions.length === REGIONS.length ? 1 : 0)
         }));
-      } catch (err) {
+      } catch {
         setLatencyHistory(prev => [...prev.slice(1), 2000]);
         setSlaMetrics(prev => ({ total: prev.total + 1, failed: prev.failed + 1 }));
       }
@@ -176,8 +176,8 @@ export default function InfrastructurePage() {
         <div className="w-20 h-20 bg-teal/10 rounded-full flex items-center justify-center mb-6">
           <Server className="w-10 h-10 text-teal" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Shared Infrastructure</h2>
-        <p className="text-white/60 max-w-md">
+        <h2 className="text-2xl font-bold text-fg mb-2">Shared Infrastructure</h2>
+        <p className="text-fg-muted max-w-md">
           The Sandbox environment runs on a shared testing cluster. Switch to Live mode to view and manage your dedicated production infrastructure and edge routing.
         </p>
       </div>
@@ -188,8 +188,8 @@ export default function InfrastructurePage() {
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">Global Infrastructure</h1>
-          <p className="text-white/60">Live view of our auto-scaling edge network routing your API traffic.</p>
+          <h1 className="text-2xl font-bold text-fg mb-2 tracking-tight">Global Infrastructure</h1>
+          <p className="text-fg-muted">Live view of our auto-scaling edge network routing your API traffic.</p>
         </div>
         <button
           onClick={handleStressTest}
@@ -197,7 +197,7 @@ export default function InfrastructurePage() {
           className={cn(
             "flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold transition-all shadow-[0_4px_14px_rgba(70,189,198,0.3)]",
             isStressTesting || outageRegions.length === REGIONS.length
-              ? "bg-white/5 text-white/40 cursor-not-allowed shadow-none border border-white/5"
+              ? "bg-glass text-fg-muted cursor-not-allowed shadow-none border border-border-subtle"
               : "bg-teal text-ink hover:bg-teal-ice"
           )}
         >
@@ -216,7 +216,7 @@ export default function InfrastructurePage() {
       </div>
 
       {/* Traffic Monitor */}
-      <div className="p-6 rounded-xl border border-white/10 bg-[#111115] shadow-2xl relative overflow-hidden">
+      <div className="p-6 rounded-xl border border-border bg-surface-2 shadow-2xl relative overflow-hidden">
         {isStressTesting && (
           <div className="absolute inset-0 bg-teal/5 animate-pulse pointer-events-none" />
         )}
@@ -231,13 +231,13 @@ export default function InfrastructurePage() {
               outageRegions.length > 0 ? "bg-semantic-warning/20" : "bg-teal/20"
             )}>
               <Activity className={cn("w-5 h-5", 
-                outageRegions.length === REGIONS.length ? "text-white/40" :
+                outageRegions.length === REGIONS.length ? "text-fg-muted" :
                 outageRegions.length > 0 && !isStressTesting ? "text-semantic-warning" : "text-teal"
               )} />
             </div>
             <div>
-              <h3 className="font-bold text-white">Requests Per Second</h3>
-              <p className="text-xs text-white/50">Global entry points</p>
+              <h3 className="font-bold text-fg">Requests Per Second</h3>
+              <p className="text-xs text-fg-muted">Global entry points</p>
             </div>
           </div>
           <div className="text-right flex items-center gap-4">
@@ -248,10 +248,10 @@ export default function InfrastructurePage() {
               </span>
             )}
             <div className={cn("text-3xl font-black tabular-nums tracking-tighter", 
-              outageRegions.length === REGIONS.length ? "text-white/40" :
+              outageRegions.length === REGIONS.length ? "text-fg-muted" :
               outageRegions.length > 0 && !isStressTesting ? "text-semantic-warning" : "text-teal"
             )}>
-              {traffic[traffic.length - 1]}<span className="text-sm font-medium text-white/40 ml-1">req/s</span>
+              {traffic[traffic.length - 1]}<span className="text-sm font-medium text-fg-muted ml-1">req/s</span>
             </div>
           </div>
         </div>
@@ -261,7 +261,7 @@ export default function InfrastructurePage() {
           {traffic.map((val, i) => (
             <div 
               key={i} 
-              className="flex-1 bg-white/5 rounded-t overflow-hidden relative"
+              className="flex-1 bg-glass rounded-t overflow-hidden relative"
               style={{ height: '100%' }}
             >
               <div 
@@ -281,8 +281,8 @@ export default function InfrastructurePage() {
       {/* SLA & Latency Monitor */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* SLA Display */}
-        <div className="p-6 rounded-xl border border-white/10 bg-[#111115] shadow-2xl flex flex-col justify-center items-center text-center">
-          <h3 className="font-bold text-white/50 mb-2 uppercase tracking-widest text-xs">Rolling SLA (90d)</h3>
+        <div className="p-6 rounded-xl border border-border bg-surface-2 shadow-2xl flex flex-col justify-center items-center text-center">
+          <h3 className="font-bold text-fg-muted mb-2 uppercase tracking-widest text-xs">Rolling SLA (90d)</h3>
           <div className={cn(
             "text-5xl font-black tracking-tighter mb-2",
             ((slaMetrics.total - slaMetrics.failed) / slaMetrics.total) * 100 < 99.9 
@@ -291,36 +291,36 @@ export default function InfrastructurePage() {
           )}>
             {(((slaMetrics.total - slaMetrics.failed) / slaMetrics.total) * 100).toFixed(3)}%
           </div>
-          <div className="flex items-center gap-2 text-xs font-medium text-white/40 bg-white/5 px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 text-xs font-medium text-fg-muted bg-glass px-3 py-1.5 rounded-full">
             <CheckCircle2 className="w-3.5 h-3.5" /> Guaranteed 99.99% Uptime
           </div>
         </div>
 
         {/* Latency Graph */}
-        <div className="md:col-span-2 p-6 rounded-xl border border-white/10 bg-[#111115] shadow-2xl">
+        <div className="md:col-span-2 p-6 rounded-xl border border-border bg-surface-2 shadow-2xl">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-indigo-500/20">
                 <Activity className="w-5 h-5 text-indigo-400" />
               </div>
               <div>
-                <h3 className="font-bold text-white">Edge Latency</h3>
-                <p className="text-xs text-white/50">Continuous active pings</p>
+                <h3 className="font-bold text-fg">Edge Latency</h3>
+                <p className="text-xs text-fg-muted">Continuous active pings</p>
               </div>
             </div>
             <div className="text-right flex items-center gap-4">
               <div className={cn("text-3xl font-black tabular-nums tracking-tighter", 
                 latencyHistory[latencyHistory.length - 1] > 500 ? "text-semantic-error" : "text-indigo-400"
               )}>
-                {latencyHistory[latencyHistory.length - 1]}<span className="text-sm font-medium text-white/40 ml-1">ms</span>
+                {latencyHistory[latencyHistory.length - 1]}<span className="text-sm font-medium text-fg-muted ml-1">ms</span>
               </div>
             </div>
           </div>
 
           <div className="h-24 flex items-end gap-1 relative">
             {/* 100ms threshold line */}
-            <div className="absolute left-0 right-0 border-t border-dashed border-white/10 z-0 pointer-events-none" style={{ bottom: '20%' }}>
-              <span className="absolute -top-4 left-0 text-[9px] text-white/30 font-mono">100ms Target</span>
+            <div className="absolute left-0 right-0 border-t border-dashed border-border z-0 pointer-events-none" style={{ bottom: '20%' }}>
+              <span className="absolute -top-4 left-0 text-[9px] text-fg-subtle font-mono">100ms Target</span>
             </div>
             
             {latencyHistory.map((val, i) => {
@@ -328,7 +328,7 @@ export default function InfrastructurePage() {
               return (
                 <div 
                   key={i} 
-                  className="flex-1 bg-white/5 rounded-t overflow-hidden relative z-10"
+                  className="flex-1 bg-glass rounded-t overflow-hidden relative z-10"
                   style={{ height: '100%' }}
                 >
                   <div 
@@ -353,9 +353,9 @@ export default function InfrastructurePage() {
           
           return (
             <div key={region} className="space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                <h3 className="font-bold text-white flex items-center gap-2">
-                  <Server className={cn("w-4 h-4", isOffline ? "text-semantic-error" : "text-white/50")} />
+              <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+                <h3 className="font-bold text-fg flex items-center gap-2">
+                  <Server className={cn("w-4 h-4", isOffline ? "text-semantic-error" : "text-fg-muted")} />
                   {region.toUpperCase()}
                   {isOffline && (
                     <span className="text-[10px] font-black uppercase tracking-wider text-semantic-error bg-semantic-error/10 px-2 py-0.5 rounded ml-2">
@@ -387,7 +387,7 @@ export default function InfrastructurePage() {
               </div>
 
               {regionNodes.length === 0 ? (
-                <div className="p-8 text-center border border-dashed border-white/10 rounded-xl text-white/30 text-sm font-medium">
+                <div className="p-8 text-center border border-dashed border-border rounded-xl text-fg-subtle text-sm font-medium">
                   No active nodes in this region.
                 </div>
               ) : (
@@ -397,22 +397,22 @@ export default function InfrastructurePage() {
                       key={node.id} 
                       className={cn(
                         "p-4 rounded-xl border transition-all duration-500",
-                        node.status === 'active' ? "border-white/10 bg-[#111115]" :
+                        node.status === 'active' ? "border-border bg-surface-2" :
                         node.status === 'offline' ? "border-semantic-error/20 bg-semantic-error/5" :
                         node.status === 'provisioning' ? "border-teal/30 bg-teal/5 animate-pulse" :
-                        "border-white/5 bg-white/5 opacity-50"
+                        "border-border-subtle bg-glass opacity-50"
                       )}
                     >
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <h4 className={cn("font-bold text-sm", node.status === 'offline' ? "text-semantic-error" : "text-white")}>
+                            <h4 className={cn("font-bold text-sm", node.status === 'offline' ? "text-semantic-error" : "text-fg")}>
                               zintlr-{node.id}
                             </h4>
                             {node.status === 'active' && <CheckCircle2 className="w-3.5 h-3.5 text-teal" />}
                             {node.status === 'offline' && <AlertTriangle className="w-3.5 h-3.5 text-semantic-error" />}
                           </div>
-                          <p className="text-[10px] uppercase font-bold tracking-wider text-white/30 flex items-center gap-1.5">
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-fg-subtle flex items-center gap-1.5">
                             {node.region}
                           </p>
                         </div>
@@ -423,7 +423,7 @@ export default function InfrastructurePage() {
                           </span>
                         )}
                         {node.status === 'draining' && (
-                          <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-white/50 bg-white/10 px-2 py-1 rounded-full">
+                          <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-fg-muted bg-white/10 px-2 py-1 rounded-full">
                             Draining
                           </span>
                         )}
@@ -431,19 +431,19 @@ export default function InfrastructurePage() {
 
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className={cn("font-medium", node.status === 'offline' ? "text-semantic-error/50" : "text-white/50")}>
+                          <span className={cn("font-medium", node.status === 'offline' ? "text-semantic-error/50" : "text-fg-muted")}>
                             {node.status === 'offline' ? 'OFFLINE' : 'CPU Load'}
                           </span>
                           <span className={cn(
                             "font-bold tabular-nums",
                             node.status === 'offline' ? "text-semantic-error/50" :
                             node.load > 85 ? "text-semantic-error" : 
-                            node.load > 60 ? "text-semantic-warning" : "text-white"
+                            node.load > 60 ? "text-semantic-warning" : "text-fg"
                           )}>
                             {node.load}%
                           </span>
                         </div>
-                        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-1 w-full bg-glass rounded-full overflow-hidden">
                           <div 
                             className={cn(
                               "h-full transition-all duration-500",
@@ -465,21 +465,21 @@ export default function InfrastructurePage() {
       </div>
       
       {/* Infrastructure Details */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-white/5">
-         <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border-subtle">
+         <div className="p-4 rounded-xl bg-glass border border-border-subtle">
             <ShieldCheck className="w-5 h-5 text-teal mb-3" />
-            <h4 className="text-sm font-bold text-white mb-1">DDoS Protection</h4>
-            <p className="text-xs text-white/60">Automated layer 7 mitigation across all edge points.</p>
+            <h4 className="text-sm font-bold text-fg mb-1">DDoS Protection</h4>
+            <p className="text-xs text-fg-muted">Automated layer 7 mitigation across all edge points.</p>
          </div>
-         <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+         <div className="p-4 rounded-xl bg-glass border border-border-subtle">
             <ArrowUpRight className="w-5 h-5 text-teal mb-3" />
-            <h4 className="text-sm font-bold text-white mb-1">Sub-50ms Routing</h4>
-            <p className="text-xs text-white/60">Anycast routing directs requests to the nearest healthy node.</p>
+            <h4 className="text-sm font-bold text-fg mb-1">Sub-50ms Routing</h4>
+            <p className="text-xs text-fg-muted">Anycast routing directs requests to the nearest healthy node.</p>
          </div>
-         <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+         <div className="p-4 rounded-xl bg-glass border border-border-subtle">
             <Activity className="w-5 h-5 text-teal mb-3" />
-            <h4 className="text-sm font-bold text-white mb-1">Zero-Downtime Scaling</h4>
-            <p className="text-xs text-white/60">Traffic seamlessly drains to new instances as load increases.</p>
+            <h4 className="text-sm font-bold text-fg mb-1">Zero-Downtime Scaling</h4>
+            <p className="text-xs text-fg-muted">Traffic seamlessly drains to new instances as load increases.</p>
          </div>
       </div>
 

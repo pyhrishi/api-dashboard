@@ -5,39 +5,34 @@ import { HealthCard } from '@/components/HealthCard';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { FirstCallWizard } from '@/src/components/FirstCallWizard';
 import { OnboardingChecklist } from '@/components/OnboardingChecklist';
-import { Omnibar } from '@/components/Omnibar';
+import { OmnibarTrigger } from '@/components/Omnibar';
 import { QuickActions } from '@/components/QuickActions';
 import { EndpointFilter } from '@/components/EndpointFilter';
+import { TelemetryGauges } from '@/components/TelemetryGauges';
 import { useStore } from '@/lib/store';
 import { RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { ENDPOINTS } from '@/lib/constants';
 
 
 
 const mockChartData = Array.from({ length: 30 }).map((_, i) => {
-  const peopleSearch = Math.floor(Math.random() * 15000) + 30000;
-  const companyEnrich = Math.floor(Math.random() * 10000) + 25000;
-  const webhooks = Math.floor(Math.random() * 4000) + 10000;
-  const billing = Math.floor(Math.random() * 1000) + 5000;
-  
+  const findPhone = Math.floor(Math.random() * 15000) + 30000;
+  const peopleSearch = Math.floor(Math.random() * 10000) + 25000;
+  const companyData = Math.floor(Math.random() * 4000) + 10000;
+  const companyEmployees = Math.floor(Math.random() * 1000) + 5000;
+
   return {
     date: `Aug ${i + 1}`,
-    '/v1/people/search': peopleSearch,
-    '/v1/company/enrich': companyEnrich,
-    '/v1/webhooks': webhooks,
-    '/v1/billing/usage': billing,
-    calls: peopleSearch + companyEnrich + webhooks + billing,
+    '/v1/people/phone': findPhone,
+    '/v1/people': peopleSearch,
+    '/v1/companies': companyData,
+    '/v1/companies/employees': companyEmployees,
+    calls: findPhone + peopleSearch + companyData + companyEmployees,
     latency: Math.floor(Math.random() * 30) + 90,
   };
 });
 
 export default function OverviewDashboard() {
-  const creditBurnPhone = 1250;
-  const creditBurnEmail = 2300;
-  const totalBurn = creditBurnPhone + creditBurnEmail;
-  const phonePercent = Math.round((creditBurnPhone / totalBurn) * 100) || 0;
-  const emailPercent = Math.round((creditBurnEmail / totalBurn) * 100) || 0;
   const { user, isFirstCallMade, resetPrototypeState } = useStore();
   const [selectedEndpoint, setSelectedEndpoint] = useState('all');
 
@@ -61,11 +56,11 @@ export default function OverviewDashboard() {
            ============================================================== */
         <div className="space-y-8 animate-in fade-in zoom-in duration-500">
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-display font-black text-white mb-4 tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-display font-black text-fg mb-4 tracking-tight">
               Welcome to zinbit, {user?.email.split('@')[0] || 'Developer'}! 👋
             </h1>
-            <p className="text-white/60 font-medium text-lg max-w-2xl mx-auto">
-              You're 2 minutes away from making your first API call. Follow the checklist below to get your sandbox keys and start building.
+            <p className="text-fg-muted font-medium text-lg max-w-2xl mx-auto">
+              You&apos;re 2 minutes away from making your first API call. Follow the checklist below to get your sandbox keys and start building.
             </p>
           </div>
 
@@ -80,23 +75,23 @@ export default function OverviewDashboard() {
         <div className="space-y-8 animate-in fade-in duration-700">
           {/* 1. Global Command Center (Omnibar) */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-display font-extrabold text-white mb-6 tracking-tight">
+            <h1 className="text-3xl font-display font-extrabold text-fg mb-6 tracking-tight">
               Welcome back, {user?.email.split('@')[0] || 'Developer'}
             </h1>
-            <Omnibar />
+            <OmnibarTrigger />
           </div>
 
           {/* 2. Quick Actions Grid */}
           <QuickActions />
 
           {/* 3. Analytics Overview */}
-          <div className="pt-8 border-t border-white/5">
+          <div className="pt-8 border-t border-border-subtle">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <h2 className="text-xl font-bold text-fg flex items-center gap-2">
                 Analytics Overview
                 <span className="px-2 py-0.5 rounded-full bg-teal/10 text-teal text-[10px] font-bold uppercase tracking-wider">Live</span>
               </h2>
-              <span className="text-sm text-white/40 font-medium">Last 30 Days</span>
+              <span className="text-sm text-fg-muted font-medium">Last 30 Days</span>
             </div>
             
             {/* KPI Cards */}
@@ -107,9 +102,9 @@ export default function OverviewDashboard() {
             </div>
 
             {/* Dual-axis Recharts Area Chart */}
-            <div className="glass-inner p-8 rounded-2xl hover:border-white/20 transition-all hover:shadow-2xl mb-8">
+            <div className="glass-inner p-8 rounded-2xl hover:border-border-strong transition-all hover:shadow-2xl mb-8">
               <div className="flex items-center justify-between mb-8 z-20 relative">
-                <h3 className="text-lg font-bold text-white">Traffic & Latency</h3>
+                <h3 className="text-lg font-bold text-fg">Traffic & Latency</h3>
                 <EndpointFilter 
                   selected={selectedEndpoint} 
                   onChange={(id) => setSelectedEndpoint(id)} 
@@ -175,35 +170,8 @@ export default function OverviewDashboard() {
               </div>
             </div>
 
-            {/* Credit Burn by Type Progress Bar */}
-            <div className="glass-inner p-8 rounded-2xl hover:border-white/20 transition-all hover:shadow-2xl">
-              <h3 className="text-lg font-bold text-white mb-6">Credit Burn by Type</h3>
-              
-              <div className="mb-3 flex justify-between text-sm font-medium">
-                <span className="text-white/50 font-bold uppercase tracking-wider text-xs">Consumption Ratio</span>
-                <span className="text-white/70">Total Consumed: <span className="font-extrabold text-white ml-1">{totalBurn.toLocaleString()}</span></span>
-              </div>
-              
-              <div className="flex h-8 rounded-xl overflow-hidden bg-[#09090b]/5 shadow-inner mb-6">
-                <div style={{ width: `${phonePercent}%` }} className="bg-teal transition-all duration-1000 ease-out flex items-center justify-center shadow-[0_0_15px_rgba(70,189,198,0.5)] z-10 relative">
-                  {phonePercent > 10 && <span className="text-white text-xs font-bold">{phonePercent}%</span>}
-                </div>
-                <div style={{ width: `${emailPercent}%` }} className="bg-teal-deep transition-all duration-1000 ease-out flex items-center justify-center shadow-[0_0_15px_rgba(32,124,130,0.5)]">
-                  {emailPercent > 10 && <span className="text-white text-xs font-bold">{emailPercent}%</span>}
-                </div>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full bg-teal shadow-[0_0_15px_rgba(255,255,255,0.02)] shadow-teal/50" />
-                  <span className="text-sm font-bold text-white">Phone Intel <span className="text-white/50 ml-1 font-medium bg-[#09090b]/5 px-2 py-0.5 rounded-md text-xs border border-white/5">{creditBurnPhone.toLocaleString()} credits</span></span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full bg-teal-deep shadow-[0_0_15px_rgba(255,255,255,0.02)] shadow-teal-deep/50" />
-                  <span className="text-sm font-bold text-white">Email Intel <span className="text-white/50 ml-1 font-medium bg-[#09090b]/5 px-2 py-0.5 rounded-md text-xs border border-white/5">{creditBurnEmail.toLocaleString()} credits</span></span>
-                </div>
-              </div>
-            </div>
+            {/* Live System Telemetry & Quotas */}
+            <TelemetryGauges />
           </div>
         </div>
       )}
@@ -212,7 +180,7 @@ export default function OverviewDashboard() {
       <div className="fixed bottom-4 right-4 z-50">
         <button 
           onClick={resetPrototypeState}
-          className="flex items-center gap-2 px-3 py-2 bg-semantic-error/10 text-semantic-error hover:bg-semantic-error hover:text-white border border-semantic-error/30 rounded-xl text-xs font-bold transition-all shadow-lg group backdrop-blur-md"
+          className="flex items-center gap-2 px-3 py-2 bg-semantic-error/10 text-semantic-error hover:bg-semantic-error hover:text-fg border border-semantic-error/30 rounded-xl text-xs font-bold transition-all shadow-lg group backdrop-blur-md"
           title="Reset Prototype to First-Time User State"
         >
           <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />

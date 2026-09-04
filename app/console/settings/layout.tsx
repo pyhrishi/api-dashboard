@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { User, Users, Shield, ArrowRight, FileSignature } from 'lucide-react';
+import { User, Users, Shield, ArrowRight, FileSignature, Paintbrush, Building2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -11,17 +11,19 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
   const navItems = [
     { name: 'Profile', href: '/console/settings/profile', icon: <User className="w-4 h-4" /> },
+    { name: 'Organization', href: '/console/settings/organization', icon: <Building2 className="w-4 h-4" />, adminOnly: true },
+    { name: 'Branding', href: '/console/settings/branding', icon: <Paintbrush className="w-4 h-4" /> },
     { name: 'Team', href: '/console/settings/team', icon: <Users className="w-4 h-4" />, adminOnly: true },
     { name: 'Security', href: '/console/settings/security', icon: <Shield className="w-4 h-4" /> },
     { name: 'Audit Logs', href: '/console/settings/audit', icon: <FileSignature className="w-4 h-4" />, adminOnly: true },
   ];
 
   return (
-    <div className="max-w-6xl mx-auto pb-12 font-sans text-white">
+    <div className="max-w-6xl mx-auto pb-12 font-sans text-fg">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Settings</h1>
-        <p className="text-white/60 font-medium text-sm">Manage your profile, team members, and workspace security.</p>
+        <h1 className="text-3xl font-extrabold text-fg mb-2 tracking-tight">Settings</h1>
+        <p className="text-fg-muted font-medium text-sm">Manage your profile, team members, and workspace security.</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -40,7 +42,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all whitespace-nowrap flex-shrink-0 lg:flex-shrink ${
                     isActive 
                       ? 'bg-teal/10 text-teal font-bold shadow-sm border border-teal/20' 
-                      : 'text-white/60 hover:bg-white/5 hover:text-white font-medium border border-transparent'
+                      : 'text-fg-muted hover:bg-glass hover:text-fg font-medium border border-transparent'
                   }`}
                 >
                   {item.icon}
