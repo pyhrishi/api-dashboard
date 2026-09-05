@@ -134,6 +134,21 @@ describe('Sandbox API Integration', () => {
       expect(response.data.confidence).toBeDefined();
     });
 
+    it('should return a deliverability score for email-verify', async () => {
+      const endpoint = getEndpointById('email-verify')!;
+      const response = await callSandboxAPI({
+        endpoint,
+        parameters: { email: 'jane.doe@acme.com' },
+        apiKey: 'sk_test_key',
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.data.email).toBe('jane.doe@acme.com');
+      expect(response.data.verdict).toBeDefined();
+      expect(typeof response.data.score).toBe('number');
+      expect(Array.isArray(response.data.checks)).toBe(true);
+    });
+
     it('should return email for phone-to-email', async () => {
       const endpoint = getEndpointById('phone-to-email')!;
       const response = await callSandboxAPI({

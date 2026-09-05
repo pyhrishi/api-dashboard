@@ -13,6 +13,7 @@ import { verifyPhoneForEmail } from '@/lib/phone-verifier';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
+import { verifyEmailDeliverability } from '@/lib/email-verifier';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -498,6 +499,20 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...firmo };
+    }
+
+    case 'email-verify': {
+      // Deterministic email deliverability scoring (single source of truth).
+      // A malformed address is a valid *result* (undeliverable), not an error;
+      // only an empty input is rejected.
+      const deliverability = verifyEmailDeliverability(String(parameters.email || ''));
+      if (!deliverability) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide an email address to verify.' },
+        };
+      }
+      return { success: true, ...deliverability };
     }
 
     case 'phone-to-email':

@@ -1027,6 +1027,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-005', // Job title normalization — Studio "Normalize a title" (GET /v1/titles/normalize)
   'F-007', // Social profile discovery — Studio "Email → socials" (GET /v1/people/social)
   'F-010', // Firmographic append — Studio "Firmographic append" (GET /v1/companies/firmographics)
+  'F-011', // Email deliverability scoring — Studio "Verify deliverability" (GET /v1/email/verify)
   'F-019', // Bulk list enrichment — Bulk Enrichment Jobs console feature
   'F-023', // Deterministic match keys — identity-resolve auto-detect on exact email/domain/phone
   'F-025', // Confidence score on every field — per-field confidence + provenance on every result

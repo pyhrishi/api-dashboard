@@ -2,6 +2,7 @@ import { getEnrichmentPresets, getPresetById, detectInputKind, validateInput, to
 import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
+import { verifyEmailDeliverability } from '@/lib/email-verifier';
 
 describe('enrichment registry', () => {
   it('builds presets from real catalog endpoints (no orphans)', () => {
@@ -73,5 +74,21 @@ describe('enrichment registry', () => {
     if (so?.metric) expect(so.metric.label).toBe('reputation');
     // A verified count surfaces as a badge.
     expect(vm.badges.some((b) => /platform/.test(b))).toBe(true);
+  });
+
+  it('maps an email-deliverability response to the structured scored view-model', () => {
+    const del = verifyEmailDeliverability('info@mailinator.com')!;
+    const vm = toEnrichmentResult({ ...del })!;
+    expect(vm.kind).toBe('person');
+    expect(vm.fields).toHaveLength(0); // rendered via the scored panel, not flat fields
+    expect(vm.deliverability).toBeDefined();
+    expect(vm.deliverability?.verdict).toBe(del.verdict);
+    expect(vm.deliverability?.score).toBe(del.score);
+    expect(vm.deliverability?.checks.length).toBe(del.checks.length);
+    // Disposable + role-based both surface as flag chips.
+    expect(vm.deliverability?.flags.some((f) => f.label === 'Disposable')).toBe(true);
+    expect(vm.deliverability?.flags.some((f) => f.label === 'Role-based')).toBe(true);
+    // The verdict is echoed as a badge.
+    expect(vm.badges).toContain('Undeliverable');
   });
 });

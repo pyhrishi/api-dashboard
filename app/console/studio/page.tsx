@@ -6,13 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Search, ArrowRight, Copy, Check, Lock, ShieldCheck, Clock, Trash2, RefreshCw,
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
-  Users, Code2, AtSign, Award, Newspaper, BadgeCheck,
+  Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult,
-  type EnrichmentPreset, type EnrichmentResult, type SocialProfileView,
+  type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView,
 } from '@/data/enrichments';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { track } from '@/lib/telemetry';
@@ -20,7 +20,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, Sparkles };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, Sparkles };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -107,6 +107,9 @@ function StudioInner() {
           result: vm, status: 'ok', environment, confidence: vm.confidence ?? 0, creditCost: p.creditCost, requestId, durationMs, timestamp: Date.now(),
         });
         track('enrichment_run', { preset: p.id, endpoint: p.endpointId, confidence: vm.confidence ?? null, environment, durationMs });
+        if (vm.deliverability) {
+          track('email_deliverability_checked', { verdict: vm.deliverability.verdict, score: vm.deliverability.score, environment });
+        }
         if (!isFirstCallMade) markFirstCallMade({ endpoint: p.endpointId, method: p.endpoint.method, statusCode: res.status, responseTime: durationMs, response: body });
       } else if (res.status === 402) {
         setPhase('error'); setMeta({ message: 'You are out of credits. Recharge to keep enriching.', durationMs, status: 402 });
@@ -339,6 +342,94 @@ function SocialFootprint({ profiles, presetId }: { profiles: SocialProfileView[]
   );
 }
 
+const CHECK_ICON = { pass: CircleCheck, warn: CircleAlert, fail: CircleX, info: CircleDot } as const;
+const CHECK_COLOR = {
+  pass: 'text-semantic-success',
+  warn: 'text-semantic-warning',
+  fail: 'text-semantic-error',
+  info: 'text-fg-subtle',
+} as const;
+
+function verdictTone(verdict: DeliverabilityView['verdict']): BadgeTone {
+  if (verdict === 'deliverable') return 'success';
+  if (verdict === 'risky') return 'warning';
+  if (verdict === 'undeliverable') return 'error';
+  return 'neutral';
+}
+function DeliverabilityPanel({ d }: { d: DeliverabilityView }) {
+  const verdictLabel = d.verdict.charAt(0).toUpperCase() + d.verdict.slice(1);
+  return (
+    <div className="mt-5 space-y-5">
+      {/* Score + verdict header */}
+      <div className="flex items-center gap-5 rounded-xl border border-border bg-surface-2 p-5">
+        <div className="relative shrink-0">
+          <svg width="88" height="88" viewBox="0 0 88 88" className="-rotate-90">
+            <circle cx="44" cy="44" r="38" className="fill-none stroke-glass" strokeWidth="8" />
+            <motion.circle
+              cx="44" cy="44" r="38"
+              className={`fill-none ${d.score >= 80 ? 'stroke-semantic-success' : d.score >= 45 ? 'stroke-semantic-warning' : 'stroke-semantic-error'}`}
+              strokeWidth="8" strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 38}
+              initial={{ strokeDashoffset: 2 * Math.PI * 38 }}
+              animate={{ strokeDashoffset: 2 * Math.PI * 38 * (1 - d.score / 100) }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-black text-fg tabular-nums leading-none">{d.score}</span>
+            <span className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle mt-0.5">/ 100</span>
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Deliverability</span>
+            <StatusBadge tone={verdictTone(d.verdict)}>{verdictLabel}</StatusBadge>
+          </div>
+          <p className="text-sm text-fg-muted mt-1">
+            Inbox-reachability score for <span className="font-semibold text-fg">{d.domain || 'this address'}</span> via {d.provider}.
+          </p>
+          {d.flags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {d.flags.map((f) => <StatusBadge key={f.label} tone={f.tone}>{f.label}</StatusBadge>)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Did-you-mean nudge */}
+      {d.didYouMean && (
+        <div className="flex items-center gap-2 rounded-xl border border-teal/30 bg-teal/10 px-4 py-3">
+          <Info className="w-4 h-4 text-teal shrink-0" />
+          <span className="text-sm text-fg">Did you mean <span className="font-mono font-bold text-teal">{d.didYouMean}</span>?</span>
+        </div>
+      )}
+
+      {/* Signal breakdown */}
+      <div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-2">Signal breakdown</div>
+        <ul className="space-y-px rounded-xl overflow-hidden border border-border">
+          {d.checks.map((c, i) => {
+            const Icon = CHECK_ICON[c.status];
+            return (
+              <motion.li
+                key={c.key || i}
+                initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.04 * i }}
+                className="flex items-start gap-3 bg-surface-2 px-4 py-3"
+              >
+                <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${CHECK_COLOR[c.status]}`} />
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm font-bold text-fg">{c.label}</span>
+                  <p className="text-[13px] text-fg-muted leading-snug">{c.detail}</p>
+                </div>
+              </motion.li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -387,6 +478,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.social && result.social.profiles.length > 0 && (
           <SocialFootprint profiles={result.social.profiles} presetId={preset.id} />
+        )}
+
+        {result.deliverability && (
+          <DeliverabilityPanel d={result.deliverability} />
         )}
 
         {result.chips && result.chips.items.length > 0 && (

@@ -59,6 +59,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'email-to-social', endpointId: 'email-to-social', param: 'email', inputKind: 'email', icon: 'Share2', category: 'person', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'priya.nair@zomato.in'], label: 'Social profiles' },
   { id: 'title-normalize', endpointId: 'title-normalize', param: 'title', inputKind: 'title', icon: 'Tags', category: 'person', examples: ['VP, Engineering', 'Sr. SWE II', 'Head of Growth'], label: 'Normalize a title' },
   { id: 'firmographics', endpointId: 'firmographic-append', param: 'domain', inputKind: 'domain', icon: 'BarChart3', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Firmographic append' },
+  { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -141,6 +142,25 @@ export interface SocialProfileView {
   metric?: { label: string; value: string };
   headline?: string;
 }
+/** Badge tone, mirrored from components/ui StatusBadge (kept local — this is a data module). */
+export type ResultTone = 'success' | 'warning' | 'error' | 'info' | 'teal' | 'neutral';
+/** One deliverability check result, for the signal breakdown list. */
+export interface DeliverabilityCheckView {
+  key: string;
+  label: string;
+  status: 'pass' | 'warn' | 'fail' | 'info';
+  detail: string;
+}
+/** Structured email-deliverability result — rendered as a scored panel + checklist. */
+export interface DeliverabilityView {
+  verdict: 'deliverable' | 'risky' | 'undeliverable' | 'unknown';
+  score: number;
+  provider: string;
+  domain: string;
+  didYouMean: string | null;
+  flags: { label: string; tone: ResultTone }[];
+  checks: DeliverabilityCheckView[];
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -151,6 +171,8 @@ export interface EnrichmentResult {
   chips?: { label: string; items: string[] };
   /** Structured cross-platform footprint — rendered as a rich card grid when present. */
   social?: { profiles: SocialProfileView[] };
+  /** Structured email-deliverability breakdown — rendered as a scored panel when present. */
+  deliverability?: DeliverabilityView;
   confidence?: number;
   provenance?: EnrichmentProvenance[];
   lastVerified?: string;
@@ -413,6 +435,60 @@ function firmographicToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Email deliverability scoring: a 0-100 reachability score + a decomposed signal breakdown. */
+function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const bool = (k: string) => d[k] === true;
+
+  const email = str('email');
+  const verdictRaw = str('verdict');
+  const verdict = (['deliverable', 'risky', 'undeliverable', 'unknown'].includes(verdictRaw) ? verdictRaw : 'unknown') as DeliverabilityView['verdict'];
+  const score = num('score') ?? 0;
+  const domain = str('domain');
+  const provider = str('provider') || '—';
+  const didYouMean = str('did_you_mean') || null;
+
+  const verdictLabel = verdict.charAt(0).toUpperCase() + verdict.slice(1);
+
+  // Flag chips — only the ones that apply, each toned by how it affects sending.
+  const flags: { label: string; tone: ResultTone }[] = [];
+  if (bool('is_disposable')) flags.push({ label: 'Disposable', tone: 'error' });
+  if (bool('is_catch_all')) flags.push({ label: 'Catch-all', tone: 'warning' });
+  if (bool('is_role_based')) flags.push({ label: 'Role-based', tone: 'warning' });
+  if (bool('is_greylisted')) flags.push({ label: 'Greylisted', tone: 'warning' });
+  if (bool('is_free_provider')) flags.push({ label: 'Free provider', tone: 'info' });
+  // Only surface the positive "confirmed" chip when it doesn't contradict the verdict.
+  if (verdict !== 'undeliverable' && bool('mx_found') && bool('smtp_check') && !bool('is_catch_all')) {
+    flags.push({ label: 'Mailbox confirmed', tone: 'success' });
+  }
+
+  const rawChecks = Array.isArray(d.checks) ? (d.checks as Record<string, unknown>[]) : [];
+  const checks: DeliverabilityCheckView[] = rawChecks.map((c) => {
+    const s = typeof c.status === 'string' ? c.status : 'info';
+    return {
+      key: typeof c.key === 'string' ? c.key : '',
+      label: typeof c.label === 'string' ? c.label : '',
+      status: (['pass', 'warn', 'fail', 'info'].includes(s) ? s : 'info') as DeliverabilityCheckView['status'],
+      detail: typeof c.detail === 'string' ? c.detail : '',
+    };
+  });
+
+  return {
+    kind: 'person',
+    title: email || 'Email',
+    subtitle: `${verdictLabel} · ${provider}${domain ? ` · ${domain}` : ''}`,
+    avatar: 'AT', // rendered as an @-style badge in the Studio
+    badges: [verdictLabel],
+    fields: [],
+    deliverability: { verdict, score, provider, domain, didYouMean, flags, checks },
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
@@ -428,6 +504,8 @@ export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.canonical_title === 'string' && typeof data.seniority === 'string') return titleToResult(data);
   // Firmographic append: naics_code + sic_code mark the shape.
   if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);
+  // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
+  if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

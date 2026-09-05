@@ -809,6 +809,43 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'email-verify',
+    name: 'Verify Email Deliverability',
+    description: 'Score any email for inbox reachability before you send. Returns a 0-100 deliverability score and a decisive verdict, decomposed into every check behind it — syntax, MX, SMTP mailbox handshake, catch-all, disposable, role-based, and free-provider — each with its own result and provenance. Catches typos with a did-you-mean suggestion.',
+    method: 'GET',
+    path: '/v1/email/verify',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'Email address to verify',
+        example: 'john@datadoghq.com',
+        placeholder: 'user@company.com',
+        maxLength: 254,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'verify-a-list',
+        title: 'Verify a whole list',
+        description: 'Upload a CSV and score every address before your next campaign.',
+        category: 'sdks',
+        link: '/console/jobs',
+      },
+      {
+        id: 'email-to-person',
+        title: 'Resolve the person',
+        description: 'Turn a deliverable email into a full verified profile.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.12', date: 'September 2026', headline: 'Email deliverability scoring',
+    changes: [
+      { kind: 'feature', text: 'Email deliverability scoring — verify any address before you send and get a 0-100 inbox-reachability score with a decisive verdict (deliverable / risky / undeliverable), decomposed into every check behind it: syntax, MX records, SMTP mailbox handshake, catch-all, disposable, role-based, and free-provider — each with its own result and provenance. Catches typo domains with a did-you-mean suggestion. New GET /v1/email/verify endpoint (1 credit), shipped as a Studio preset with an animated score ring and a full signal breakdown.' },
+      { kind: 'improvement', text: 'Scoring is deterministic — the same address always returns the same verdict and breakdown across the Studio, Explorer, and CLI (a single email verifier). Syntax is checked for real; disposable, role-based, and free-provider lists back the reputation signals.' },
+      { kind: 'improvement', text: 'Deliverability signals are infrastructure metadata, so live keys return the full score (only the email echo is masked) — verify production traffic without losing the result.' },
+    ],
+  },
+  {
     version: 'v4.11', date: 'September 2026', headline: 'Firmographic append',
     changes: [
       { kind: 'feature', text: 'Firmographic append — turn a domain into CRM-ready firmographic codes: NAICS and SIC (with titles), employee and revenue bands, ownership (public / private / VC- or PE-backed / nonprofit / government), and entity type, each with provenance. The standardized segmentation layer that sits alongside the full company dossier. New GET /v1/companies/firmographics endpoint (1 credit), shipped as a Studio preset.' },
