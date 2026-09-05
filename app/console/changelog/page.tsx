@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.13', date: 'September 2026', headline: 'Email domain authentication (SPF/DKIM/DMARC)',
+    changes: [
+      { kind: 'feature', text: "Email domain authentication — inspect any domain's SPF record and policy, DKIM selectors, and DMARC policy and coverage, then score how well it is protected against spoofing (0-100 with a Strong/Partial/Weak/None grade and a plain spoofable verdict). The domain-level complement to mailbox deliverability: F-011 answers \"can I reach this inbox,\" this answers \"is this domain authenticated to send, and can it be spoofed.\" New GET /v1/email/domain-auth endpoint (1 credit), shipped as a Studio preset." },
+      { kind: 'improvement', text: 'Authentication posture is deterministic — the same domain always returns the same SPF/DKIM/DMARC findings and score across the Studio, Explorer, and CLI (a single domain-auth resolver). Accepts a bare domain or a full email address.' },
+    ],
+  },
+  {
     version: 'v4.12', date: 'September 2026', headline: 'Email deliverability scoring',
     changes: [
       { kind: 'feature', text: 'Email deliverability scoring — verify any address before you send and get a 0-100 inbox-reachability score with a decisive verdict (deliverable / risky / undeliverable), decomposed into every check behind it: syntax, MX records, SMTP mailbox handshake, catch-all, disposable, role-based, and free-provider — each with its own result and provenance. Catches typo domains with a did-you-mean suggestion. New GET /v1/email/verify endpoint (1 credit), shipped as a Studio preset with an animated score ring and a full signal breakdown.' },

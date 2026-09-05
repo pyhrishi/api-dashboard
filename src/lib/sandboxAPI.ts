@@ -14,6 +14,7 @@ import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
+import { checkDomainAuth } from '@/lib/email-domain-auth';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -513,6 +514,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...deliverability };
+    }
+
+    case 'email-domain-auth': {
+      // Deterministic SPF/DKIM/DMARC domain-authentication posture (single source of truth).
+      const auth = checkDomainAuth(String(parameters.domain || ''));
+      if (!auth) {
+        return {
+          success: false,
+          error: { code: 'INVALID_DOMAIN', message: 'Provide a domain (or email address) to inspect.' },
+        };
+      }
+      return { success: true, ...auth };
     }
 
     case 'phone-to-email':

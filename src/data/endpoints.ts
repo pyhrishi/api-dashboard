@@ -846,6 +846,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'email-domain-auth',
+    name: 'Email Domain Authentication',
+    description: "Inspect a domain's email sending-authentication posture — SPF record + policy, DKIM selectors, and DMARC policy/coverage — and score how well it is protected against spoofing (0-100 with a Strong/Partial/Weak/None grade and a spoofable verdict). The domain-level complement to mailbox deliverability.",
+    method: 'GET',
+    path: '/v1/email/domain-auth',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'Domain (or email address) to inspect',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 254,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'domain-auth-to-verify',
+        title: 'Verify a specific mailbox',
+        description: 'Score inbox reachability for an address on this domain.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

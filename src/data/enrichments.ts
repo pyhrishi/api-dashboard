@@ -60,6 +60,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'title-normalize', endpointId: 'title-normalize', param: 'title', inputKind: 'title', icon: 'Tags', category: 'person', examples: ['VP, Engineering', 'Sr. SWE II', 'Head of Growth'], label: 'Normalize a title' },
   { id: 'firmographics', endpointId: 'firmographic-append', param: 'domain', inputKind: 'domain', icon: 'BarChart3', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Firmographic append' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
+  { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -489,6 +490,43 @@ function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Email domain authentication: SPF/DKIM/DMARC posture as a scored company card. */
+function domainAuthToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const sub = (k: string): Record<string, unknown> => (isRecord(d[k]) ? (d[k] as Record<string, unknown>) : {});
+  const domain = str('domain') || 'Domain';
+  const grade = str('grade');
+  const score = num('score');
+  const spoofable = d.spoofable === true;
+
+  const spf = sub('spf');
+  const dkim = sub('dkim');
+  const dmarc = sub('dmarc');
+  const selectors = Array.isArray(dkim.selectors) ? (dkim.selectors as unknown[]).filter((s): s is string => typeof s === 'string') : [];
+
+  const fields: EnrichmentField[] = [
+    { label: 'SPF', value: spf.present ? `Policy ${typeof spf.policy === 'string' ? spf.policy : '—'}` : 'Missing', mono: true },
+    { label: 'DKIM', value: dkim.present ? (selectors.length ? `${selectors.length} selector${selectors.length === 1 ? '' : 's'}: ${selectors.join(', ')}` : 'Published') : 'Missing', mono: true },
+    { label: 'DMARC', value: dmarc.present ? `p=${typeof dmarc.policy === 'string' ? dmarc.policy : '—'}${typeof dmarc.pct === 'number' ? `, pct=${dmarc.pct}` : ''}` : 'Missing', mono: true },
+    { label: 'Anti-spoofing', value: score !== undefined ? `${score}/100 · ${grade || '—'}` : (grade || '—') },
+    { label: 'Spoofable', value: spoofable ? 'Yes — no DMARC enforcement' : 'No — DMARC enforced' },
+  ];
+
+  return {
+    kind: 'company',
+    title: domain,
+    subtitle: `Email authentication posture${grade ? ` · ${grade}` : ''}`,
+    avatar: 'DNS',
+    badges: [grade ? `${grade} auth` : '', spoofable ? 'Spoofable' : 'Protected'].filter(Boolean),
+    fields,
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
@@ -506,6 +544,8 @@ export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
+  // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.
+  if (typeof data.spoofable === 'boolean' && isRecord(data.dmarc)) return domainAuthToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;
