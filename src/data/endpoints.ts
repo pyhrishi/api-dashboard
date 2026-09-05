@@ -779,6 +779,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'firmographic-append',
+    name: 'Firmographic Append',
+    description: 'Append standardized firmographic classification codes to a domain — NAICS and SIC (with titles), employee and revenue bands, ownership, and entity type. The CRM-ready segmentation layer, distinct from the full company dossier.',
+    method: 'GET',
+    path: '/v1/companies/firmographics',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'Company domain to classify',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 100,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'firmographic-to-company',
+        title: 'Full company dossier',
+        description: 'Enrich the same domain into industry, tech stack, and funding.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

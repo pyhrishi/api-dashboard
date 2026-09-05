@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Layers, Map } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -62,8 +62,8 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Overview', href: '/console/overview', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'API Keys', href: '/console/keys', icon: <Key className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Endpoint Explorer', href: '/console/explorer', icon: <Compass className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Enrichment Studio', href: '/console/studio', icon: <Layers className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Bulk Jobs', href: '/console/jobs', icon: <Layers className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Enrichment Studio', href: '/console/studio', icon: <Sparkles className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Bulk Jobs', href: '/console/jobs', icon: <ListChecks className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Growth', href: '/console/growth', icon: <TrendingUp className="w-5 h-5" />, roles: ['admin', 'billing'] },
     { name: 'Infrastructure', href: '/console/infrastructure', icon: <Server className="w-5 h-5" />, roles: ['admin', 'developer'] },
@@ -73,8 +73,8 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Partners', href: '/console/partners', icon: <Handshake className="w-5 h-5" />, roles: ['admin'] },
     { name: 'Data Sharing', href: '/console/data-sharing', icon: <Database className="w-5 h-5" />, roles: ['admin'] },
     { name: 'Webhooks', href: '/console/webhooks', icon: <Webhook className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Features', href: '/console/features', icon: <MessageSquare className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Signals', href: '/console/signals', icon: <MessageSquare className="w-5 h-5" />, roles: ['admin'] },
+    { name: 'Features', href: '/console/features', icon: <Lightbulb className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Signals', href: '/console/signals', icon: <Radar className="w-5 h-5" />, roles: ['admin'] },
     { name: 'Docs', href: '/docs', icon: <BookOpen className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Changelog', href: '/console/changelog', icon: <GitBranch className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Roadmap', href: '/console/roadmap', icon: <Map className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },

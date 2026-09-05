@@ -3,7 +3,7 @@
 > **A preset in the Enrichment Studio** (see `enrichment-studio.md`). Ships at `/console/studio` as the "Social profiles" preset — no separate page or nav entry.
 
 **Status:** Built (prototype is the spec) · **Roadmap:** F-007 (Now) · **Route:** `/console/studio` (preset `email-to-social`)
-**Owner:** Product · **Last updated:** 2026-09-04
+**Owner:** Product · **Last updated:** 2026-09-06
 
 > Reverse-engineered from the shipped prototype for the engineering-to-scale handoff.
 
@@ -41,15 +41,19 @@ Single source of truth: **`lib/social-resolver.ts`** → `discoverSocialProfiles
 - **Masking:** profiles are public handles, so no PII masking applies; sandbox and live both return full data.
 
 ## 7. UI
-- **Surface:** `toEnrichmentResult` (`src/data/enrichments.ts`) gains a `socialToResult` branch, selected when the response carries a `profiles` array + `platform_count`.
-- **Result card** (existing Studio `ResultCard`): title = name; a platform-count badge; subtitle = "N social profiles discovered"; each profile is a field (handle · followers, with a verified check) and a clickable link; right rail = confidence % + bar + cross-platform provenance.
-- **Preset:** "Social profiles" (`Share2` icon, person category). **States:** loading, empty (preset prompt), not-found (`No result`), success (the card).
+- **Surface:** `toEnrichmentResult` (`src/data/enrichments.ts`) has a `socialToResult` branch, selected when the response carries a `profiles` array + `platform_count`. It emits a structured `social: { profiles: SocialProfileView[] }` section on the view-model (not flat `fields`), so the Studio renders a purpose-built footprint rather than text rows.
+- **`SocialProfileView`:** `platform`, `handle`, `url`, `verified`, `confidence`, `primary`, optional `metric: { label, value }` (label is `reputation` for Stack Overflow, else `followers`), optional `headline`. Profiles sort primary-first then by confidence — deterministic.
+- **Result card** (Studio `ResultCard`): title = name; badges show platform count + verified count; subtitle = "N social profiles discovered across the professional web".
+- **`SocialFootprint` grid** (new component in `app/console/studio/page.tsx`): a responsive 2-up card grid, one card per platform, each with a platform icon (mapped to lucide icons that exist in 1.33.0 — `Linkedin`/`Github`/`Twitter` do **not**, so LinkedIn→`Users`, GitHub→`Code2`, X→`AtSign`, Stack Overflow→`Award`, Medium→`Newspaper`, personal site→`Globe2`), a `BadgeCheck` when verified, the follower/reputation metric, a per-platform confidence micro-bar, the headline, and a whole-card external link with hover lift. The primary account is highlighted in teal. Public handles are **not** masked in live.
+- **Right rail:** overall confidence % + bar + cross-platform provenance (unchanged).
+- **Preset:** "Social profiles" (`Share2` icon, person category). **States:** loading (skeleton), empty (preset prompt), not-found (`No result`), success (the footprint grid).
 
 ## 8. Telemetry
-Reuses the Studio's run event recorded in the shared `enrichments` slice. No new event type.
+- Reuses the Studio's `enrichment_run` / `enrichment_failed` events recorded in the shared `enrichments` slice.
+- Adds **`social_profile_opened`** (`lib/telemetry.ts`), fired when a viewer clicks through to a discovered profile, with `{ preset, platform, verified }` — an expansion/engagement signal that measures how often discovered footprints are acted on.
 
 ## 9. Verification
-`tsc` clean · isolated `NEXT_DIST_DIR=.next-verify next build` green · lint clean · `jest` green (5 new tests + existing sandbox/enrichment suites) · Playwright smoke: Studio "Social profiles" renders the multi-platform card with links and confidence.
+`tsc` clean · isolated `NEXT_DIST_DIR=.next-verify next build` green · lint clean · `jest` green (social resolver + a view-model mapping test + existing suites — 134 total) · Playwright smoke: Studio "Social profiles" renders the multi-platform card with links and confidence.
 
 ## 10. Deferred
 Bulk social append; real social-graph sources; follower-history; CRM write-back; per-post activity detail.

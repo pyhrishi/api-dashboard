@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.11', date: 'September 2026', headline: 'Firmographic append',
+    changes: [
+      { kind: 'feature', text: 'Firmographic append — turn a domain into CRM-ready firmographic codes: NAICS and SIC (with titles), employee and revenue bands, ownership (public / private / VC- or PE-backed / nonprofit / government), and entity type, each with provenance. The standardized segmentation layer that sits alongside the full company dossier. New GET /v1/companies/firmographics endpoint (1 credit), shipped as a Studio preset.' },
+      { kind: 'improvement', text: 'Firmographic classification is deterministic and shares the company graph, so the same domain always maps to the same NAICS/SIC codes across the Studio, Explorer, and CLI.' },
+    ],
+  },
+  {
     version: 'v4.10', date: 'September 2026', headline: 'Job title normalization',
     changes: [
       { kind: 'feature', text: 'Job title normalization — turn any messy title ("Sr. SWE II", "VP, Eng", "Head of Growth") into a canonical title plus a normalized seniority, function, department, and management level, with the lexicon tokens behind each classification and a decision-maker flag for lead routing and scoring. New GET /v1/titles/normalize endpoint (1 credit), shipped as a Studio preset.' },
@@ -29,6 +36,7 @@ const RELEASES: Release[] = [
     changes: [
       { kind: 'feature', text: 'Social profile discovery — turn an email into a person\'s whole professional social footprint: LinkedIn, GitHub, X, Stack Overflow, Medium, and personal sites, each with a handle, verification status, follower/reputation signal, and per-platform match confidence. New GET /v1/people/social endpoint (2 credits), shipped as a Studio preset with clickable profile links and cross-platform provenance.' },
       { kind: 'improvement', text: 'Social discovery is deterministic — the same email always fans out to the same profiles across the Studio, Explorer, and CLI (a single social resolver built on the person graph).' },
+      { kind: 'improvement', text: 'The Studio now renders the footprint as a rich per-platform card grid — each account shows a platform icon, verification badge, follower/reputation signal, and its own confidence bar, with the strongest profile highlighted and one-click open-out.' },
     ],
   },
   {

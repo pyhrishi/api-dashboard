@@ -5,13 +5,14 @@ import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Search, ArrowRight, Copy, Check, Lock, ShieldCheck, Clock, Trash2, RefreshCw,
-  ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags,
+  ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
+  Users, Code2, AtSign, Award, Newspaper, BadgeCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult,
-  type EnrichmentPreset, type EnrichmentResult,
+  type EnrichmentPreset, type EnrichmentResult, type SocialProfileView,
 } from '@/data/enrichments';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { track } from '@/lib/telemetry';
@@ -19,7 +20,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, Sparkles };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, Sparkles };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -258,6 +259,86 @@ function StudioInner() {
   );
 }
 
+const PLATFORM_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  LinkedIn: Users,
+  GitHub: Code2,
+  X: AtSign,
+  'Stack Overflow': Award,
+  Medium: Newspaper,
+  'Personal site': Globe2,
+};
+
+function SocialFootprint({ profiles, presetId }: { profiles: SocialProfileView[]; presetId: string }) {
+  return (
+    <div className="mt-5">
+      <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-2">
+        Cross-platform footprint
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {profiles.map((p, i) => {
+          const Icon = PLATFORM_ICON[p.platform] ?? Globe2;
+          const card = (
+            <div className="flex items-start gap-3 h-full">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${p.primary ? 'bg-teal/10 border-teal/30 text-teal' : 'bg-glass border-border-subtle text-fg-muted'}`}>
+                <Icon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-bold text-fg truncate">{p.platform}</span>
+                  {p.verified && <BadgeCheck className="w-3.5 h-3.5 text-teal shrink-0" aria-label="Verified account" />}
+                  {p.url && <ExternalLink className="w-3 h-3 text-fg-subtle ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                </div>
+                <div className="text-xs font-mono text-fg-muted truncate">{p.handle || '—'}</div>
+                {p.headline && <div className="text-[11px] text-fg-subtle truncate mt-0.5">{p.headline}</div>}
+                <div className="flex items-center gap-2 mt-2">
+                  {p.metric && (
+                    <span className="text-[10px] font-bold text-fg-muted tabular-nums">
+                      {p.metric.value} <span className="font-semibold text-fg-subtle">{p.metric.label}</span>
+                    </span>
+                  )}
+                  <span className="ml-auto flex items-center gap-1.5">
+                    <span className="w-10 h-1 rounded-full bg-glass overflow-hidden" aria-hidden>
+                      <span className="block h-full rounded-full bg-teal" style={{ width: `${Math.round(p.confidence * 100)}%` }} />
+                    </span>
+                    <span className="text-[10px] font-mono tabular-nums text-fg-subtle">{Math.round(p.confidence * 100)}%</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+          const baseCls = `group block rounded-xl border p-3 h-full transition-colors ${p.primary ? 'border-teal/30 bg-teal/5' : 'border-border-subtle bg-surface-2'}`;
+          return p.url ? (
+            <motion.a
+              key={p.platform + i}
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => track('social_profile_opened', { preset: presetId, platform: p.platform, verified: p.verified })}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * i }}
+              whileHover={{ y: -2 }}
+              className={`${baseCls} hover:border-teal/40`}
+            >
+              {card}
+            </motion.a>
+          ) : (
+            <motion.div
+              key={p.platform + i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * i }}
+              className={baseCls}
+            >
+              {card}
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -289,18 +370,24 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border rounded-xl overflow-hidden border border-border mt-5">
-          {result.fields.map((f, i) => (
-            <motion.div key={f.label + i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }} className="bg-surface-2 p-3.5">
-              <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">
-                {f.label}
-                {f.verified && <ShieldCheck className="w-3 h-3 text-semantic-success" aria-label="Verified" />}
-                {f.masked && isLive && <Lock className="w-3 h-3 text-fg-subtle" aria-label="Masked in live" />}
-              </div>
-              <div className={`text-sm font-semibold text-fg ${f.mono ? 'font-mono break-all' : ''}`}>{f.masked ? maskVal(f.value) : f.value}</div>
-            </motion.div>
-          ))}
-        </div>
+        {result.fields.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border rounded-xl overflow-hidden border border-border mt-5">
+            {result.fields.map((f, i) => (
+              <motion.div key={f.label + i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }} className="bg-surface-2 p-3.5">
+                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">
+                  {f.label}
+                  {f.verified && <ShieldCheck className="w-3 h-3 text-semantic-success" aria-label="Verified" />}
+                  {f.masked && isLive && <Lock className="w-3 h-3 text-fg-subtle" aria-label="Masked in live" />}
+                </div>
+                <div className={`text-sm font-semibold text-fg ${f.mono ? 'font-mono break-all' : ''}`}>{f.masked ? maskVal(f.value) : f.value}</div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {result.social && result.social.profiles.length > 0 && (
+          <SocialFootprint profiles={result.social.profiles} presetId={preset.id} />
+        )}
 
         {result.chips && result.chips.items.length > 0 && (
           <div className="mt-5">

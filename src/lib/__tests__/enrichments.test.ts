@@ -1,6 +1,7 @@
 import { getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult } from '@/data/enrichments';
 import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
+import { discoverSocialProfiles } from '@/lib/social-resolver';
 
 describe('enrichment registry', () => {
   it('builds presets from real catalog endpoints (no orphans)', () => {
@@ -56,5 +57,21 @@ describe('enrichment registry', () => {
     expect(vm.confidence).toBe(0.95);
     expect(vm.fields.some((f) => f.value === 'Verizon')).toBe(true);
     expect(vm.fields.some((f) => f.label.toLowerCase() === 'success')).toBe(false);
+  });
+
+  it('maps a social discovery response to the structured footprint view-model', () => {
+    const social = discoverSocialProfiles('jane.doe@acme.com')!;
+    const vm = toEnrichmentResult({ ...social })!;
+    expect(vm.kind).toBe('person');
+    expect(vm.fields).toHaveLength(0); // rendered via the rich card grid, not flat fields
+    expect(vm.social?.profiles.length).toBe(social.platform_count);
+    // The primary account sorts first and every profile carries a confidence.
+    expect(vm.social?.profiles[0]?.primary).toBe(true);
+    expect(vm.social?.profiles.every((p) => p.confidence >= 0 && p.confidence <= 1)).toBe(true);
+    // Stack Overflow (when present) labels its count as reputation, not followers.
+    const so = vm.social?.profiles.find((p) => p.platform === 'Stack Overflow');
+    if (so?.metric) expect(so.metric.label).toBe('reputation');
+    // A verified count surfaces as a badge.
+    expect(vm.badges.some((b) => /platform/.test(b))).toBe(true);
   });
 });

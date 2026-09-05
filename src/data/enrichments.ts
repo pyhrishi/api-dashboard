@@ -58,6 +58,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'reverse-ip', endpointId: 'ip-to-company', param: 'ip', inputKind: 'ip', icon: 'Network', category: 'identity', examples: ['52.38.104.17', '104.18.32.7', '8.8.8.8'], label: 'Reverse IP → company' },
   { id: 'email-to-social', endpointId: 'email-to-social', param: 'email', inputKind: 'email', icon: 'Share2', category: 'person', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'priya.nair@zomato.in'], label: 'Social profiles' },
   { id: 'title-normalize', endpointId: 'title-normalize', param: 'title', inputKind: 'title', icon: 'Tags', category: 'person', examples: ['VP, Engineering', 'Sr. SWE II', 'Head of Growth'], label: 'Normalize a title' },
+  { id: 'firmographics', endpointId: 'firmographic-append', param: 'domain', inputKind: 'domain', icon: 'BarChart3', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Firmographic append' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -127,6 +128,19 @@ export function validateInput(kind: InputKind, raw: string): boolean {
 // ── Generic result view-model ────────────────────────────────────────────────
 export interface EnrichmentField { label: string; value: string; verified?: boolean; masked?: boolean; mono?: boolean; }
 export interface EnrichmentProvenance { field: string; source: string; signal: string; confidence: number; }
+/** One discovered social account, structured for the rich per-platform card grid. */
+export interface SocialProfileView {
+  platform: string;
+  handle: string;
+  url: string;
+  verified: boolean;
+  confidence: number;
+  /** The strongest account — drives ordering and a subtle highlight. */
+  primary: boolean;
+  /** Follower / reputation signal where the platform has one. */
+  metric?: { label: string; value: string };
+  headline?: string;
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -135,6 +149,8 @@ export interface EnrichmentResult {
   badges: string[];
   fields: EnrichmentField[];
   chips?: { label: string; items: string[] };
+  /** Structured cross-platform footprint — rendered as a rich card grid when present. */
+  social?: { profiles: SocialProfileView[] };
   confidence?: number;
   provenance?: EnrichmentProvenance[];
   lastVerified?: string;
@@ -289,26 +305,41 @@ function socialToResult(d: Record<string, unknown>): EnrichmentResult {
 
   const fmtCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 
-  const fields: EnrichmentField[] = profiles.map((p) => {
-    const platform = typeof p.platform === 'string' ? p.platform : 'Profile';
-    const handle = typeof p.handle === 'string' ? p.handle : '';
-    const followers = typeof p.followers === 'number' ? p.followers : undefined;
-    const value = followers !== undefined ? `${handle} · ${fmtCount(followers)} followers` : handle;
-    return { label: platform, value: value || '—', verified: p.verified === true, mono: true };
-  });
+  // Reputation-style platforms label their count differently from follower graphs.
+  const metricLabel = (platform: string) => (platform === 'Stack Overflow' ? 'reputation' : 'followers');
 
-  const links = profiles
-    .filter((p) => typeof p.url === 'string')
-    .map((p) => ({ label: typeof p.platform === 'string' ? p.platform : 'Link', href: p.url as string }));
+  const views: SocialProfileView[] = profiles.map((p) => {
+    const platform = typeof p.platform === 'string' ? p.platform : 'Profile';
+    const followers = typeof p.followers === 'number' ? p.followers : undefined;
+    const headline = typeof p.headline === 'string' ? p.headline : undefined;
+    return {
+      platform,
+      handle: typeof p.handle === 'string' ? p.handle : '',
+      url: typeof p.url === 'string' ? p.url : '',
+      verified: p.verified === true,
+      confidence: typeof p.confidence === 'number' ? p.confidence : 0,
+      primary: p.primary === true,
+      metric: followers !== undefined ? { label: metricLabel(platform), value: fmtCount(followers) } : undefined,
+      // "Reputation" duplicates the metric label — surface only real headlines.
+      headline: headline && headline !== 'Reputation' ? headline : undefined,
+    };
+  });
+  // Strongest account first, then by confidence — deterministic ordering.
+  views.sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0) || b.confidence - a.confidence);
+
+  const verifiedCount = views.filter((v) => v.verified).length;
 
   return {
     kind: 'person',
     title: name,
-    subtitle: `${profiles.length} social profile${profiles.length === 1 ? '' : 's'} discovered`,
+    subtitle: `${views.length} social profile${views.length === 1 ? '' : 's'} discovered across the professional web`,
     avatar: initialsOf(name),
-    badges: [`${profiles.length} platform${profiles.length === 1 ? '' : 's'}`],
-    fields,
-    links,
+    badges: [
+      `${views.length} platform${views.length === 1 ? '' : 's'}`,
+      verifiedCount > 0 ? `${verifiedCount} verified` : '',
+    ].filter(Boolean),
+    fields: [],
+    social: { profiles: views },
     confidence: num('confidence'),
     provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
     lastVerified: str('last_verified') || undefined,
@@ -349,6 +380,39 @@ function titleToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Firmographic append: standardized classification codes for a company. */
+function firmographicToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const company = str('company') || str('domain') || 'Company';
+  const emp = num('employee_count');
+  const founded = num('founded_year');
+
+  const fields: EnrichmentField[] = [
+    { label: 'NAICS', value: [str('naics_code'), str('naics_title')].filter(Boolean).join(' · ') || '—', mono: true },
+    { label: 'SIC', value: [str('sic_code'), str('sic_title')].filter(Boolean).join(' · ') || '—', mono: true },
+    { label: 'Industry', value: [str('industry'), str('sub_industry')].filter(Boolean).join(' · ') || '—' },
+    { label: 'Employees', value: emp !== undefined ? `${emp.toLocaleString()} · ${str('employee_band')}` : (str('employee_band') || '—') },
+    { label: 'Revenue band', value: str('revenue_band') || '—' },
+    { label: 'Ownership', value: [str('ownership'), str('entity_type')].filter(Boolean).join(' · ') || '—' },
+    { label: 'Founded', value: founded !== undefined ? String(founded) : '—' },
+    { label: 'HQ country', value: str('hq_country') || '—' },
+  ];
+
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: str('domain') || undefined,
+    avatar: initialsOf(company),
+    badges: [str('ownership'), str('industry')].filter(Boolean),
+    fields,
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
@@ -362,6 +426,8 @@ export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.profiles) && typeof data.platform_count === 'number') return socialToResult(data);
   // Job title normalization: canonical_title + seniority mark the shape.
   if (typeof data.canonical_title === 'string' && typeof data.seniority === 'string') return titleToResult(data);
+  // Firmographic append: naics_code + sic_code mark the shape.
+  if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

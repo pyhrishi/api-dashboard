@@ -12,6 +12,7 @@ import { resolveCompanyFromIp } from '@/lib/ip-resolver';
 import { verifyPhoneForEmail } from '@/lib/phone-verifier';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { normalizeJobTitle } from '@/lib/title-normalizer';
+import { appendFirmographics } from '@/lib/firmographic-resolver';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -485,6 +486,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...norm };
+    }
+
+    case 'firmographic-append': {
+      // Deterministic firmographic classification append (single source of truth).
+      const firmo = appendFirmographics(String(parameters.domain || ''));
+      if (!firmo) {
+        return {
+          success: false,
+          error: { code: 'INVALID_DOMAIN', message: 'That domain could not be classified. Provide a valid company domain.' },
+        };
+      }
+      return { success: true, ...firmo };
     }
 
     case 'phone-to-email':

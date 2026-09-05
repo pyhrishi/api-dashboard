@@ -41,6 +41,7 @@ export type TelemetryEventName =
   | 'export_downloaded'
   | 'alert_rule_created'
   | 'feature_abandoned'
+  | 'social_profile_opened'
   // navigation & workspace
   | 'command_palette_used'
   | 'roadmap_viewed'
