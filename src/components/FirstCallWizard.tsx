@@ -95,7 +95,7 @@ export function FirstCallWizard() {
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-2xl p-2 md:p-4 text-ink ring-1 ring-black/5 transform transition-transform duration-500 hover:scale-[1.01]">
+              <div className="bg-white text-ink ring-1 ring-black/5 dark:bg-black/20 dark:text-white dark:ring-white/10 rounded-2xl shadow-2xl p-2 md:p-4 transform transition-transform duration-500 hover:scale-[1.01]">
                 <RequestBuilder 
                   onExecute={handleExecute} 
                   apiKey={apiKey}
