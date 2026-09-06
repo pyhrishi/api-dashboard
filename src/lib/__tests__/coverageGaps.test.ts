@@ -3,7 +3,7 @@ import {
   gapSeverityRank, isRealGap,
 } from '@/lib/coverage-gaps';
 import { getCoverageSnapshot } from '@/lib/region-coverage';
-import { useStore } from '@/lib/store';
+import { useStore, extractTenantState, defaultTenantState } from '@/lib/store';
 
 describe('coverage-gaps engine', () => {
   it('is deterministic per org and coherent internally', () => {
@@ -106,6 +106,15 @@ describe('coverage-gaps store slice', () => {
 
   it('throws on an unknown segment', () => {
     expect(() => useStore.getState().requestCoverageExpansion('atlantis:phone', 'x')).toThrow();
+  });
+
+  it('is tenant-scoped: requests flow through the tenant snapshot and default empty per org', () => {
+    const gap = analyzeCoverageGaps('org_1').gaps[0];
+    useStore.getState().requestCoverageExpansion(gap.id, 'expand');
+    // The field is part of the extracted tenant state, so switchOrganization swaps it per-org...
+    expect(extractTenantState(useStore.getState()).coverageExpansionRequests).toHaveLength(1);
+    // ...and a fresh tenant starts with none (no cross-org leak).
+    expect(defaultTenantState().coverageExpansionRequests).toEqual([]);
   });
 
   it('blocks the billing role', () => {

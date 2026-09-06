@@ -116,13 +116,15 @@ function CoverageGapsInner() {
 
       {/* Filters */}
       <div className="flex items-center justify-between gap-3 mt-6 mb-4 flex-wrap">
-        <SegmentedControl<RegionKey | 'all'>
-          options={REGION_FILTERS}
-          value={region}
-          onChange={onFilterRegion}
-          size="sm"
-          layoutId="gap-region"
-        />
+        <div className="overflow-x-auto max-w-full">
+          <SegmentedControl<RegionKey | 'all'>
+            options={REGION_FILTERS}
+            value={region}
+            onChange={onFilterRegion}
+            size="sm"
+            layoutId="gap-region"
+          />
+        </div>
         <button
           onClick={() => setGapsOnly((v) => !v)}
           aria-pressed={gapsOnly}
@@ -133,16 +135,14 @@ function CoverageGapsInner() {
       </div>
 
       {visible.length === 0 ? (
-        <GlassCard className="p-0">
-          <EmptyState
-            icon={<Check className="w-8 h-8" />}
-            title={gapsOnly ? 'No material gaps here' : 'No segments in this view'}
-            description={gapsOnly
-              ? 'Your traffic in this view is well within our coverage — nothing is costing you material misses. Switch to “All segments” to see every region × data type.'
-              : 'No traffic matches this filter. Try another region.'}
-            action={gapsOnly ? <Button variant="secondary" onClick={() => setGapsOnly(false)}>Show all segments <ArrowRight className="w-4 h-4" /></Button> : undefined}
-          />
-        </GlassCard>
+        <EmptyState
+          icon={<Check className="w-8 h-8" />}
+          title={gapsOnly ? 'No material gaps here' : 'No segments in this view'}
+          description={gapsOnly
+            ? 'Your traffic in this view is well within our coverage — nothing is costing you material misses. Switch to “All segments” to see every region × data type.'
+            : 'No traffic matches this filter. Try another region.'}
+          action={gapsOnly ? <Button variant="secondary" onClick={() => setGapsOnly(false)}>Show all segments <ArrowRight className="w-4 h-4" /></Button> : undefined}
+        />
       ) : (
         <div className="space-y-3">
           <AnimatePresence initial={false} mode="popLayout">
@@ -287,8 +287,9 @@ function GapsSkeleton() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
       </div>
-      <div className="flex items-center justify-between mt-6 mb-4">
-        <Skeleton className="h-9 w-80 rounded-lg" />
+      <Skeleton className="h-4 w-64 mt-4" />
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-6 mb-4">
+        <Skeleton className="h-9 w-80 max-w-full rounded-lg" />
         <Skeleton className="h-8 w-28 rounded-lg" />
       </div>
       <div className="space-y-3">

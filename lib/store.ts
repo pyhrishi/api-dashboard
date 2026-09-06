@@ -507,6 +507,8 @@ export interface TenantState {
   corrections: Correction[];
   /** Golden-record snapshots (F-054) — immutable, versioned canonical-record history per entity. */
   goldenSnapshots: GoldenSnapshot[];
+  /** Coverage-expansion requests (F-053) — per-tenant, submitted against thin-coverage segments. */
+  coverageExpansionRequests: CoverageExpansionRequest[];
 }
 
 export const extractTenantState = (state: AppState): TenantState => ({
@@ -551,6 +553,7 @@ export const extractTenantState = (state: AppState): TenantState => ({
   enrichments: state.enrichments,
   corrections: state.corrections,
   goldenSnapshots: state.goldenSnapshots,
+  coverageExpansionRequests: state.coverageExpansionRequests,
 });
 
 export const defaultTenantState = (): TenantState => ({
@@ -595,6 +598,7 @@ export const defaultTenantState = (): TenantState => ({
   enrichments: [],
   corrections: [],
   goldenSnapshots: [],
+  coverageExpansionRequests: [],
 });
 
 interface AppState extends FirstCallState, TenantState {
@@ -670,9 +674,7 @@ interface AppState extends FirstCallState, TenantState {
   accuracyBenchmarkRuns: AccuracyBenchmarkRun[];
   /** Re-samples the benchmark (new cycle). Returns the run. Billing role cannot. */
   runAccuracyBenchmark: () => AccuracyBenchmarkRun;
-  // Coverage gap reporting (F-053) — expansion requests for thin-coverage segments.
-  /** Submitted coverage-expansion requests (newest first, capped at 30); persisted. */
-  coverageExpansionRequests: CoverageExpansionRequest[];
+  // Coverage gap reporting (F-053) — the data field (coverageExpansionRequests) is tenant-scoped in TenantState.
   /** Requests a coverage expansion for a gap segment. Returns the new id. Billing role cannot. */
   requestCoverageExpansion: (segmentId: string, note: string) => string;
   // User-reported corrections — governed field-correction feedback loop (F-046).
