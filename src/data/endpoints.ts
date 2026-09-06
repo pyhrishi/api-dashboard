@@ -2250,6 +2250,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/regions',
       },
     ],
+  },
+
+  {
+    id: 'records-snapshot',
+    name: 'Golden-record snapshot',
+    description: "Capture the canonical golden record for an entity as an immutable, content-hashed snapshot you can version and audit (F-054). Give a company domain or a corporate email and get the reconciled trusted value for every field — with the source that drove each value, its confidence, and when it was last observed — plus an overall confidence and a content hash. Store the hash to detect drift; snapshot again later and diff the two versions to see exactly what changed, when, and which source moved it.",
+    method: 'GET',
+    path: '/v1/records/snapshot',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'query',
+        type: 'string',
+        required: true,
+        description: 'A company domain (→ company golden record) or a corporate email (→ person golden record)',
+        example: 'stripe.com',
+        placeholder: 'company domain or corporate email',
+        maxLength: 200,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'snapshot-to-reconcile',
+        title: 'See the reconciliation behind it',
+        description: 'Inspect how conflicting sources were merged into each golden value.',
+        category: 'sdks',
+        link: '/console/reconciliation',
+      },
+    ],
   }
 ];
 

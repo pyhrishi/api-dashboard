@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.68', date: 'September 2026', headline: 'Golden-record snapshots',
+    changes: [
+      { kind: 'feature', text: 'Golden-record snapshots — version the canonical record for every account and contact. A new Golden Records console (and GET /v1/records/snapshot) captures an immutable, content-hashed snapshot of an entity\'s reconciled golden record, so you can answer "what did we know about this account on the day we signed?" Diff any two versions field-by-field — what changed, which source drove it, and how confidence moved — and pin the version that is your official record of truth.' },
+      { kind: 'improvement', text: 'Honest history by design: capturing again only creates a new version when the record actually changed (content-hash equal ⇒ no empty snapshot), each version is immutable and audit-logged, and the whole history is tenant-scoped and role-gated (billing is read-only). Seeded with real evolution — a promotion, a relocation, a headcount jump, a funding round — so the diffs are meaningful the moment you open it. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.67', date: 'September 2026', headline: 'Coverage gap reporting',
     changes: [
       { kind: 'feature', text: 'Coverage gaps — see exactly where your enrichment traffic hits thin data and what it costs you. A new Coverage Gaps console (and GET /v1/coverage/gaps) overlays your account\'s request mix (region × data type) on Zinbit\'s regional coverage and ranks the segments burning the most: your match rate, missed lookups, wasted credits, and addressable uplift, each with a concrete fix — enable email-first fallback where direct dials are thin, supplement technographics with firmographics, or request a coverage expansion.' },

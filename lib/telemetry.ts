@@ -139,7 +139,12 @@ export type TelemetryEventName =
   | 'accuracy_benchmark_run'
   | 'coverage_gaps_viewed'
   | 'coverage_gaps_filtered'
-  | 'coverage_expansion_requested';
+  | 'coverage_expansion_requested'
+  // data quality — golden-record snapshots (F-054)
+  | 'golden_records_viewed'
+  | 'golden_record_captured'
+  | 'golden_record_pinned'
+  | 'golden_record_deleted';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

@@ -1150,6 +1150,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-042', // Data decay alerts — lib/data-decay.ts (proactive decay-risk scoring over the F-041 record pool: age-vs-window + field volatility + role mobility + company-event signal → probability/severity/projected-decay + explainable factors; alert inbox with snooze/resolve lifecycle) + store slice + GET /v1/records/decay-score + /console/data-decay
   'F-044', // Accuracy benchmarking — lib/accuracy-benchmark.ts (sampled precision/recall per data category from an integer confusion matrix + Wilson CI, registry/hybrid/lookup engines, competitor comparison with lead) + store re-sample slice + GET /v1/quality/benchmark + /console/benchmarks
   'F-053', // Coverage gap reporting — lib/coverage-gaps.ts (per-tenant demand profile joined against the region-coverage supply ceiling → ranked region×data-type gaps with missed volume, wasted credits, addressable uplift + state-aware recommendation) + expansion-request store slice + GET /v1/coverage/gaps + /console/coverage-gaps
+  'F-054', // Golden-record snapshots — lib/golden-record.ts (build-as-of-a-point-in-time golden record via a deterministic field-evolution model, content hash, field-level diff w/ source+confidence delta, seeded history) + tenant-scoped persisted goldenSnapshots store slice (capture/pin/label/delete, RBAC, audit, hash no-op) + GET /v1/records/snapshot + /console/golden-records
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

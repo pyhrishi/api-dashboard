@@ -22,6 +22,7 @@ import { resolveIdentityHistory } from '@/lib/identity-history-resolver';
 import { linkDomainToEmployer } from '@/lib/domain-employer-linker';
 import { decayScoreForEmail } from '@/lib/data-decay';
 import { benchmarkForCategory } from '@/lib/accuracy-benchmark';
+import { buildGoldenRecord, hashRecord } from '@/lib/golden-record';
 import { gapReportForAccount } from '@/lib/coverage-gaps';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
@@ -646,6 +647,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
     case 'coverage-gaps': {
       // The account's demand-vs-supply coverage gap report (single source of truth).
       return { success: true, ...gapReportForAccount() };
+    }
+
+    case 'records-snapshot': {
+      // Golden-record snapshot (F-054): the reconciled canonical record + content hash.
+      const rec = buildGoldenRecord(String(parameters.query || ''));
+      if (!rec) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No entity could be resolved for that identifier. Provide a company domain or a corporate email.' },
+        };
+      }
+      return { success: true, ...rec, hash: hashRecord(rec.fields) };
     }
 
     case 'people-identity-history': {
