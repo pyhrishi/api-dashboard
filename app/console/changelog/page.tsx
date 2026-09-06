@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.60', date: 'September 2026', headline: 'Cross-source reconciliation',
+    changes: [
+      { kind: 'feature', text: 'Cross-source reconciliation — when data providers disagree on a field, the gateway now picks the value to trust. A new GET /v1/reconcile (and a Reconciliation console) gathers what each source reports for a contact and merges it into a golden record: the winning value per field, weighted by provider reliability and how recently each source observed it, with the winning source, source agreement, and — when providers genuinely disagree — a conflict flag showing every candidate.' },
+      { kind: 'improvement', text: 'Correct by construction: formatting variants ("VP, Engineering" vs "VP Engineering") are clustered with Jaro-Winkler so they never count as conflicts, while a stale minority value is outvoted rather than flagged. Reuses the F-043 source catalog (reliability) and the F-024 similarity engine, so reconciliation, attribution, and matching tell one story. Single-sourced in lib/reconciliation.ts, deterministic, and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.59', date: 'September 2026', headline: 'Historical attribute trends',
     changes: [
       { kind: 'feature', text: 'Historical attribute trends — a new GET /v1/companies/timeseries (and a "Growth history" Studio lookup) charts how a company changed month over month: headcount, estimated revenue, technologies detected, and open roles, over a window you choose (6–36 months, default 24). Each series comes with its trailing-12-month growth, average month-over-month growth, and a trend (accelerating / growing / flat / declining), plus a headline momentum — so you can prioritize fast-growing accounts and spot stalling ones.' },

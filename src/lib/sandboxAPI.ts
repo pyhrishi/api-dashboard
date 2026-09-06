@@ -23,6 +23,7 @@ import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
 import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { resolveBuyerIntent } from '@/lib/intent-resolver';
 import { resolveCompanyTimeseries } from '@/lib/company-timeseries-resolver';
+import { reconcile, type FieldObservations } from '@/lib/reconciliation';
 import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { deduplicateRecords } from '@/lib/entity-dedup';
@@ -535,6 +536,43 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...demo };
+    }
+
+    case 'reconcile': {
+      // Cross-source reconciliation (F-027): build multi-source observations for a
+      // resolved contact — a few catalog providers per field, with a deterministic
+      // stale/divergent one on some fields — then reconcile to a golden record.
+      const person = resolvePersonFromEmail(String(parameters.email || ''));
+      if (!person) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No contact could be resolved for that email (personal mailboxes have no multi-source record).' },
+        };
+      }
+      let seed = 0x811c9dc5;
+      const dseed = String(parameters.email || '');
+      for (let i = 0; i < dseed.length; i++) { seed ^= dseed.charCodeAt(i); seed = Math.imul(seed, 0x01000193); }
+      const rand = (n: number) => { seed = Math.imul(seed ^ (seed >>> 13), 0x5bd1e995); return Math.abs(seed % n); };
+      const scalar = [
+        { field: 'Title', value: person.title, primary: 'Professional graph', secondary: 'Social graph', stale: 'Senior Associate' },
+        { field: 'Company', value: `${person.company}`, primary: 'Company graph', secondary: 'Directory match', stale: `${person.company} (former)` },
+        { field: 'Location', value: person.location, primary: 'Directory match', secondary: 'Professional graph', stale: 'Remote' },
+        { field: 'Phone', value: person.phone, primary: 'Carrier HLR lookup', secondary: 'Number intelligence', stale: '' },
+      ];
+      const fields: FieldObservations[] = scalar.filter((s) => s.value).map((s, i) => {
+        const observations = [
+          { source: s.primary, value: s.value, observedAt: '2026-08-01' },
+          // Secondary usually agrees (sometimes a harmless formatting variant).
+          { source: s.secondary, value: rand(10) < 7 ? s.value : s.value.replace(/,/g, ''), observedAt: '2026-05-01' },
+        ];
+        // A stale, divergent third source on ~1 in 3 fields → a real conflict.
+        if (s.stale && (rand(3) === 0 || i === 0)) {
+          observations.push({ source: 'Directory match', value: s.stale, observedAt: '2023-02-01' });
+        }
+        return { field: s.field, observations };
+      });
+      const result = reconcile(fields);
+      return { success: true, subject: person.email, company: person.company, ...result };
     }
 
     case 'companies-job-signals': {

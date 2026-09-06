@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -80,6 +80,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Quality SLA', href: '/console/quality-sla', icon: <Gauge className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Re-verification', href: '/console/re-verification', icon: <RefreshCw className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Corrections', href: '/console/corrections', icon: <MessageSquareWarning className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Reconciliation', href: '/console/reconciliation', icon: <Combine className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Regional Coverage', href: '/console/regions', icon: <Globe className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Growth', href: '/console/growth', icon: <TrendingUp className="w-5 h-5" />, roles: ['admin', 'billing'] },
     { name: 'Circuit Breakers', href: '/console/circuits', icon: <Zap className="w-5 h-5" />, roles: ['admin', 'developer'] },

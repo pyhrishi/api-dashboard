@@ -116,7 +116,10 @@ export type TelemetryEventName =
   // intent — buyer intent signals (F-012)
   | 'intent_resolved'
   // firmographics — historical time-series attributes (F-022)
-  | 'timeseries_resolved';
+  | 'timeseries_resolved'
+  // data quality — cross-source reconciliation (F-027)
+  | 'reconciliation_viewed'
+  | 'reconciliation_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

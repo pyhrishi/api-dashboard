@@ -1994,6 +1994,35 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=funding',
       },
     ],
+  },
+
+  {
+    id: 'reconcile',
+    name: 'Cross-Source Reconciliation',
+    description: "Merge conflicting field values across providers into one golden record (F-027). Given a contact, the gateway gathers what each source reports for each field and reconciles them — weighting by provider reliability and recency — returning the winning value, its confidence, the winning source, source agreement, and (when providers disagree) a conflict flag with every candidate. Formatting variants are clustered so they don't count as conflicts.",
+    method: 'GET',
+    path: '/v1/reconcile',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'The contact email to reconcile across sources',
+        example: 'jane.doe@acme.com',
+        placeholder: 'user@company.com',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'reconcile-to-console',
+        title: 'Open the Reconciliation console',
+        description: 'See the golden record with per-field conflicts and candidates.',
+        category: 'sdks',
+        link: '/console/reconciliation',
+      },
+    ],
   }
 ];
 
