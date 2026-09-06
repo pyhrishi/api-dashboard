@@ -11,6 +11,7 @@ import { parseFields, projectFields, applySparseDiscount, sparseDiscountPct, pay
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
 import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gateway/upstreams';
+import { planPartial, computePartial } from '@/lib/gateway/partialResult';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
 import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
 import { enforceSOC2Controls, attachISO27001Headers, enforceDDoSProtection, enforceMSAControls, enforceDPAControls, enforceFraudDetection } from '@/lib/gateway/security';
@@ -766,6 +767,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   let remainingCredits = 0;
   let appliedDiscount = 0;
   let appliedSparseDiscount = 0;
+  let partialCompleteness = 1; // 1 = full; <1 when a secondary upstream is degraded (F-071)
 
   // 4. Metered Billing Engine
   if (!result && !isIdempotentReplay && endpoint) {
@@ -779,8 +781,13 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     const { cost: volumeCost, discountPct } = calculateVolumeDiscount(apiKey, baseCreditCost);
 
     // Sparse-response discount — fewer fields, lower cost.
-    const { cost: finalCreditCost, discountPct: sparsePct } = applySparseDiscount(volumeCost, requestedFields.length);
+    const { cost: sparseCost, discountPct: sparsePct } = applySparseDiscount(volumeCost, requestedFields.length);
     appliedSparseDiscount = sparsePct;
+
+    // Partial-result billing (F-071) — a degraded secondary upstream means we can
+    // only return part of the record, so we bill proportionally to what resolved.
+    partialCompleteness = planPartial(endpoint.id, (u) => getCircuitState(u) === 'OPEN').completeness;
+    const finalCreditCost = Math.max(1, Math.round(sparseCost * partialCompleteness));
 
     const billingResult = deductCredits(apiKey, finalCreditCost);
     appliedCreditCost = finalCreditCost;
@@ -1006,6 +1013,22 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
   }
 
+  // Partial-result responses (F-071): if a SECONDARY upstream is degraded, drop the
+  // fields it would have supplied and return what resolved (206) with a `partial`
+  // block explaining what's missing and why. Runs before masking so withheld
+  // fields never leak. Billing was already scaled by planPartial in the billing block.
+  let partialMeta: import('@/lib/gateway/partialResult').PartialMeta | undefined;
+  if (endpoint) {
+    const outcome = computePartial(endpoint.id, payload, (u) => getCircuitState(u) === 'OPEN');
+    if (outcome.meta.partial) {
+      payload = outcome.data;
+      partialMeta = outcome.meta;
+      responseHeaders['X-Partial-Result'] = 'true';
+      responseHeaders['X-Partial-Missing'] = outcome.meta.missing.map((m) => m.label).join(', ');
+      responseHeaders['X-Partial-Completeness'] = String(outcome.meta.completeness);
+    }
+  }
+
   // Privacy enforcement applies to LIVE keys only. Sandbox (sk_test_) responses
   // are fully synthetic (no real PII) and are returned unmasked so developers can
   // see complete example payloads while testing. Live keys get DPDP/GDPR/CCPA
@@ -1066,6 +1089,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
         sparse_discount_pct: appliedSparseDiscount > 0 ? appliedSparseDiscount : undefined
       } : undefined,
       sparse: sparseMeta,
+      partial: partialMeta,
       compliance: {
         framework: privacyFramework,
         country_code: countryCode,
@@ -1073,7 +1097,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
         opt_outs_honored: optOutsRemoved > 0 ? optOutsRemoved : undefined
       }
     },
-  }, result.status);
+  }, partialMeta ? 206 : result.status);
 }
 
 // ─── Thin route wrapper for partner revenue attribution ───────────────────────

@@ -90,7 +90,9 @@ export type TelemetryEventName =
   | 'field_selection_run'
   // reliability — circuit breaker per upstream (F-066)
   | 'circuits_viewed'
-  | 'circuit_forced';
+  | 'circuit_forced'
+  // resilience — partial-result responses (F-071)
+  | 'partial_result_received';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

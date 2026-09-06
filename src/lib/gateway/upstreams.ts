@@ -101,3 +101,40 @@ export function getUpstream(id: string): UpstreamProvider | undefined {
 export function endpointsForUpstream(id: string): string[] {
   return Object.keys(ENDPOINT_UPSTREAM).filter((ep) => ENDPOINT_UPSTREAM[ep] === id);
 }
+
+/**
+ * Secondary (optional) upstream contributions per endpoint (F-071). The primary
+ * upstream (upstreamForEndpoint) is required — if its circuit is OPEN the request
+ * can't be served at all (503). These SECONDARY upstreams each contribute a group
+ * of fields; if one's circuit is OPEN, those fields are dropped and the result is
+ * returned partial (206) rather than failing the whole call. Field paths are
+ * dotted, relative to the response `data`.
+ */
+export interface UpstreamContribution {
+  upstream: string;
+  /** Human label for the field group, shown in the partial metadata + UI. */
+  label: string;
+  /** Dotted paths under `data` this upstream supplies. */
+  fields: string[];
+}
+
+const CONTRIBUTIONS: Record<string, UpstreamContribution[]> = {
+  'people-search': [
+    { upstream: 'carrier-hlr', label: 'Direct phone', fields: ['person.phone', 'person.phone_verified'] },
+    { upstream: 'social-graph', label: 'Social profiles', fields: ['person.linkedin_url', 'person.github_url', 'person.twitter_url'] },
+    { upstream: 'smtp-verification', label: 'Email verification', fields: ['person.email_verified'] },
+  ],
+  'v2-people-search': [
+    { upstream: 'carrier-hlr', label: 'Direct phone', fields: ['person.phone', 'person.phone_verified'] },
+    { upstream: 'social-graph', label: 'Social profiles', fields: ['person.linkedin_url', 'person.github_url', 'person.twitter_url'] },
+    { upstream: 'smtp-verification', label: 'Email verification', fields: ['person.email_verified'] },
+  ],
+  'company-enrich': [
+    { upstream: 'funding-database', label: 'Funding', fields: ['company.funding_stage', 'company.total_raised_usd'] },
+  ],
+};
+
+/** The secondary upstream contributions for an endpoint (empty when none). */
+export function secondaryContributions(endpointId: string): UpstreamContribution[] {
+  return CONTRIBUTIONS[endpointId] ?? [];
+}

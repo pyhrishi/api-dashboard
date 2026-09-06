@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.48', date: 'September 2026', headline: 'Partial-result responses',
+    changes: [
+      { kind: 'feature', text: 'Partial-result responses — when one of the upstreams behind an enrichment is degraded, you now get back what resolved instead of an all-or-nothing failure. If, say, the carrier HLR that supplies direct phones has an open circuit, a person lookup still returns the name, title, company, location, and socials — just without the phone — as HTTP 206 with a `partial` metadata block naming exactly which fields were withheld and why (which upstream, X-Partial-Result / X-Partial-Missing headers).' },
+      { kind: 'feature', text: 'You’re billed only for what resolved — a partial response is discounted in proportion to the sources that answered (X-Partial-Completeness), so a degraded upstream never means paying full price for a half-filled record. The Enrichment Studio shows it inline: a “Partial result — N% complete” banner lists each unavailable field and the degraded provider, linking straight to the Circuit Breakers console.' },
+      { kind: 'improvement', text: 'Built on the per-upstream circuit breakers (F-066): the same upstream registry that isolates a failing provider now also decides which fields can still be served. A required (primary) upstream being down still returns 503; only optional secondary sources degrade to partial. Single-sourced in src/lib/gateway/partialResult.ts, deterministic, and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.47', date: 'September 2026', headline: 'Circuit breaker per upstream',
     changes: [
       { kind: 'feature', text: 'Circuit breaker per upstream — every endpoint depends on a real data provider (SMTP verification, the MCA registry, a carrier HLR, the professional/company graphs, a funding database), and each now has its own circuit breaker. When one upstream starts failing, only its breaker trips: calls that depend on it return 503 with a Retry-After and an X-Upstream header, while every other endpoint keeps serving. One flaky provider no longer looks like — or causes — a total outage.' },

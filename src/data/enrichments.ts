@@ -356,6 +356,14 @@ export interface DedupView {
   dedupRate: number;
   clusters: DedupClusterView[];
 }
+export interface PartialMissingView { upstream: string; upstreamName: string; label: string; reason: string; fields: string[]; }
+export interface PartialView {
+  partial: boolean;
+  missing: PartialMissingView[];
+  degraded_upstreams: string[];
+  completeness: number;
+}
+
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -392,6 +400,8 @@ export interface EnrichmentResult {
   completeness?: CompletenessScore;
   /** Per-field provider attribution (F-043) — grouped over provenance; present when the result has provenance. */
   sources?: SourceAttribution;
+  /** Partial-result metadata (F-071) — present when a degraded upstream withheld some fields. */
+  partial?: PartialView;
   confidence?: number;
   provenance?: EnrichmentProvenance[];
   lastVerified?: string;

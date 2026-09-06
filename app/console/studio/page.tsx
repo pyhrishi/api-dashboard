@@ -8,14 +8,14 @@ import {
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
-  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine, Languages, ArrowDown,
+  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine, Languages, ArrowDown, Unplug,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel, applyCorrections,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
-  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView, type NameCanonicalView, type CatchAllView,
+  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView, type NameCanonicalView, type CatchAllView, type PartialView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
@@ -134,6 +134,11 @@ function StudioInner() {
 
       const data = body && typeof body === 'object' && 'data' in body ? (body as { data: unknown }).data : body;
       const vm = res.ok ? toEnrichmentResult(data) : null;
+      // Attach partial-result metadata (F-071) when a degraded upstream withheld fields.
+      const partialMeta = body && typeof body === 'object' && 'metadata' in body
+        ? (body as { metadata?: { partial?: EnrichmentResult['partial'] } }).metadata?.partial
+        : undefined;
+      if (vm && partialMeta?.partial) vm.partial = partialMeta;
 
       if (res.ok && vm) {
         deductCredits(p.creditCost); incrementKeyUsage(key?.id ?? '', p.creditCost);
@@ -144,6 +149,7 @@ function StudioInner() {
           result: vm, status: 'ok', environment, confidence: vm.confidence ?? 0, creditCost: p.creditCost, requestId, durationMs, timestamp: Date.now(),
         });
         track('enrichment_run', { preset: p.id, endpoint: p.endpointId, confidence: vm.confidence ?? null, environment, durationMs });
+        if (vm.partial?.partial) track('partial_result_received', { preset: p.id, endpoint: p.endpointId, completeness: vm.partial.completeness, degraded: vm.partial.degraded_upstreams.join(','), environment });
         if (vm.deliverability) {
           track('email_deliverability_checked', { verdict: vm.deliverability.verdict, score: vm.deliverability.score, environment });
         }
@@ -1161,6 +1167,36 @@ function NameCanonicalPanel({ n }: { n: NameCanonicalView }) {
   );
 }
 
+function PartialBanner({ p }: { p: PartialView }) {
+  return (
+    <div className="mt-5 rounded-xl border border-semantic-warning/30 bg-semantic-warning/5 p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-semantic-warning shrink-0 mt-0.5"><Unplug className="w-5 h-5" /></span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-black text-fg">Partial result</span>
+            <StatusBadge tone="warning">{Math.round(p.completeness * 100)}% complete</StatusBadge>
+          </div>
+          <p className="text-[12px] text-fg-muted mt-1 leading-snug">
+            A data source was degraded, so some fields were withheld. What resolved is shown below — you were billed only for what was returned.
+          </p>
+          <ul className="mt-3 space-y-1.5">
+            {p.missing.map((m) => (
+              <li key={m.upstream} className="flex items-start gap-2 text-[12px]">
+                <CircleAlert className="w-3.5 h-3.5 text-semantic-warning mt-0.5 shrink-0" />
+                <span className="text-fg"><span className="font-semibold">{m.label}</span> — unavailable <span className="text-fg-subtle">({m.upstreamName} degraded)</span></span>
+              </li>
+            ))}
+          </ul>
+          <Link href="/console/circuits" className="text-[11px] font-bold text-teal hover:text-fg transition-colors inline-flex items-center gap-1 mt-2">
+            View upstream health <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorrection }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -1193,6 +1229,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorr
             )}
           </div>
         </div>
+
+        {result.partial && result.partial.partial && (
+          <PartialBanner p={result.partial} />
+        )}
 
         {result.fields.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border rounded-xl overflow-hidden border border-border mt-5">
