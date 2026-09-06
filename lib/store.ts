@@ -6,6 +6,8 @@ import { generateSeedRequestHistory, SEED_LOOKUP_COUNT } from '@/lib/seed-reques
 import { generateMergeCandidates, type MergeableEntity, type EntityMerge } from '@/lib/merge-seed';
 import { DEFAULT_THRESHOLDS, type MatchUseCase } from '@/lib/threshold-tuning';
 import { generateReverifiableRecords, reverifyRecords, computeDueRecords, DEFAULT_CADENCE, CADENCE_BOUNDS, type ReverificationCadence, type ReVerificationRun } from '@/lib/reverification';
+import type { DecaySeverity, DecayAlertState } from '@/lib/data-decay';
+import { getBenchmarkReport, type AccuracyBenchmarkRun } from '@/lib/accuracy-benchmark';
 import { generateSeedCorrections, correctionEntityKey, inferFieldKind, makeCorrectionId, type Correction, type CorrectionInput } from '@/lib/corrections';
 import { triageCorrection } from '@/lib/insight-engine';
 
@@ -644,6 +646,24 @@ interface AppState extends FirstCallState, TenantState {
   runReVerification: () => ReVerificationRun;
   /** Sets one field-type's cadence (clamped to CADENCE_BOUNDS). Billing role cannot. */
   setReverificationCadence: (field: keyof ReverificationCadence, days: number) => void;
+  // Data decay alerts (F-042) — proactive decay-risk inbox over the same record pool.
+  /** Minimum severity that raises an alert; persisted. */
+  decayAlertThreshold: DecaySeverity;
+  /** Per-record lifecycle overlay (open/snoozed/resolved), keyed by record id; persisted. */
+  decayAlertStates: Record<string, DecayAlertState>;
+  /** Snoozes an alert for N days (hidden until it expires). Billing role cannot. */
+  snoozeDecayAlert: (recordId: string, days: number) => void;
+  /** Marks an alert resolved (dismissed as handled). Billing role cannot. */
+  resolveDecayAlert: (recordId: string) => void;
+  /** Reopens a snoozed/resolved alert. Billing role cannot. */
+  reopenDecayAlert: (recordId: string) => void;
+  /** Sets the severity floor for raising alerts. Billing role cannot. */
+  setDecayAlertThreshold: (severity: DecaySeverity) => void;
+  // Accuracy benchmarking (F-044) — sampled precision/recall re-sample history.
+  /** History of benchmark re-samples (newest first, capped at 12); persisted. */
+  accuracyBenchmarkRuns: AccuracyBenchmarkRun[];
+  /** Re-samples the benchmark (new cycle). Returns the run. Billing role cannot. */
+  runAccuracyBenchmark: () => AccuracyBenchmarkRun;
   // User-reported corrections — governed field-correction feedback loop (F-046).
   /** Idempotently seeds demo corrections on mount (like seedMergeCandidates). No audit log. */
   seedCorrections: () => void;
@@ -871,6 +891,9 @@ export const useStore = create<AppState>()(
       entityMerges: [],
       reverificationCadence: DEFAULT_CADENCE,
       reverificationRuns: [],
+      decayAlertThreshold: 'medium',
+      decayAlertStates: {},
+      accuracyBenchmarkRuns: [],
       matchThresholds: { ...DEFAULT_THRESHOLDS },
       webhooks: [],
       webhookLogs: [],
@@ -2622,6 +2645,68 @@ export const useStore = create<AppState>()(
         return { reverificationCadence: { ...state.reverificationCadence, [field]: clamped } };
       }),
 
+      // ─── Data decay alerts (F-042) ──────────────────────────────────────────
+      snoozeDecayAlert: (recordId, days) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot triage decay alerts');
+        const d = Math.max(1, Math.min(90, Math.round(days)));
+        return {
+          decayAlertStates: {
+            ...state.decayAlertStates,
+            [recordId]: { status: 'snoozed', snoozedUntil: Date.now() + d * 86_400_000, updatedAt: Date.now() },
+          },
+        };
+      }),
+
+      resolveDecayAlert: (recordId) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot triage decay alerts');
+        return {
+          decayAlertStates: {
+            ...state.decayAlertStates,
+            [recordId]: { status: 'resolved', updatedAt: Date.now() },
+          },
+        };
+      }),
+
+      reopenDecayAlert: (recordId) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot triage decay alerts');
+        return {
+          decayAlertStates: {
+            ...state.decayAlertStates,
+            [recordId]: { status: 'open', updatedAt: Date.now() },
+          },
+        };
+      }),
+
+      setDecayAlertThreshold: (severity) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot change the alert threshold');
+        return { decayAlertThreshold: severity };
+      }),
+
+      // ─── Accuracy benchmarking (F-044) ──────────────────────────────────────
+      runAccuracyBenchmark: () => {
+        const state = get();
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot re-run the benchmark');
+        const cycle = state.accuracyBenchmarkRuns.length + 1;
+        const report = getBenchmarkReport(cycle);
+        const run: AccuracyBenchmarkRun = {
+          id: `abr_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`,
+          timestamp: Date.now(),
+          cycle,
+          precision: report.overall.precision,
+          recall: report.overall.recall,
+          f1: report.overall.f1,
+          totalSamples: report.overall.totalSamples,
+        };
+        const log = generateAuditLog('data.benchmarked', `${run.totalSamples} samples`, state.user?.email || 'System', state.environment, {
+          changes: { after: { precision: run.precision, recall: run.recall, f1: run.f1 } },
+        });
+        set((s) => ({
+          accuracyBenchmarkRuns: [run, ...s.accuracyBenchmarkRuns].slice(0, 12),
+          auditLogs: [log, ...s.auditLogs],
+        }));
+        return run;
+      },
+
       // ─── User-reported corrections (F-046) ──────────────────────────────────
       seedCorrections: () => set((state) => {
         if (state.corrections.length > 0) return {};
@@ -2756,6 +2841,9 @@ export const useStore = create<AppState>()(
         entityMerges: state.entityMerges,
         reverificationCadence: state.reverificationCadence,
         reverificationRuns: state.reverificationRuns,
+        decayAlertThreshold: state.decayAlertThreshold,
+        decayAlertStates: state.decayAlertStates,
+        accuracyBenchmarkRuns: state.accuracyBenchmarkRuns,
         matchThresholds: state.matchThresholds,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,

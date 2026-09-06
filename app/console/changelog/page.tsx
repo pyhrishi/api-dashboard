@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.66', date: 'September 2026', headline: 'Data decay alerts & accuracy benchmarks',
+    changes: [
+      { kind: 'feature', text: 'Data decay alerts — see which enriched records are about to go stale before they do. A new Data Decay console (and GET /v1/records/decay-score) scores every monitored record for decay risk from its age versus its re-check window, field volatility (employment > email > phone), role mobility, and company events (M&A, layoffs, rapid growth) — returning a probability, a severity, the projected date it crosses the decay line, and the explainable factors behind it. Triage the inbox with snooze/resolve, and re-verify the riskiest first.' },
+      { kind: 'feature', text: 'Accuracy benchmarking — the proof behind the accuracy number, not a vanity figure. A new Accuracy Benchmarks console (and GET /v1/quality/benchmark) publishes sampled precision, recall, F1, sample size, and a 95% Wilson confidence interval for every data category, plus a like-for-like comparison to the incumbents. Registry-backed identity (the IDS engine) scores near-perfect precision — where Zinbit’s lead is widest — and re-sampling records a run history.' },
+      { kind: 'improvement', text: 'Both are deterministic and unit-tested: decay scoring reuses the re-verification record pool so the two features agree, and benchmark precision/recall are computed straight from an integer confusion matrix so the figures are exactly what the sample yields. An expired snooze quietly reverts a decay alert to open, so stale snoozes never hide risk.' },
+    ],
+  },
+  {
     version: 'v4.65', date: 'September 2026', headline: 'Cross-reference ID mapping',
     changes: [
       { kind: 'feature', text: 'Cross-reference ID mapping — a new GET /v1/identity/xref (plus an "ID Map" console page and a Studio lookup) turns any identifier into the same entity’s ID in every system. Paste a domain, a corporate email, a company name or ticker, a LinkedIn or Crunchbase URL, a Salesforce/HubSpot record ID, a DUNS number, or a Zinbit ID, and get back the full cross-reference map — CRM, data providers, social, registries, and financial — each ID with a resolvable public URL where one exists, all unified under one persistent Zinbit ID.' },

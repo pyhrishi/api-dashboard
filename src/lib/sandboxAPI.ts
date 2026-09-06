@@ -20,6 +20,8 @@ import { enrichMerchant } from '@/lib/ecommerce-merchant-resolver';
 import { groupIntoAccounts } from '@/lib/account-grouping';
 import { resolveIdentityHistory } from '@/lib/identity-history-resolver';
 import { linkDomainToEmployer } from '@/lib/domain-employer-linker';
+import { decayScoreForEmail } from '@/lib/data-decay';
+import { benchmarkForCategory } from '@/lib/accuracy-benchmark';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -614,6 +616,30 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...link };
+    }
+
+    case 'records-decay-score': {
+      // Deterministic decay-risk score for a monitored record (single source of truth).
+      const score = decayScoreForEmail(String(parameters.email || ''));
+      if (!score) {
+        return {
+          success: false,
+          error: { code: 'INVALID_INPUT', message: 'That record could not be scored. Provide a monitored contact email.' },
+        };
+      }
+      return { success: true, ...score };
+    }
+
+    case 'quality-benchmark': {
+      // Sampled precision/recall for a data category (single source of truth).
+      const bench = benchmarkForCategory(String(parameters.category || ''));
+      if (!bench) {
+        return {
+          success: false,
+          error: { code: 'INVALID_INPUT', message: 'Unknown category. Try one of: registry_id, company, employment, email, seniority, phone, location, title.' },
+        };
+      }
+      return { success: true, ...bench };
     }
 
     case 'people-identity-history': {

@@ -131,7 +131,12 @@ export type TelemetryEventName =
   // identity — cross-reference ID mapping (F-039)
   | 'cross_reference_viewed'
   | 'cross_reference_resolved'
-  | 'cross_reference_exported';
+  | 'cross_reference_exported'
+  | 'decay_alerts_viewed'
+  | 'decay_alert_actioned'
+  | 'decay_threshold_changed'
+  | 'accuracy_benchmark_viewed'
+  | 'accuracy_benchmark_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

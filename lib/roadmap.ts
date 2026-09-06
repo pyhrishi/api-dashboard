@@ -1147,6 +1147,8 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-035', // Historical identity graph — lib/identity-history-resolver.ts (career identity timeline: prior companies/emails/titles + typed transitions, tied to one persistent Zinbit ID) + GET /v1/people/identity-history + /console/identity-history timeline
   'F-037', // Domain-to-employer linking — lib/domain-employer-linker.ts (classify corporate/personal-ESP/disposable/subsidiary/edu/gov + link to employer, subsidiary→parent rollup, honest no-employer for free/disposable) + GET /v1/domains/employer + Studio preset
   'F-039', // Cross-reference ID mapping — lib/xref-resolver.ts (any identifier → canonical entity + its ID in every system: CRM/data-provider/social/registry/financial, each with a public URL, forward + reverse anchor-scan) + GET /v1/identity/xref + Studio preset + /console/xref ID Map
+  'F-042', // Data decay alerts — lib/data-decay.ts (proactive decay-risk scoring over the F-041 record pool: age-vs-window + field volatility + role mobility + company-event signal → probability/severity/projected-decay + explainable factors; alert inbox with snooze/resolve lifecycle) + store slice + GET /v1/records/decay-score + /console/data-decay
+  'F-044', // Accuracy benchmarking — lib/accuracy-benchmark.ts (sampled precision/recall per data category from an integer confusion matrix + Wilson CI, registry/hybrid/lookup engines, competitor comparison with lead) + store re-sample slice + GET /v1/quality/benchmark + /console/benchmarks
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

@@ -2171,6 +2171,65 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/hierarchy',
       },
     ],
+  },
+
+  {
+    id: 'records-decay-score',
+    name: 'Record Decay Score',
+    description: "Score how likely an enriched record is to go stale — before it does (F-042). Pass a monitored contact's email and the gateway returns a decay probability (0–1), a severity, the projected date the field crosses the decay line, and the explainable factors behind it: age vs. its re-check window, field volatility (employment > email > phone), role mobility, and company events (M&A, layoffs). Use it to gate a send or prioritize re-verification. Unresolvable emails return an error.",
+    method: 'GET',
+    path: '/v1/records/decay-score',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'A monitored contact email to score for decay risk.',
+        example: 'marcus@stripe.com',
+        placeholder: 'user@company.com',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'decay-to-reverification',
+        title: 'Re-verify the riskiest records',
+        description: 'Send high-decay records into the re-verification schedule.',
+        category: 'sdks',
+        link: '/console/re-verification',
+      },
+    ],
+  },
+
+  {
+    id: 'quality-benchmark',
+    name: 'Accuracy Benchmark',
+    description: "Fetch Zinbit's sampled accuracy for a data category (F-044): precision, recall, F1, the sample size, and a 95% Wilson confidence interval — measured against ground truth. The proof behind the accuracy number, callable so you can cite it. Categories: registry_id, company, employment, email, seniority, phone, location, title. An unknown category returns an error.",
+    method: 'GET',
+    path: '/v1/quality/benchmark',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'category',
+        type: 'string',
+        required: true,
+        description: 'The data category to benchmark.',
+        example: 'email',
+        placeholder: 'email | phone | company | registry_id | …',
+        maxLength: 32,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'benchmark-to-sla',
+        title: 'Check live target compliance',
+        description: 'See current metrics against committed SLA targets.',
+        category: 'sdks',
+        link: '/console/quality-sla',
+      },
+    ],
   }
 ];
 
