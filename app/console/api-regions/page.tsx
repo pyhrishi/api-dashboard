@@ -56,7 +56,7 @@ function ApiRegionsInner() {
     try {
       setDataResidencyRegion(region);
       track('data_residency_pinned', { region: region ?? 'auto' });
-      toast.success(region ? `Residency pinned to ${regionById(region).label}` : 'Residency set to auto', region ? 'Cross-region calls will be refused for keys provisioned here.' : 'Requests route to the nearest edge.');
+      toast.success(region ? `Residency pinned to ${regionById(region).label}` : 'Residency set to auto', region ? `Keys provisioned under this policy are bound to ${regionById(region).residency} and refuse cross-region calls (451).` : 'Requests route to the nearest edge.');
     } catch (e) {
       toast.error('Could not update residency', e instanceof Error ? e.message : 'Unexpected error');
     }
@@ -137,7 +137,7 @@ function ApiRegionsInner() {
         <GlassCard className="p-5">
           <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-2 flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Data-residency policy</div>
           <SegmentedControl<RegionId | 'auto'>
-            options={PIN_OPTIONS}
+            options={PIN_OPTIONS.map((o) => ({ ...o, disabled: !isAdmin }))}
             value={pinnedRegion ?? 'auto'}
             onChange={onPin}
             size="sm"
@@ -145,7 +145,7 @@ function ApiRegionsInner() {
           />
           <p className="text-[12px] text-fg-muted mt-2.5">
             {pinnedRegion
-              ? <>Pinned to <span className="font-semibold text-fg">{regionById(pinnedRegion).label}</span> — cross-region calls are refused (451) for keys provisioned here.</>
+              ? <>Pinned to <span className="font-semibold text-fg">{regionById(pinnedRegion).label}</span> — keys provisioned under this policy are bound to the region and refuse cross-region calls (451) at the gateway.</>
               : 'Auto — requests route to the nearest edge with no residency restriction.'}
           </p>
           {!isAdmin && <div className="mt-2 flex items-center gap-1.5 text-[11px] text-fg-subtle"><Info className="w-3.5 h-3.5 text-semantic-warning" /> Only admins can change the residency policy.</div>}
@@ -175,7 +175,7 @@ function ApiRegionsInner() {
       <GlassCard className="p-0 overflow-hidden mt-4">
         <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle bg-surface-2/50">
           <span className="text-[11px] font-mono text-fg-subtle inline-flex items-center gap-1.5"><Radio className="w-3.5 h-3.5" /> Call the {regionById(snippetRegion).label} endpoint</span>
-          <button onClick={() => copy(curl, 'curl')} className="text-[11px] text-fg-subtle hover:text-fg inline-flex items-center gap-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50 rounded px-1">
+          <button onClick={() => copy(curl, 'curl')} aria-label={copied === 'curl' ? 'curl command copied' : 'Copy curl command'} className="text-[11px] text-fg-subtle hover:text-fg inline-flex items-center gap-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50 rounded px-1">
             {copied === 'curl' ? <><Check className="w-3 h-3 text-semantic-success" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
           </button>
         </div>
@@ -224,6 +224,7 @@ function RegionCard({ region, index, isKeyRegion, crossBorder, isPinned, probe, 
         {/* Endpoint URL */}
         <button
           onClick={() => onCopy(baseUrl)}
+          aria-label={copied ? `${region.host} copied to clipboard` : `Copy endpoint ${region.host}`}
           className="mt-3 w-full text-left group flex items-center justify-between gap-2 rounded-lg bg-surface-2 border border-border-subtle px-2.5 py-1.5 hover:border-teal/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50"
         >
           <span className="text-[11px] font-mono text-fg-muted truncate">{region.host}</span>
@@ -231,7 +232,7 @@ function RegionCard({ region, index, isKeyRegion, crossBorder, isPinned, probe, 
         </button>
 
         {crossBorder && (
-          <div className="mt-2 flex items-start gap-1.5 text-[11px] text-semantic-warning"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> Outside your residency policy — calls here would be refused.</div>
+          <div className="mt-2 flex items-start gap-1.5 text-[11px] text-semantic-warning"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> Outside your residency policy — data served here would leave your pinned region.</div>
         )}
 
         <p className="text-[11px] text-fg-subtle mt-3 leading-snug flex-1">{region.description}</p>
