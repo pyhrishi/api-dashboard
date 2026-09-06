@@ -1113,6 +1113,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-024', // Probabilistic fuzzy matching — GET /v1/match/fuzzy (lib/fuzzy-matcher.ts, Jaro-Winkler) + Studio candidate panel
   'F-026', // Entity de-duplication — GET /v1/records/dedupe (lib/entity-dedup.ts, reuses jaroWinkler) + Studio golden-records panel
   'F-028', // Persistent Zinbit ID — GET /v1/identity/zid (lib/zinbit-id.ts, frozen normalization) + zid on every person/company result
+  'F-030', // Name canonicalization — GET /v1/names/canonicalize (lib/name-canonicalizer.ts SSOT, also powering F-024) + Studio panel
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

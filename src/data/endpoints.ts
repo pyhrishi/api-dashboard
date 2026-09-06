@@ -1393,6 +1393,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'name-canonicalize',
+    name: 'Name Canonicalization',
+    description: "Normalize any spelling, casing, ordering, or accenting of a personal name into one canonical form. Returns the canonical \"First Last\", an ASCII-folded form, a formal form (with prefix + suffix), the parsed components (prefix / first / middle / last / suffix), and a log of exactly what changed — reordering, nickname expansion (Bob → Robert), typo fixes, diacritic folding, and surname casing (McDonald, O'Brien, van der Berg).",
+    method: 'GET',
+    path: '/v1/names/canonicalize',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'name',
+        type: 'string',
+        required: true,
+        description: 'The personal name to canonicalize',
+        example: 'SMITH, Bob',
+        placeholder: 'e.g. Dr. josé garcía jr.',
+        maxLength: 120,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'name-to-fuzzy',
+        title: 'Match the name',
+        description: 'Use the canonical name to fuzzy-match a person at a company.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

@@ -8,14 +8,14 @@ import {
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
-  MapPin, Globe, Sun, Hash, GitCompareArrows,
+  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
-  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView,
+  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView, type NameCanonicalView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
@@ -25,7 +25,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -929,6 +929,58 @@ function DedupPanel({ d }: { d: DedupView }) {
   );
 }
 
+function NameCanonicalPanel({ n }: { n: NameCanonicalView }) {
+  const comps: { label: string; value: string | null }[] = [
+    { label: 'Prefix', value: n.components.prefix },
+    { label: 'First', value: n.components.first },
+    { label: 'Middle', value: n.components.middle },
+    { label: 'Last', value: n.components.last || null },
+    { label: 'Suffix', value: n.components.suffix },
+  ];
+  return (
+    <div className="mt-5 space-y-4">
+      {/* Canonical forms */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border">
+        {[
+          { label: 'Canonical', value: n.canonical },
+          { label: 'ASCII', value: n.ascii },
+          { label: 'Formal', value: n.formal },
+        ].map((f) => (
+          <div key={f.label} className="bg-surface-2 p-3.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">{f.label}</div>
+            <div className="text-sm font-bold text-fg break-words">{f.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Parsed components */}
+      <div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-2">Parsed components</div>
+        <div className="flex flex-wrap gap-1.5">
+          {comps.map((c) => (
+            <span key={c.label} className={`text-[11px] px-2 py-1 rounded-md border ${c.value ? 'bg-glass border-border-subtle text-fg' : 'bg-surface-2 border-border-subtle text-fg-subtle'}`}>
+              <span className="font-black uppercase tracking-wider text-fg-subtle">{c.label}</span> {c.value ?? '—'}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Change log */}
+      <div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-2">What changed</div>
+        <ul className="space-y-1.5">
+          {n.changes.map((ch, i) => (
+            <motion.li key={ch + i} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.04 * i }} className="flex items-start gap-2 text-[13px] text-fg-muted">
+              <CircleCheck className="w-3.5 h-3.5 text-teal mt-0.5 shrink-0" />
+              {ch}
+            </motion.li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -1017,6 +1069,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.fuzzy && (
           <FuzzyMatchPanel f={result.fuzzy} />
+        )}
+
+        {result.nameCanonical && (
+          <NameCanonicalPanel n={result.nameCanonical} />
         )}
 
         {result.dedupe && (

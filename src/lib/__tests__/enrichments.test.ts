@@ -5,6 +5,7 @@ import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
+import { canonicalizeName } from '@/lib/name-canonicalizer';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 
@@ -126,6 +127,22 @@ describe('enrichment registry', () => {
     // exactly the best_match candidate is flagged best.
     expect(vm.fuzzy?.candidates.filter((c) => c.best).length).toBe(1);
     expect(vm.fuzzy?.candidates[0].best).toBe(true);
+  });
+
+  it('maps a name-canonicalization response to the parsed view-model (F-030)', () => {
+    const c = canonicalizeName('Dr. josé garcía jr.')!;
+    const vm = toEnrichmentResult({ ...c })!;
+    expect(vm.nameCanonical).toBeDefined();
+    expect(vm.nameCanonical?.canonical).toBe('José García');
+    expect(vm.nameCanonical?.ascii).toBe('Jose Garcia');
+    expect(vm.nameCanonical?.components.prefix).toBe('Dr.');
+    expect(vm.nameCanonical?.components.suffix).toBe('Jr.');
+    expect(vm.nameCanonical?.changes.length).toBeGreaterThan(0);
+    expect(vm.fields).toHaveLength(0); // rendered via the panel
+    // A reordered name flags its badge.
+    const rc = toEnrichmentResult({ ...canonicalizeName('Smith, Bob')! })!;
+    expect(rc.nameCanonical?.reordered).toBe(true);
+    expect(rc.nameCanonical?.canonical).toBe('Robert Smith');
   });
 
   it('flattens a generic flat response into fields', () => {

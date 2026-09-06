@@ -73,6 +73,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'fuzzy', endpointId: 'fuzzy-match', param: 'query', inputKind: 'auto', icon: 'GitCompareArrows', category: 'identity', examples: ['Jhon Smith, Stipe', 'Bob Johnson, Datadog', 'Micheal Chen, notion'], label: 'Fuzzy match' },
   { id: 'dedupe', endpointId: 'records-dedupe', param: 'records', inputKind: 'auto', icon: 'Layers', category: 'identity', examples: ['John Smith, Stripe; Jhon Smith, Stipe; Jane Doe, Acme', 'Bob Johnson, Datadog; Robert Johnson, datadoghq.com; Bob Johnson, Datadog Inc'], label: 'De-duplicate records' },
   { id: 'zid', endpointId: 'identity-zid', param: 'query', inputKind: 'auto', icon: 'Fingerprint', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'stripe.com'], label: 'Persistent Zinbit ID' },
+  { id: 'canonicalize', endpointId: 'name-canonicalize', param: 'name', inputKind: 'auto', icon: 'SpellCheck', category: 'person', examples: ['SMITH, Bob', "mary jane o'brien", 'Dr. josé garcía jr.'], label: 'Canonicalize name' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -301,6 +302,17 @@ export interface FuzzyMatchView {
   interpreted: { name: string; company: string };
   candidates: FuzzyCandidateView[];
 }
+/** Structured name-canonicalization result (F-030) — parsed forms + change log. */
+export interface NameCanonicalView {
+  canonical: string;
+  ascii: string;
+  formal: string;
+  components: { prefix: string | null; first: string; middle: string | null; last: string; suffix: string | null };
+  changes: string[];
+  nicknameExpanded: boolean;
+  hadDiacritics: boolean;
+  reordered: boolean;
+}
 /** One member of a de-duplication cluster. */
 export interface DedupMemberView {
   name: string;
@@ -347,6 +359,8 @@ export interface EnrichmentResult {
   news?: NewsFeedView;
   /** Structured fuzzy-match result (F-024) — rendered as a ranked candidate list. */
   fuzzy?: FuzzyMatchView;
+  /** Structured name-canonicalization result (F-030) — rendered as parsed forms + a change log. */
+  nameCanonical?: NameCanonicalView;
   /** Structured entity de-duplication result (F-026) — rendered as clustered golden records. */
   dedupe?: DedupView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
@@ -924,6 +938,41 @@ function fuzzyToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Name canonicalization (F-030): parsed forms + a change log for a messy name. */
+function nameCanonicalToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const canonical = str('canonical') || 'Name';
+  const comp = isRecord(d.components) ? (d.components as Record<string, unknown>) : {};
+  const cstr = (k: string) => (typeof comp[k] === 'string' ? (comp[k] as string) : null);
+  const components = {
+    prefix: cstr('prefix'), first: cstr('first') ?? '', middle: cstr('middle'),
+    last: cstr('last') ?? '', suffix: cstr('suffix'),
+  };
+  const changes = Array.isArray(d.changes) ? (d.changes as unknown[]).filter((x): x is string => typeof x === 'string') : [];
+
+  return {
+    kind: 'person',
+    title: canonical,
+    subtitle: str('input') && str('input') !== canonical ? `Canonicalized from "${str('input')}"` : undefined,
+    avatar: initialsOf(canonical),
+    badges: [d.reordered === true ? 'Reordered' : '', d.nickname_expanded === true ? 'Nickname' : '', d.had_diacritics === true ? 'Accents' : ''].filter(Boolean),
+    fields: [],
+    nameCanonical: {
+      canonical,
+      ascii: str('ascii') || canonical,
+      formal: str('formal') || canonical,
+      components,
+      changes,
+      nicknameExpanded: d.nickname_expanded === true,
+      hadDiacritics: d.had_diacritics === true,
+      reordered: d.reordered === true,
+    },
+    confidence: num('confidence'),
+    raw: d,
+  };
+}
+
 /** Entity de-duplication (F-026): a messy record list collapsed into golden records. */
 function dedupToResult(d: Record<string, unknown>): EnrichmentResult {
   const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : 0);
@@ -1201,6 +1250,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.events) && typeof data.event_count === 'number') return newsToResult(data);
   // Probabilistic fuzzy matching: a `candidates` array + a `verdict` mark the shape.
   if (Array.isArray(data.candidates) && typeof data.verdict === 'string' && isRecord(data.interpreted)) return fuzzyToResult(data);
+  // Name canonicalization: a `components` object + a `canonical` string + a `changes` array.
+  if (isRecord(data.components) && typeof data.canonical === 'string' && Array.isArray(data.changes)) return nameCanonicalToResult(data);
   // Entity de-duplication: a `clusters` array + numeric `dedup_rate` mark the shape.
   if (Array.isArray(data.clusters) && typeof data.dedup_rate === 'number') return dedupToResult(data);
   // Persistent Zinbit ID: a `zinbit_id` string + an `aliases` array mark the shape.

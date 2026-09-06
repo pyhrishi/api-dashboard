@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.32', date: 'September 2026', headline: 'Name canonicalization',
+    changes: [
+      { kind: 'feature', text: 'Name canonicalization — normalize any spelling, casing, ordering, or accenting of a personal name into one canonical form. New GET /v1/names/canonicalize returns the canonical "First Last", an ASCII-folded form, a formal form (with prefix + suffix), the parsed components (prefix / first / middle / last / suffix), and a log of exactly what changed — reordering "Last, First", expanding nicknames (Bob → Robert), fixing typos (Jhon → John), folding accents (José → Jose), and casing surnames (McDonald, O\'Brien, van der Berg). Shipped as a Studio preset with a parsed-components panel.' },
+      { kind: 'improvement', text: 'Name canonicalization is now one source of truth: Probabilistic Fuzzy Matching (and, through it, Entity De-duplication) resolve nicknames and typos through this same normalizer, so the three features can never disagree about a name\'s canonical form. Deterministic — the same name always canonicalizes the same way.' },
+    ],
+  },
+  {
     version: 'v4.31', date: 'September 2026', headline: 'Persistent Zinbit ID',
     changes: [
       { kind: 'feature', text: 'Persistent Zinbit ID — every resolved entity now has a stable canonical ID (zid_p_… for people, zid_c_… for companies) that is the same no matter which identifier you look them up by and that survives an email change, because it is derived from who the entity is — a frozen normalization of name @ company domain — not from the query. New GET /v1/identity/zid resolves any email or domain to its Zinbit ID, entity type, first-seen date, and the aliases (email, LinkedIn, hashed email, phone) that all unify to it. Key your records on it to join and dedupe across sources.' },

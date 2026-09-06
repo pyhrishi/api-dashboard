@@ -21,6 +21,7 @@ import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { deduplicateRecords } from '@/lib/entity-dedup';
 import { resolveZinbitId } from '@/lib/zinbit-id';
+import { canonicalizeName } from '@/lib/name-canonicalizer';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -619,6 +620,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...zid };
+    }
+
+    case 'name-canonicalize': {
+      // Deterministic name canonicalization (single source of truth).
+      const canon = canonicalizeName(String(parameters.name || ''));
+      if (!canon) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a name to canonicalize.' },
+        };
+      }
+      return { success: true, ...canon };
     }
 
     case 'email-verify': {

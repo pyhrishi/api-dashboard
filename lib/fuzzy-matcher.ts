@@ -9,6 +9,8 @@
  * matched company. No `Math.random` — the same query always scores the same.
  */
 
+import { canonicalNameString } from '@/lib/name-canonicalizer';
+
 export type FuzzyVerdict = 'strong' | 'likely' | 'weak' | 'no_match';
 
 export interface FuzzyCandidate {
@@ -84,28 +86,10 @@ export function jaroWinkler(a: string, b: string): number {
   return Math.round((j + prefix * 0.1 * (1 - j)) * 1000) / 1000;
 }
 
-// ── Normalization dictionaries ───────────────────────────────────────────────
-const NICKNAMES: Record<string, string> = {
-  bob: 'Robert', rob: 'Robert', bill: 'William', will: 'William', jim: 'James',
-  jimmy: 'James', mike: 'Michael', mikey: 'Michael', tom: 'Thomas', dave: 'David',
-  dan: 'Daniel', danny: 'Daniel', chris: 'Christopher', matt: 'Matthew', joe: 'Joseph',
-  liz: 'Elizabeth', beth: 'Elizabeth', kate: 'Katherine', katie: 'Katherine', sam: 'Samuel',
-  alex: 'Alexander', nick: 'Nicholas', tony: 'Anthony', greg: 'Gregory', andy: 'Andrew',
-};
-const NAME_TYPOS: Record<string, string> = {
-  jhon: 'John', jon: 'John', wlliam: 'William', willaim: 'William', micheal: 'Michael',
-  stephan: 'Stephen', catherin: 'Catherine', jennifer: 'Jennifer', sara: 'Sarah',
-};
-
+// Name normalization is the name-canonicalizer's job (F-030) — one source of
+// truth, so fuzzy match and canonicalization agree on every nickname and typo.
 const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
-function canonicalName(raw: string): string {
-  return raw.trim().split(/\s+/).map((part) => {
-    const lower = part.toLowerCase();
-    if (NAME_TYPOS[lower]) return NAME_TYPOS[lower];
-    if (NICKNAMES[lower]) return NICKNAMES[lower];
-    return titleCase(lower);
-  }).join(' ');
-}
+const canonicalName = (raw: string): string => canonicalNameString(raw) || titleCase(raw.trim().toLowerCase());
 
 // Known companies to fuzzy-resolve a messy company name against.
 const KNOWN_COMPANIES: { name: string; domain: string }[] = [
