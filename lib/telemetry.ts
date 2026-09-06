@@ -105,7 +105,11 @@ export type TelemetryEventName =
   | 'query_viewed'
   | 'query_run'
   // efficiency — payload compression (F-080)
-  | 'compression_viewed';
+  | 'compression_viewed'
+  // security — CORS configuration panel (F-082)
+  | 'cors_viewed'
+  | 'cors_policy_updated'
+  | 'cors_preflight_tested';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

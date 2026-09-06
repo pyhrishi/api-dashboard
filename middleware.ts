@@ -9,6 +9,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // CORS preflight (F-082): a browser preflight (OPTIONS) carries no Authorization
+  // header, so it must bypass the auth gate. Forward it to the route handler, which
+  // evaluates the CORS policy and answers with the Access-Control-* headers.
+  if (request.method === 'OPTIONS') {
+    return NextResponse.next();
+  }
+
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   const timestamp = Date.now();
 

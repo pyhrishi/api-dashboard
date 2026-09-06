@@ -26,6 +26,7 @@ import { getAllPartners, getPartnerDashboard, lookupPartner, attributeReferral, 
 import { generateForecastReport, forecastCapacity, getCurrentUsageSnapshot, type ForecastHorizon, type RegionId, type ResourceType } from '@/lib/gateway/capacityForecast';
 import { API_BASE_URL } from '@/lib/api-config';
 import { negotiateEncoding, compressPayload, recordCompression, getCompressionStats } from '@/lib/gateway/compression';
+import { evaluateCors, getCorsStats, updateCorsPolicy } from '@/lib/gateway/cors';
 
 async function handleRequest(request: NextRequest, { params }: { params: { route: string[] } }) {
   const startTime = Date.now();
@@ -111,6 +112,16 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
 
   // ISO 27001 Security Headers
   attachISO27001Headers(responseHeaders);
+
+  // CORS (F-082): reflect the configured Access-Control-* headers for the request's
+  // Origin, so browser front-ends on an allowed origin can call the API. A preflight
+  // (OPTIONS) — let through unauthenticated by middleware — is answered here with the
+  // policy's headers and no body.
+  const cors = evaluateCors(request.headers.get('origin'), request.method);
+  Object.assign(responseHeaders, cors.headers);
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 204, headers: responseHeaders });
+  }
 
   // Zero-Copy Data Share Route Handler
   // Handles /v1/data-shares/{snowflake|bigquery} outside the normal pipeline
@@ -583,6 +594,48 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
     return NextResponse.json(
       { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/compression. Send Accept-Encoding: br (or gzip) on any request to compress its response.' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
+  // CORS policy (F-082) — read the policy (GET), update it (PATCH), or test an
+  // origin against it (POST /v1/cors/test). Free meta endpoint; the policy read
+  // here governs the Access-Control-* headers applied above.
+  if (path === '/v1/cors' || path === '/v1/cors/test') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (path === '/v1/cors' && request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getCorsStats(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (path === '/v1/cors' && request.method === 'PATCH') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const body = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const result = updateCorsPolicy(body);
+      if (!result.success) {
+        return NextResponse.json({ success: false, error: { code: result.code, message: result.message } }, { status: 400, headers: responseHeaders });
+      }
+      return NextResponse.json(
+        { success: true, data: { policy: result.policy }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (path === '/v1/cors/test' && request.method === 'POST') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const body = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const testOrigin = typeof body.origin === 'string' ? body.origin : '';
+      const testMethod = typeof body.method === 'string' ? body.method : 'GET';
+      const evalResult = evaluateCors(testOrigin, testMethod);
+      return NextResponse.json(
+        { success: true, data: evalResult, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET or PATCH /v1/cors, or POST /v1/cors/test.' } },
       { status: 405, headers: responseHeaders },
     );
   }
@@ -1201,4 +1254,6 @@ async function handleRequestWithPartnerTracking(request: NextRequest, ctx: { par
 export const GET = handleRequestWithPartnerTracking;
 export const POST = handleRequestWithPartnerTracking;
 export const PUT = handleRequestWithPartnerTracking;
+export const PATCH = handleRequestWithPartnerTracking;
 export const DELETE = handleRequestWithPartnerTracking;
+export const OPTIONS = handleRequestWithPartnerTracking; // CORS preflight (F-082)

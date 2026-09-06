@@ -1134,6 +1134,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-074', // Request replay & debug echo — src/lib/gateway/debugEcho.ts (parsed-request inspection) + X-Debug-Echo short-circuit (0 credits) + /console/debug inspector + real Logs replay (was a mock)
   'F-078', // Query filtering & sorting — src/lib/gateway/queryEngine.ts (filter grammar + multi-sort SSOT) + sandbox company-employees rewire + filter/sort GLOBAL_PARAMS + /console/query playground
   'F-080', // Payload compression (Gzip/Brotli) — src/lib/gateway/compression.ts (negotiate br>gzip + zlib compress + byte-saved stats) + sendResponse rewire + X-*-Bytes/Ratio/Vary headers + GET /v1/compression + /console/compression
+  'F-082', // CORS configuration panel — src/lib/gateway/cors.ts (policy + evaluateCors SSOT) + middleware OPTIONS pass-through + route preflight/Access-Control-* + GET/PATCH /v1/cors + POST /v1/cors/test + /console/cors panel with live preflight tester
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

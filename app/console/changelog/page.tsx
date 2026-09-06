@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.53', date: 'September 2026', headline: 'CORS configuration panel',
+    changes: [
+      { kind: 'feature', text: 'CORS configuration — call the API straight from a browser front-end. A new CORS Policy console (/console/cors) controls which origins are allowed (an allowlist, a wildcard, or disabled), whether credentials are permitted, the allowed methods and headers, and the preflight max-age. Changes apply to the live gateway immediately: the policy you set is exactly what the gateway sends back on a real preflight.' },
+      { kind: 'feature', text: 'A live preflight tester lets you type any origin and see the exact Access-Control-* headers the gateway would return — allowed or blocked — evaluated server-side against the real policy (the browser won’t let a page forge an Origin, so the test runs on the gateway). The gateway now answers CORS preflight (OPTIONS) requests and reflects Access-Control-Allow-Origin for allowlisted origins on every response.' },
+      { kind: 'improvement', text: 'Correct by construction: a credentialed policy reflects the caller’s origin instead of “*” (which browsers reject with credentials), sets Vary: Origin, and gates on the allowed method. Managed over GET/PATCH /v1/cors and POST /v1/cors/test; single-sourced in src/lib/gateway/cors.ts and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.52', date: 'September 2026', headline: 'Payload compression (Brotli / Gzip)',
     changes: [
       { kind: 'feature', text: 'Payload compression — send Accept-Encoding: br (or gzip) and the gateway compresses the JSON response, picking the best encoding you offered (Brotli preferred — it beats gzip on JSON). A typical 100-row list drops from ~13 KB to under 1 KB — around 93% smaller on the wire. Most HTTP clients set the header and decompress transparently, so it’s free bandwidth savings for existing integrations.' },
