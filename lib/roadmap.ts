@@ -1124,6 +1124,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-049', // Catch-all domain detection — lib/catch-all-detector.ts (SSOT, shared with email-verify) + GET /v1/email/catch-all + Studio panel
   'F-046', // User-reported corrections — lib/corrections.ts SSOT + insight-engine triage + /console/corrections review queue + Studio inline flag/overlay + POST/GET /v1/feedback/correction
   'F-052', // Suppression list honoring — src/lib/gateway/suppressionList.ts do-not-contact registry + GET/POST/DELETE /v1/suppression + pre-billing enforcement gate (email/domain lookups return "suppressed, details withheld" at 0 credits)
+  'F-055', // Quality SLA dashboard — /console/quality-sla (lib/quality-sla.ts) — 6 quality metrics vs committed targets, met/at-risk/breached, 30-day trend + breach log; single-sourced from region-coverage + health
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

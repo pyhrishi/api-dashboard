@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.43', date: 'September 2026', headline: 'Quality SLA dashboard',
+    changes: [
+      { kind: 'feature', text: 'Quality SLA dashboard — a new /console/quality-sla page puts every data-quality and platform metric against the target we commit to: match rate, field accuracy, coverage, data freshness, API uptime, and p95 latency. Each shows current vs target with a met / at-risk / breached status, a 30-day trend, and a plain-English description — plus an overall SLA-compliance figure and a breach log (open breaches first, then resolved history). This is the enterprise trust surface: “are you hitting the numbers you promised?”, answered honestly.' },
+      { kind: 'improvement', text: 'The scorecard is single-sourced, so it can never contradict the rest of the console: match rate and coverage come from the regional coverage model and uptime from the platform health model. A metric that dips below target opens a breach and closes when it recovers. Deterministic (no wall-clock, no random), unit-tested, and read-only for the whole workspace.' },
+    ],
+  },
+  {
     version: 'v4.42', date: 'September 2026', headline: 'Suppression list honoring',
     changes: [
       { kind: 'feature', text: 'Suppression list honoring — a customer do-not-contact list is now enforced at the gateway. Add an email or domain to your suppression list (POST /v1/suppression) and any enrichment lookup on that address — or any mailbox on a suppressed domain — returns “suppressed, details withheld” instead of the contact, at zero credits. The check runs before billing, so you can’t accidentally resolve, or be charged for, a contact you’re obligated not to reach: unsubscribes, GDPR erasures, competitor blocks, complaints.' },
