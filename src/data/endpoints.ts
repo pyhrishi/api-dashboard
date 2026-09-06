@@ -906,6 +906,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'email-disposable',
+    name: 'Detect Disposable Email',
+    description: "Flag throwaway, temporary, and anonymizing mailboxes before they reach signup. Returns a decisive verdict (disposable / suspected / trusted), the provider category, a confidence, and the reason — catching both known providers and unlisted domains that look disposable by pattern. A lightweight, single-purpose check when you don't need full deliverability scoring.",
+    method: 'GET',
+    path: '/v1/email/disposable',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'Email address to check',
+        example: 'user@mailinator.com',
+        placeholder: 'user@company.com',
+        maxLength: 254,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'disposable-to-deliverability',
+        title: 'Full deliverability score',
+        description: 'Go beyond disposable — score inbox reachability with every signal.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

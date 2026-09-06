@@ -1036,6 +1036,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-029', // Match-rate transparency — /console/coverage dashboard + per-request match explanation in Logs
   'F-048', // Completeness scoring — per-result "record completeness" meter (populated ÷ expected fields) in the Studio
   'F-050', // Role-account flagging — delivered by F-011: ROLE_PREFIXES → is_role_based, the "Role-based" deliverability check + flag chip
+  'F-051', // Disposable email detection — Studio "Detect disposable" (GET /v1/email/disposable); lib/disposable-detector.ts SSOT, also powering F-011
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

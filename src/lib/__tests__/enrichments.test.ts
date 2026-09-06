@@ -3,6 +3,7 @@ import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
+import { detectDisposable } from '@/lib/disposable-detector';
 
 describe('enrichment registry', () => {
   it('builds presets from real catalog endpoints (no orphans)', () => {
@@ -66,6 +67,19 @@ describe('enrichment registry', () => {
     expect(vm.kind).toBe('company');
     expect(vm.chips?.items.length).toBeGreaterThan(0);
     expect(vm.confidence).toBeGreaterThan(0);
+  });
+
+  it('maps a disposable-detection response to the tone-coded verdict view-model (F-051)', () => {
+    const det = detectDisposable('user@mailinator.com')!;
+    const vm = toEnrichmentResult({ ...det })!;
+    expect(vm.disposable).toBeDefined();
+    expect(vm.disposable?.verdict).toBe('disposable');
+    expect(vm.disposable?.tone).toBe('error');
+    expect(vm.badges).toContain('Disposable');
+    expect(vm.fields).toHaveLength(0); // structured panel, not flat fields
+    // Trusted domains tone success.
+    const trusted = toEnrichmentResult({ ...detectDisposable('sam@gmail.com')! })!;
+    expect(trusted.disposable?.tone).toBe('success');
   });
 
   it('flattens a generic flat response into fields', () => {

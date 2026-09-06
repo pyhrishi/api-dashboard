@@ -11,6 +11,8 @@
  * no `Math.random`. Roadmap F-011 (also covers F-049 catch-all, F-051 disposable).
  */
 
+import { isDisposableDomain } from '@/lib/disposable-detector';
+
 export type DeliverabilityVerdict = 'deliverable' | 'risky' | 'undeliverable' | 'unknown';
 export type DeliverabilityCheckStatus = 'pass' | 'warn' | 'fail' | 'info';
 
@@ -67,12 +69,6 @@ const FREE_PROVIDERS = new Set([
   'gmail.com', 'googlemail.com', 'yahoo.com', 'ymail.com', 'outlook.com', 'hotmail.com',
   'live.com', 'msn.com', 'icloud.com', 'me.com', 'mac.com', 'aol.com', 'proton.me',
   'protonmail.com', 'gmx.com', 'zoho.com', 'yandex.com', 'mail.com',
-]);
-
-const DISPOSABLE_DOMAINS = new Set([
-  'mailinator.com', 'guerrillamail.com', '10minutemail.com', 'temp-mail.org', 'tempmail.com',
-  'throwawaymail.com', 'yopmail.com', 'trashmail.com', 'getnada.com', 'dispostable.com',
-  'sharklasers.com', 'maildrop.cc', 'fakeinbox.com', 'mailnesia.com', 'emailondeck.com',
 ]);
 
 const ROLE_PREFIXES = new Set([
@@ -152,7 +148,7 @@ export function verifyEmailDeliverability(rawEmail: string): EmailDeliverability
   }
 
   const is_free_provider = FREE_PROVIDERS.has(domain);
-  const is_disposable = DISPOSABLE_DOMAINS.has(domain);
+  const is_disposable = isDisposableDomain(domain);
   const is_role_based = ROLE_PREFIXES.has(rootPrefix);
   const did_you_mean = TYPO_CORRECTIONS[domain] ? `${localPart}@${TYPO_CORRECTIONS[domain]}` : null;
 

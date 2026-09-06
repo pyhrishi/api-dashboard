@@ -63,6 +63,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
+  { id: 'email-disposable', endpointId: 'email-disposable', param: 'email', inputKind: 'email', icon: 'Trash2', category: 'person', examples: ['user@mailinator.com', 'signup@sneaky-tempmail.io', 'jane.doe@acme.com'], label: 'Detect disposable' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -165,6 +166,16 @@ export interface DeliverabilityView {
   flags: { label: string; tone: ResultTone }[];
   checks: DeliverabilityCheckView[];
 }
+/** Structured disposable-detection result — rendered as a tone-coded verdict panel. */
+export interface DisposableView {
+  verdict: 'disposable' | 'suspected' | 'trusted';
+  category: string;
+  confidence: number;
+  reason: string;
+  matchedOn: string;
+  domain: string;
+  tone: ResultTone;
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -177,6 +188,8 @@ export interface EnrichmentResult {
   social?: { profiles: SocialProfileView[] };
   /** Structured email-deliverability breakdown — rendered as a scored panel when present. */
   deliverability?: DeliverabilityView;
+  /** Structured disposable-detection verdict (F-051) — rendered as a tone-coded panel. */
+  disposable?: DisposableView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
   completeness?: CompletenessScore;
   confidence?: number;
@@ -495,6 +508,35 @@ function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Disposable email detection (F-051): a tone-coded verdict on a throwaway mailbox. */
+function disposableToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const email = str('email');
+  const domain = str('domain');
+  const verdictRaw = str('verdict');
+  const verdict = (['disposable', 'suspected', 'trusted'].includes(verdictRaw) ? verdictRaw : 'trusted') as DisposableView['verdict'];
+  const verdictLabel = verdict.charAt(0).toUpperCase() + verdict.slice(1);
+  const tone: ResultTone = verdict === 'disposable' ? 'error' : verdict === 'suspected' ? 'warning' : 'success';
+  const category = str('category').replace(/-/g, ' ');
+  const matchedOn = str('matched_on').replace(/-/g, ' ');
+
+  return {
+    kind: 'person',
+    title: email || 'Email',
+    subtitle: domain ? `${verdictLabel} · ${domain}` : verdictLabel,
+    avatar: 'AT',
+    badges: [verdictLabel],
+    fields: [],
+    disposable: {
+      verdict, category: category || 'unknown', confidence: num('confidence') ?? 0,
+      reason: str('reason'), matchedOn: matchedOn || 'no signal', domain, tone,
+    },
+    confidence: num('confidence'),
+    raw: d,
+  };
+}
+
 /** Email domain authentication: SPF/DKIM/DMARC posture as a scored company card. */
 function domainAuthToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -635,6 +677,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.spoofable === 'boolean' && isRecord(data.dmarc)) return domainAuthToResult(data);
   // Cross-field validation: a `rules` array + numeric `integrity_score` mark the shape.
   if (Array.isArray(data.rules) && typeof data.integrity_score === 'number') return validationToResult(data);
+  // Disposable detection: `is_disposable` + a `matched_on` provenance marker.
+  if (typeof data.is_disposable === 'boolean' && typeof data.matched_on === 'string' && typeof data.category === 'string') return disposableToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

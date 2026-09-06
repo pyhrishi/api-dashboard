@@ -149,6 +149,19 @@ describe('Sandbox API Integration', () => {
       expect(Array.isArray(response.data.checks)).toBe(true);
     });
 
+    it('should detect disposable mailboxes for email-disposable', async () => {
+      const endpoint = getEndpointById('email-disposable')!;
+      const response = await callSandboxAPI({
+        endpoint,
+        parameters: { email: 'user@mailinator.com' },
+        apiKey: 'sk_test_key',
+      });
+      expect(response.status).toBe(200);
+      expect(response.data.is_disposable).toBe(true);
+      expect(response.data.verdict).toBe('disposable');
+      expect(response.data.category).toBeDefined();
+    });
+
     it('should return email for phone-to-email', async () => {
       const endpoint = getEndpointById('phone-to-email')!;
       const response = await callSandboxAPI({

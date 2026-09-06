@@ -14,6 +14,7 @@ import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
+import { detectDisposable } from '@/lib/disposable-detector';
 import { checkDomainAuth } from '@/lib/email-domain-auth';
 import { validateRecord } from '@/lib/record-validator';
 
@@ -515,6 +516,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...deliverability };
+    }
+
+    case 'email-disposable': {
+      // Deterministic disposable-mailbox detection (single source of truth).
+      const disposable = detectDisposable(String(parameters.email || ''));
+      if (!disposable) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide an email address to check.' },
+        };
+      }
+      return { success: true, ...disposable };
     }
 
     case 'email-domain-auth': {

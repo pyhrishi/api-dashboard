@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
-  type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness,
+  type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
@@ -21,7 +21,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Sparkles };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -468,6 +468,44 @@ function CompletenessMeter({ c }: { c: CompletenessScore }) {
   );
 }
 
+const DISPOSABLE_STYLE: Record<DisposableView['verdict'], { icon: typeof Trash2; ring: string; text: string; badge: BadgeTone }> = {
+  disposable: { icon: Trash2, ring: 'border-semantic-error/30 bg-semantic-error/10', text: 'text-semantic-error', badge: 'error' },
+  suspected: { icon: CircleAlert, ring: 'border-semantic-warning/30 bg-semantic-warning/10', text: 'text-semantic-warning', badge: 'warning' },
+  trusted: { icon: CircleCheck, ring: 'border-semantic-success/30 bg-semantic-success/10', text: 'text-semantic-success', badge: 'success' },
+};
+
+function DisposablePanel({ d }: { d: DisposableView }) {
+  const style = DISPOSABLE_STYLE[d.verdict];
+  const Icon = style.icon;
+  const verdictLabel = d.verdict.charAt(0).toUpperCase() + d.verdict.slice(1);
+  return (
+    <div className="mt-5">
+      <div className={`rounded-xl border p-5 flex items-start gap-4 ${style.ring}`}>
+        <div className={`w-11 h-11 rounded-xl bg-surface-2 border border-border flex items-center justify-center shrink-0 ${style.text}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Disposable check</span>
+            <StatusBadge tone={style.badge}>{verdictLabel}</StatusBadge>
+            <span className="text-[11px] font-semibold text-fg-muted capitalize">{d.category}</span>
+          </div>
+          <p className="text-sm text-fg mt-1.5">{d.reason}</p>
+          <div className="flex items-center gap-4 mt-3 text-[11px] text-fg-subtle">
+            <span className="flex items-center gap-1.5">
+              <span className="w-16 h-1.5 rounded-full bg-glass overflow-hidden inline-block" aria-hidden>
+                <span className={`block h-full rounded-full ${style.text.replace('text-', 'bg-')}`} style={{ width: `${Math.round(d.confidence * 100)}%` }} />
+              </span>
+              <span className="font-mono tabular-nums">{Math.round(d.confidence * 100)}% confidence</span>
+            </span>
+            <span className="capitalize">Matched: {d.matchedOn}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -532,6 +570,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.deliverability && (
           <DeliverabilityPanel d={result.deliverability} />
+        )}
+
+        {result.disposable && (
+          <DisposablePanel d={result.disposable} />
         )}
 
         {result.chips && result.chips.items.length > 0 && (

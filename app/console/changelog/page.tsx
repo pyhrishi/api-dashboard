@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.18', date: 'September 2026', headline: 'Disposable email detection',
+    changes: [
+      { kind: 'feature', text: 'Disposable email detection — a new "Detect disposable" lookup flags throwaway, temporary, and anonymizing mailboxes before they reach signup. It returns a decisive verdict (disposable / suspected / trusted), the provider category, a confidence, and a plain-English reason — catching both known providers and unlisted domains that look disposable by pattern (e.g. a "tempmail" in the domain). A lightweight single-purpose check at 1 credit when you don\'t need full deliverability. New GET /v1/email/disposable endpoint, shipped as a Studio preset with a tone-coded verdict panel.' },
+      { kind: 'improvement', text: 'Disposable detection is now one source of truth: the same detector powers both the new endpoint and the deliverability score\'s "Disposable" check, so a domain is classified identically everywhere. The list is larger and categorized, and heuristic detection now catches lookalike domains that are not on any list.' },
+    ],
+  },
+  {
     version: 'v4.17', date: 'September 2026', headline: 'Completeness scoring',
     changes: [
       { kind: 'feature', text: 'Completeness scoring — every resolved record now shows a "record completeness" meter: what share of the record\'s expected attributes actually came back with a real value versus a blank. The Studio result card displays a 0-100 score, a complete / partial / sparse tier, and names exactly which fields are missing (e.g. "Missing: Phone, Location"), so you know how much of the record you got before you act on it. Applies to every field-bearing lookup — person, company, and identity records.' },
