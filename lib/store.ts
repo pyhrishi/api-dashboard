@@ -4,6 +4,7 @@ import type { TelemetryEventRecord } from '@/lib/telemetry';
 import type { EnrichmentResult } from '@/data/enrichments';
 import { generateSeedRequestHistory, SEED_LOOKUP_COUNT } from '@/lib/seed-request-history';
 import { generateMergeCandidates, type MergeableEntity, type EntityMerge } from '@/lib/merge-seed';
+import { DEFAULT_THRESHOLDS, type MatchUseCase } from '@/lib/threshold-tuning';
 
 /**
  * One enrichment run in the Enrichment Studio (any preset/endpoint), persisted per
@@ -615,6 +616,12 @@ interface AppState extends FirstCallState, TenantState {
   mergeableEntities: MergeableEntity[];
   /** Applied merges with full audit trail; persisted. */
   entityMerges: EntityMerge[];
+  /** Per-use-case match confidence floors (F-034); persisted. */
+  matchThresholds: Record<MatchUseCase, number>;
+  /** Set the confidence floor for a use case. Billing role cannot change it. */
+  setMatchThreshold: (useCase: MatchUseCase, value: number) => void;
+  /** Reset all match thresholds to their recommended defaults. Billing role cannot. */
+  resetMatchThresholds: () => void;
   /** Idempotently seeds merge candidates on mount (like seedRequestHistory). No audit log. */
   seedMergeCandidates: () => void;
   /** Merges records into one canonical entity. Returns the new merge id. Billing role cannot merge. */
@@ -836,6 +843,7 @@ export const useStore = create<AppState>()(
       enrichments: [],
       mergeableEntities: [],
       entityMerges: [],
+      matchThresholds: { ...DEFAULT_THRESHOLDS },
       webhooks: [],
       webhookLogs: [],
       webhookRetryQueue: [],
@@ -2556,6 +2564,17 @@ export const useStore = create<AppState>()(
         });
         return { entityMerges, auditLogs: [log, ...state.auditLogs] };
       }),
+
+      setMatchThreshold: (useCase, value) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot change match thresholds');
+        const clamped = Math.max(0.5, Math.min(0.99, Math.round(value * 100) / 100));
+        return { matchThresholds: { ...state.matchThresholds, [useCase]: clamped } };
+      }),
+
+      resetMatchThresholds: () => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot change match thresholds');
+        return { matchThresholds: { ...DEFAULT_THRESHOLDS } };
+      }),
     }),
     {
       name: 'zinbit-storage',
@@ -2615,6 +2634,7 @@ export const useStore = create<AppState>()(
         enrichments: state.enrichments,
         // Merge audit trail (candidates are re-seeded, so only the merges persist)
         entityMerges: state.entityMerges,
+        matchThresholds: state.matchThresholds,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
         isFirstCallMade: state.isFirstCallMade,

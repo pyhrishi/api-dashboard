@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.34', date: 'September 2026', headline: 'Match threshold tuning',
+    changes: [
+      { kind: 'feature', text: 'Match threshold tuning — a new Match Thresholds console (/console/thresholds) lets teams set the confidence floor for each matching use case (contact matching, company de-dup, lead routing). Drag one slider and watch a labeled sample of record pairs split into accepted and rejected in real time, with live precision, recall, and F1 — plus a suggested F1-maximizing floor and a per-pair breakdown showing exactly which decisions the floor gets right or wrong. Floors persist per use case and are RBAC-gated (billing role is read-only).' },
+      { kind: 'improvement', text: 'The tuner scores its sample with the exact same Jaro-Winkler engine (and name canonicalization) that governs real Fuzzy Matching and Entity De-duplication — so the floor you tune here is the floor that applies in production, never a divergent preview. Deterministic: the same threshold always yields the same precision and recall.' },
+    ],
+  },
+  {
     version: 'v4.33', date: 'September 2026', headline: 'Merge & unmerge controls',
     changes: [
       { kind: 'feature', text: 'Merge & unmerge controls — a new Identity Resolution console (/console/identity) puts a human in the loop over entity resolution. Suspected-duplicate records (the same person entered across Salesforce, HubSpot, CSV imports, and the API) surface as groups; pick the surviving record, add a reason, and merge them into one canonical entity — collapsing their Zinbit IDs into a single golden ID.' },

@@ -58,6 +58,9 @@ export type TelemetryEventName =
   | 'async_jobs_viewed'
   | 'async_job_created'
   | 'async_job_cancelled'
+  | 'thresholds_viewed'
+  | 'threshold_changed'
+  | 'threshold_saved'
   // navigation & workspace
   | 'command_palette_used'
   | 'roadmap_viewed'
