@@ -1954,6 +1954,46 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=technographics',
       },
     ],
+  },
+
+  {
+    id: 'company-timeseries',
+    name: 'Historical Attribute Trends',
+    description: "Chart how a company's attributes changed month over month (F-022): headcount, estimated revenue, technologies detected, and open roles, over a configurable window (default 24 months). Each series carries trailing-12-month growth, average month-over-month growth, and a trend (accelerating / growing / flat / declining), plus a headline momentum. The newest point of every series equals a live company lookup — history back-projects from current firmographics, so trajectory and snapshot never disagree. Deterministic.",
+    method: 'GET',
+    path: '/v1/companies/timeseries',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'The company domain to chart',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 253,
+      },
+      {
+        name: 'months',
+        type: 'number',
+        required: false,
+        description: 'History window in months (6–36, default 24)',
+        example: '24',
+        placeholder: '24',
+        minValue: 6,
+        maxValue: 36,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'timeseries-to-funding',
+        title: 'See the funding behind the growth',
+        description: 'Review the rounds that fueled the headcount trajectory.',
+        category: 'sdks',
+        link: '/console/studio?preset=funding',
+      },
+    ],
   }
 ];
 

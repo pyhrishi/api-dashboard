@@ -1140,6 +1140,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-014', // Person demographic append — lib/demographic-resolver.ts (professional demographics on resolvePersonFromEmail+normalizeJobTitle; protected attributes excluded by design) + GET /v1/people/demographics + Studio preset
   'F-016', // Job-posting growth signals — lib/job-signal-resolver.ts (hiring velocity, dept breakdown, growth score; funding→hiring coherence boost) + GET /v1/companies/job-signals + Studio preset
   'F-017', // Ecommerce merchant enrichment — lib/ecommerce-merchant-resolver.ts (platform, GMV/revenue bands, categories, payments, model; honest is_merchant:false for non-stores) + GET /v1/companies/merchant + Studio preset
+  'F-022', // Historical time-series attributes — lib/company-timeseries-resolver.ts (monthly headcount/revenue/tech/roles back-projected from current firmographics + MoM growth/trend) + GET /v1/companies/timeseries + Studio sparkline panel
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

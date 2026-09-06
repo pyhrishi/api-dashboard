@@ -114,7 +114,9 @@ export type TelemetryEventName =
   | 'hierarchy_viewed'
   | 'hierarchy_resolved'
   // intent — buyer intent signals (F-012)
-  | 'intent_resolved';
+  | 'intent_resolved'
+  // firmographics — historical time-series attributes (F-022)
+  | 'timeseries_resolved';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

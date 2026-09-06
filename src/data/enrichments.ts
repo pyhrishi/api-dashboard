@@ -14,6 +14,7 @@ import { scoreCompleteness, type CompletenessScore } from '@/lib/completeness-sc
 import { attributeSources, type SourceAttribution } from '@/lib/source-catalog';
 import type { NormalizedText } from '@/lib/text-normalizer';
 import type { BuyerIntentProfile } from '@/lib/intent-resolver';
+import type { CompanyTimeseries } from '@/lib/company-timeseries-resolver';
 import { zidForPerson, zidForCompany } from '@/lib/zinbit-id';
 
 export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
@@ -73,6 +74,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'offices', endpointId: 'company-offices', param: 'domain', inputKind: 'domain', icon: 'MapPin', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'HQ & office geo' },
   { id: 'news', endpointId: 'company-news', param: 'domain', inputKind: 'domain', icon: 'Newspaper', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Company news' },
   { id: 'intent', endpointId: 'company-intent', param: 'domain', inputKind: 'domain', icon: 'Crosshair', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Buyer intent' },
+  { id: 'timeseries', endpointId: 'company-timeseries', param: 'domain', inputKind: 'domain', icon: 'LineChart', category: 'company', examples: ['stripe.com', 'shopify.com', 'datadoghq.com'], label: 'Growth history' },
   { id: 'hashed-email', endpointId: 'hashed-email', param: 'email_sha256', inputKind: 'email', icon: 'Hash', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'sarah.chen@notion.so'], label: 'Hashed-email lookup', transform: 'sha256' },
   { id: 'fuzzy', endpointId: 'fuzzy-match', param: 'query', inputKind: 'auto', icon: 'GitCompareArrows', category: 'identity', examples: ['Jhon Smith, Stipe', 'Bob Johnson, Datadog', 'Micheal Chen, notion'], label: 'Fuzzy match' },
   { id: 'dedupe', endpointId: 'records-dedupe', param: 'records', inputKind: 'auto', icon: 'Layers', category: 'identity', examples: ['John Smith, Stripe; Jhon Smith, Stipe; Jane Doe, Acme', 'Bob Johnson, Datadog; Robert Johnson, datadoghq.com; Bob Johnson, Datadog Inc'], label: 'De-duplicate records' },
@@ -397,6 +399,8 @@ export interface EnrichmentResult {
   news?: NewsFeedView;
   /** Buyer intent signals (F-012) — rendered as a scored intent panel. */
   intent?: BuyerIntentProfile;
+  /** Historical attribute time-series (F-022) — rendered as sparkline growth cards. */
+  timeseries?: CompanyTimeseries;
   /** Structured fuzzy-match result (F-024) — rendered as a ranked candidate list. */
   fuzzy?: FuzzyMatchView;
   /** Structured name-canonicalization result (F-030) — rendered as parsed forms + a change log. */
@@ -956,6 +960,26 @@ function intentToResult(d: Record<string, unknown>): EnrichmentResult {
     intent: i,
     confidence: typeof i.confidence === 'number' ? i.confidence : undefined,
     lastVerified: typeof i.last_verified === 'string' ? i.last_verified : undefined,
+    raw: d,
+  };
+}
+
+/** Historical attribute trends (F-022): monthly growth series anchored to current firmographics. */
+function timeseriesToResult(d: Record<string, unknown>): EnrichmentResult {
+  const t = d as unknown as CompanyTimeseries;
+  const company = typeof t.company === 'string' ? t.company : (typeof t.domain === 'string' ? t.domain : 'Company');
+  const head = Array.isArray(t.attributes) ? t.attributes.find((a) => a.attribute === 'headcount') : undefined;
+  const growthLabel = head ? `headcount ${head.growth_12mo_pct > 0 ? '+' : ''}${head.growth_12mo_pct}% YoY` : '';
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: `Growth history · ${t.months}mo · ${t.momentum}${growthLabel ? ` · ${growthLabel}` : ''}`,
+    avatar: initialsOf(company),
+    badges: [typeof t.momentum === 'string' ? t.momentum : '', `${t.months}mo`].filter(Boolean),
+    fields: [],
+    timeseries: t,
+    confidence: typeof t.confidence === 'number' ? t.confidence : undefined,
+    lastVerified: typeof t.last_verified === 'string' ? t.last_verified : undefined,
     raw: d,
   };
 }
@@ -1552,6 +1576,7 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   // Company news & event feed: an `events` array + a numeric `event_count` mark the shape.
   if (Array.isArray(data.events) && typeof data.event_count === 'number') return newsToResult(data);
   if (typeof data.tier === 'string' && typeof data.in_market === 'boolean' && Array.isArray(data.topics) && Array.isArray(data.signals)) return intentToResult(data);
+  if (Array.isArray(data.attributes) && typeof data.momentum === 'string' && typeof data.months === 'number') return timeseriesToResult(data);
   // Probabilistic fuzzy matching: a `candidates` array + a `verdict` mark the shape.
   if (Array.isArray(data.candidates) && typeof data.verdict === 'string' && isRecord(data.interpreted)) return fuzzyToResult(data);
   // Name canonicalization: a `components` object + a `canonical` string + a `changes` array.

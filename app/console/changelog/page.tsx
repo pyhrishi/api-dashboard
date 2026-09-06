@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.59', date: 'September 2026', headline: 'Historical attribute trends',
+    changes: [
+      { kind: 'feature', text: 'Historical attribute trends — a new GET /v1/companies/timeseries (and a "Growth history" Studio lookup) charts how a company changed month over month: headcount, estimated revenue, technologies detected, and open roles, over a window you choose (6–36 months, default 24). Each series comes with its trailing-12-month growth, average month-over-month growth, and a trend (accelerating / growing / flat / declining), plus a headline momentum — so you can prioritize fast-growing accounts and spot stalling ones.' },
+      { kind: 'improvement', text: 'The trajectory is coherent by construction: the newest point of every series equals a live company lookup — history back-projects from the current firmographics — so the trend and the snapshot never disagree. Deterministic (the same domain always charts the same history, no wall-clock) and unit-tested. Personal or unrecognized domains return no history.' },
+    ],
+  },
+  {
     version: 'v4.58', date: 'September 2026', headline: 'Ecommerce merchant enrichment',
     changes: [
       { kind: 'feature', text: 'Ecommerce merchant enrichment — detect whether a company runs an online store and enrich it. A new GET /v1/companies/merchant (and an "Ecommerce merchant" Studio lookup) returns the platform (Shopify / WooCommerce / Magento / BigCommerce / …), business model (DTC / marketplace / subscription / …), GMV and monthly-revenue bands, product-catalog size and top categories, average order value, payment providers, shipping regions, currencies, storefront tech, and a monthly-traffic band.' },

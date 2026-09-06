@@ -22,6 +22,7 @@ import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
 import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { resolveBuyerIntent } from '@/lib/intent-resolver';
+import { resolveCompanyTimeseries } from '@/lib/company-timeseries-resolver';
 import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { deduplicateRecords } from '@/lib/entity-dedup';
@@ -630,6 +631,19 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...intent };
+    }
+
+    case 'company-timeseries': {
+      // Deterministic historical attribute trends (single source of truth, F-022).
+      const months = parameters.months !== undefined ? Number(parameters.months) : 24;
+      const ts = resolveCompanyTimeseries(String(parameters.domain || ''), Number.isFinite(months) ? months : 24);
+      if (!ts) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No company could be resolved for that domain (personal-email domains have no history).' },
+        };
+      }
+      return { success: true, ...ts };
     }
 
     case 'hashed-email': {

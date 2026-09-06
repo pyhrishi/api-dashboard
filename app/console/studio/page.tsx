@@ -9,7 +9,7 @@ import {
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
   MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine, Languages, ArrowDown, Unplug,
-  Crosshair, Flame, TrendingUp, TrendingDown, IdCard, BriefcaseBusiness, Store,
+  Crosshair, Flame, TrendingUp, TrendingDown, IdCard, BriefcaseBusiness, Store, LineChart,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
@@ -22,16 +22,17 @@ import type { CompletenessScore } from '@/lib/completeness-scorer';
 import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
 import type { NormalizedText } from '@/lib/text-normalizer';
 import type { BuyerIntentProfile, IntentTopic, IntentSignal, IntentTier, IntentTrend } from '@/lib/intent-resolver';
+import type { CompanyTimeseries, AttributeSeries } from '@/lib/company-timeseries-resolver';
 import { correctionEntityKey, acceptedCorrectionsFor } from '@/lib/corrections';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { sha256Hex } from '@/lib/sha256';
 import { track } from '@/lib/telemetry';
 import { useToast } from '@/components/Toast';
 import RoleGuard from '@/components/RoleGuard';
-import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction, Modal, Field, Textarea } from '@/components/ui';
+import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction, Modal, Field, Textarea, Sparkline } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages, Crosshair, IdCard, BriefcaseBusiness, Store };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages, Crosshair, IdCard, BriefcaseBusiness, Store, LineChart };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -152,6 +153,7 @@ function StudioInner() {
         });
         track('enrichment_run', { preset: p.id, endpoint: p.endpointId, confidence: vm.confidence ?? null, environment, durationMs });
         if (vm.intent) track('intent_resolved', { domain: raw, score: vm.intent.score, tier: vm.intent.tier, in_market: vm.intent.in_market, environment });
+        if (vm.timeseries) track('timeseries_resolved', { domain: raw, months: vm.timeseries.months, momentum: vm.timeseries.momentum, environment });
         if (vm.partial?.partial) track('partial_result_received', { preset: p.id, endpoint: p.endpointId, completeness: vm.partial.completeness, degraded: vm.partial.degraded_upstreams.join(','), environment });
         if (vm.deliverability) {
           track('email_deliverability_checked', { verdict: vm.deliverability.verdict, score: vm.deliverability.score, environment });
@@ -970,6 +972,55 @@ const INTENT_SIGNAL_ICON: Record<IntentSignal['category'], React.ElementType> = 
   funding: Banknote, hiring: Users, technographic: Cpu, news: Newspaper, engagement: BarChart3,
 };
 
+const TS_TREND_TONE: Record<AttributeSeries['trend'], BadgeTone> = {
+  accelerating: 'success', growing: 'teal', flat: 'neutral', declining: 'error',
+};
+function fmtTsValue(v: number, unit: string): string {
+  if (unit === 'USD') {
+    if (v >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(1)}B`;
+    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+    return `$${v}`;
+  }
+  return v.toLocaleString();
+}
+function TimeseriesPanel({ t }: { t: CompanyTimeseries }) {
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="rounded-xl border border-border bg-surface-2 p-4 flex items-center gap-3 flex-wrap">
+        <span className="text-teal shrink-0"><LineChart className="w-5 h-5" /></span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Growth history</span>
+        <StatusBadge tone={TS_TREND_TONE[t.momentum]}>{t.momentum}</StatusBadge>
+        <span className="text-[11px] text-fg-muted">{t.from_month} → {t.to_month} · {t.months} months</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {t.attributes.map((a) => {
+          const up = a.growth_12mo_pct >= 0;
+          return (
+            <div key={a.attribute} className="rounded-xl border border-border bg-surface-2 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">{a.label}</div>
+                  <div className="text-lg font-black text-fg tabular-nums mt-0.5">{fmtTsValue(a.current, a.unit)}</div>
+                </div>
+                <div className="text-teal shrink-0"><Sparkline values={a.points.map((p) => p.value)} width={88} height={30} /></div>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`text-[11px] font-bold inline-flex items-center gap-1 ${up ? 'text-semantic-success' : 'text-semantic-error'}`}>
+                  {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  {up ? '+' : ''}{a.growth_12mo_pct}% <span className="text-fg-subtle font-normal">12mo</span>
+                </span>
+                <span className="text-[11px] text-fg-subtle">·  {a.avg_mom_pct > 0 ? '+' : ''}{a.avg_mom_pct}%/mo avg</span>
+                <StatusBadge tone={TS_TREND_TONE[a.trend]}>{a.trend}</StatusBadge>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function IntentPanel({ i }: { i: BuyerIntentProfile }) {
   const tier = INTENT_TIER_STYLE[i.tier];
   const TrendIcon = INTENT_TREND_META[i.trend].icon;
@@ -1411,6 +1462,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorr
 
         {result.intent && (
           <IntentPanel i={result.intent} />
+        )}
+
+        {result.timeseries && (
+          <TimeseriesPanel t={result.timeseries} />
         )}
 
         {result.fuzzy && (
