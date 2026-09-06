@@ -13,6 +13,7 @@ import { verifyPhoneForEmail } from '@/lib/phone-verifier';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
+import { resolveCompanyHierarchy } from '@/lib/company-hierarchy';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -517,6 +518,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...firmo };
+    }
+
+    case 'company-hierarchy': {
+      // Deterministic corporate family tree (single source of truth).
+      const tree = resolveCompanyHierarchy(String(parameters.domain || ''));
+      if (!tree) {
+        return {
+          success: false,
+          error: { code: 'NO_HIERARCHY', message: 'No corporate hierarchy could be resolved. Provide a valid company domain (personal mailbox domains have no corporate structure).' },
+        };
+      }
+      return { success: true, ...tree };
     }
 
     case 'technographic-detect': {

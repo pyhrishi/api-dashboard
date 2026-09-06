@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.54', date: 'September 2026', headline: 'Company hierarchy graph',
+    changes: [
+      { kind: 'feature', text: 'Company hierarchy — resolve a company’s whole corporate family from a single domain. A new GET /v1/companies/hierarchy returns the ultimate parent, intermediate parents, subsidiaries, branches, and divisions as a tree, each entity with its ownership stake, entity type, headquarters, headcount, and a registry id (CIN-style for Indian entities) — so the structure is anchored to registry-backed identity, not guessed from a website.' },
+      { kind: 'feature', text: 'A new Company Hierarchy console (/console/hierarchy) visualizes it: enter a domain and see the org tree (ultimate parent crowned, the queried company highlighted, subsidiaries and divisions nested with ownership), click any entity for its details and registry id, and jump straight to enriching it. Deterministic — the same domain always resolves to the same family — and the per-entity facts agree with a direct company lookup.' },
+      { kind: 'improvement', text: 'Built on the shared company resolver, so hierarchy and enrichment tell one story. Single-sourced in lib/company-hierarchy.ts and unit-tested (connected single-root tree, ownership bounds, role↔shape consistency). Personal or unrecognized domains return no hierarchy.' },
+    ],
+  },
+  {
     version: 'v4.53', date: 'September 2026', headline: 'CORS configuration panel',
     changes: [
       { kind: 'feature', text: 'CORS configuration — call the API straight from a browser front-end. A new CORS Policy console (/console/cors) controls which origins are allowed (an allowlist, a wildcard, or disabled), whether credentials are permitted, the allowed methods and headers, and the preflight max-age. Changes apply to the live gateway immediately: the policy you set is exactly what the gateway sends back on a real preflight.' },

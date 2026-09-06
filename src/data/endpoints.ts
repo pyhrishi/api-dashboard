@@ -1805,6 +1805,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/compression',
       },
     ],
+  },
+
+  {
+    id: 'company-hierarchy',
+    name: 'Company Hierarchy',
+    description: "Resolve a company's corporate family tree (F-008): the ultimate parent, intermediate parents, subsidiaries, branches, and divisions — each returned as an entity with its ownership stake, entity type, headquarters, headcount, and a registry id (CIN-style for Indian entities), so the hierarchy is anchored to registry-backed identity rather than inferred from a website. Personal or unrecognized domains return no hierarchy.",
+    method: 'GET',
+    path: '/v1/companies/hierarchy',
+    creditCost: 3,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'The company domain to resolve the corporate family for.',
+        example: 'acme.com',
+        placeholder: 'company.com',
+        maxLength: 253,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'hierarchy-to-console',
+        title: 'Visualize the family tree',
+        description: 'See the whole corporate structure as an org graph.',
+        category: 'sdks',
+        link: '/console/hierarchy',
+      },
+    ],
   }
 ];
 

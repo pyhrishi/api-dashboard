@@ -109,7 +109,10 @@ export type TelemetryEventName =
   // security — CORS configuration panel (F-082)
   | 'cors_viewed'
   | 'cors_policy_updated'
-  | 'cors_preflight_tested';
+  | 'cors_preflight_tested'
+  // firmographics — company hierarchy graph (F-008)
+  | 'hierarchy_viewed'
+  | 'hierarchy_resolved';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
