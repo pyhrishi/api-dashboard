@@ -9,7 +9,8 @@ import { getCorrectionStats, recordCorrection } from '@/lib/gateway/corrections'
 import { addSuppression, removeSuppression, checkSuppression, getSuppressionStats, type SuppressionReason } from '@/lib/gateway/suppressionList';
 import { parseFields, projectFields, applySparseDiscount, sparseDiscountPct, payloadBytes } from '@/lib/gateway/fieldSelection';
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
-import { getCircuitState, recordSuccess, recordFailure } from '@/lib/gateway/circuitBreaker';
+import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
+import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gateway/upstreams';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
 import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
 import { enforceSOC2Controls, attachISO27001Headers, enforceDDoSProtection, enforceMSAControls, enforceDPAControls, enforceFraudDetection } from '@/lib/gateway/security';
@@ -491,6 +492,49 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     );
   }
 
+  // Per-upstream circuit breakers (F-066) — GET reads every upstream's state;
+  // POST forces one OPEN (drain) / CLOSED / auto for a game-day drill.
+  // Free meta endpoint; handled before route resolution + billing.
+  if (path === '/v1/circuits') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      const upstreams = UPSTREAMS.map((u) => {
+        const snap = getCircuitSnapshot(u.id);
+        return { id: u.id, name: u.name, category: u.category, description: u.description, ...snap, powers: endpointsForUpstream(u.id) };
+      });
+      const healthy = upstreams.filter((u) => u.state === 'CLOSED').length;
+      const degraded = upstreams.length - healthy;
+      const availability = upstreams.length === 0 ? 1 : Math.round((healthy / upstreams.length) * 100) / 100;
+      return NextResponse.json(
+        { success: true, data: { upstreams, healthy, degraded, availability }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'POST') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const body = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const upstream = typeof body.upstream === 'string' ? body.upstream : '';
+      const modeRaw = typeof body.mode === 'string' ? body.mode : '';
+      const mode = (['OPEN', 'CLOSED', 'auto'].includes(modeRaw) ? modeRaw : '') as 'OPEN' | 'CLOSED' | 'auto' | '';
+      if (!upstream || !UPSTREAMS.some((u) => u.id === upstream) || !mode) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_PARAMETERS', message: 'Provide a valid "upstream" id and "mode" (OPEN | CLOSED | auto).' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      forceCircuit(upstream, mode);
+      return NextResponse.json(
+        { success: true, data: { upstream, ...getCircuitSnapshot(upstream) }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/circuits (state) or POST /v1/circuits (force a drill).' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
   // 1. Route resolution
   const endpoint = resolveEndpoint(path);
 
@@ -801,21 +845,25 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       result = { status: 200, data: cacheResult.payload, duration: 5, timestamp: Date.now() } as APIResponse;
       cacheHeader = 'HIT';
     } else {
-      const circuitState = getCircuitState('sandboxAPI');
-      
+      // Per-upstream circuit breaker (F-066): this endpoint's real data provider.
+      const upstream = upstreamForEndpoint(endpoint.id);
+      responseHeaders['X-Upstream'] = upstream;
+      const circuitState = getCircuitState(upstream);
+
       if (circuitState === 'OPEN') {
         result = {
           isAPIError: true,
           status: 503,
           statusText: 'Service Unavailable',
-          error: 'Circuit Breaker is OPEN. Downstream service is currently unavailable.',
-          errorCode: 'SERVICE_UNAVAILABLE',
+          error: `Upstream "${upstream}" is unavailable — its circuit breaker is OPEN. Other upstreams are unaffected; retry after the cooldown.`,
+          errorCode: 'UPSTREAM_UNAVAILABLE',
           timestamp: Date.now(),
           duration: 0,
           requestId,
           data: null,
         } as APIError;
         responseHeaders['X-Circuit-Breaker'] = 'OPEN';
+        responseHeaders['Retry-After'] = '30';
       } else {
         try {
           result = await callSandboxAPI({
@@ -845,11 +893,11 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
           }
         }
         
-        // Track circuit breaker metrics
+        // Track circuit breaker metrics against this endpoint's upstream.
         if (isAPIError(result) && result.status >= 500) {
-          recordFailure('sandboxAPI');
+          recordFailure(upstream);
         } else {
-          recordSuccess('sandboxAPI');
+          recordSuccess(upstream);
         }
       }
       

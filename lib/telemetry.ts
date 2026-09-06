@@ -87,7 +87,10 @@ export type TelemetryEventName =
   | 'idempotency_viewed'
   // efficiency — field selection / sparse responses (F-062)
   | 'field_selection_analyzed'
-  | 'field_selection_run';
+  | 'field_selection_run'
+  // reliability — circuit breaker per upstream (F-066)
+  | 'circuits_viewed'
+  | 'circuit_forced';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

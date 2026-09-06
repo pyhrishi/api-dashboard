@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.47', date: 'September 2026', headline: 'Circuit breaker per upstream',
+    changes: [
+      { kind: 'feature', text: 'Circuit breaker per upstream — every endpoint depends on a real data provider (SMTP verification, the MCA registry, a carrier HLR, the professional/company graphs, a funding database), and each now has its own circuit breaker. When one upstream starts failing, only its breaker trips: calls that depend on it return 503 with a Retry-After and an X-Upstream header, while every other endpoint keeps serving. One flaky provider no longer looks like — or causes — a total outage.' },
+      { kind: 'feature', text: 'A tripped breaker recovers on its own (OPEN → HALF_OPEN probe after a cooldown → CLOSED on the next success). A new Circuit Breakers console (/console/circuits) shows each upstream’s live state, failure rate, trip count, cooldown countdown, and the endpoints it powers — with admin-only Force-open (drain) and Reset controls for game-day drills, backed by GET/POST /v1/circuits.' },
+      { kind: 'improvement', text: 'The upstreams are the same named providers behind source attribution (F-043), so reliability and provenance tell one story. Single-sourced in src/lib/gateway/upstreams.ts + circuitBreaker.ts, deterministic, and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.46', date: 'September 2026', headline: 'Field selection / sparse responses',
     changes: [
       { kind: 'feature', text: 'Field selection — ask for only the attributes you need. Add ?fields=phone,carrier (dotted paths like company.domain work too) to any enrichment call and the gateway returns just those fields. A typical response drops from ~15 fields to 3 — often a 90% smaller payload — with X-Fields-Selected, X-Fields-Omitted, X-Sparse-Response headers and a sparse{} metadata block reporting bytes before/after.' },

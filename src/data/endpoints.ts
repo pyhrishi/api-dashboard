@@ -1756,6 +1756,26 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/idempotency',
       },
     ],
+  },
+
+  {
+    id: 'circuits-stats',
+    name: 'Circuit Breakers',
+    description: "Read the per-upstream circuit breakers (F-066): each data provider's state (CLOSED / OPEN / HALF_OPEN), failure rate, trip count, cooldown, and the endpoints it powers. A failing upstream trips only its own breaker, so dependent endpoints return 503 with Retry-After and X-Upstream while everything else keeps serving. POST { upstream, mode: OPEN | CLOSED | auto } to force a breaker for a game-day drill. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/circuits',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'circuits-to-console',
+        title: 'Open the Circuit Breakers console',
+        description: 'Watch upstream health live and run drain/reset drills.',
+        category: 'sdks',
+        link: '/console/circuits',
+      },
+    ],
   }
 ];
 
