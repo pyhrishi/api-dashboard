@@ -222,11 +222,20 @@ export default function ExplorerPage() {
       // rate-limiting, and (for live keys only) DPDP privacy masking. The rich
       // scope / IP / sunset / quota checks above stay client-side as the UX layer.
       const isGet = activeEndpoint.method === 'GET';
+      // Substitute {param} tokens in the path (e.g. /v1/jobs/{id}) from the entered values,
+      // and keep those names out of the query string / body so they aren't sent twice.
+      const pathParamNames = new Set<string>();
+      const resolvedPath = activeEndpoint.path.replace(/\{(\w+)\}/g, (_m, name: string) => {
+        pathParamNames.add(name);
+        const v = parameters[name];
+        return v !== undefined && v !== null && `${v}`.length > 0 ? encodeURIComponent(`${v}`) : `{${name}}`;
+      });
       const queryEntries = Object.entries(parameters)
-        .filter(([, v]) => v !== undefined && v !== null && `${v}`.length > 0)
+        .filter(([k, v]) => !pathParamNames.has(k) && v !== undefined && v !== null && `${v}`.length > 0)
         .map(([k, v]) => [k, `${v}`] as [string, string]);
       const qs = isGet && queryEntries.length ? `?${new URLSearchParams(queryEntries).toString()}` : '';
-      const url = `/api${activeEndpoint.path}${qs}`;
+      const url = `/api${resolvedPath}${qs}`;
+      const bodyParams = Object.fromEntries(Object.entries(parameters).filter(([k]) => !pathParamNames.has(k)));
 
       const res = await fetch(url, {
         method: activeEndpoint.method,
@@ -234,7 +243,7 @@ export default function ExplorerPage() {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
-        ...(isGet ? {} : { body: JSON.stringify(parameters) }),
+        ...(isGet ? {} : { body: JSON.stringify(bodyParams) }),
       });
 
       const duration = Math.round(performance.now() - startedAt);

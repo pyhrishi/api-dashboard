@@ -974,6 +974,120 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/jobs',
       },
     ],
+  },
+
+  {
+    id: 'async-job-create',
+    name: 'Create Async Job',
+    description: 'Kick off a long-running enrichment as an async job. POST a list of identifiers (up to 10,000) with the operation to run; the call returns immediately with a job id and a 202, and credits are charged up front for the batch. Poll the job for progress and results — the programmatic path for volumes too large to run synchronously.',
+    method: 'POST',
+    path: '/v1/jobs',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'endpoint',
+        type: 'string',
+        required: true,
+        description: 'The lookup to run per input (e.g. people-search, company-enrich)',
+        example: 'people-search',
+        placeholder: 'people-search',
+      },
+      {
+        name: 'inputs',
+        type: 'array',
+        required: true,
+        description: 'Identifiers to enrich — emails for people, domains for companies (max 10,000)',
+        example: '["marcus@stripe.com","priya.nair@zomato.in"]',
+        placeholder: '["user@company.com", ...]',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'poll-the-job',
+        title: 'Poll the job',
+        description: 'Call GET /v1/jobs/{id} to watch progress and pull results when it completes.',
+        category: 'sdks',
+        link: '/console/async-jobs',
+      },
+      {
+        id: 'async-webhooks',
+        title: 'Get notified instead of polling',
+        description: 'Wire a webhook to receive results when the job finishes.',
+        category: 'webhooks',
+        link: '/console/webhooks',
+      },
+    ],
+  },
+
+  {
+    id: 'async-job-get',
+    name: 'Get Async Job',
+    description: 'Poll an async job by id for its live status (queued / running / completed / cancelled), progress (processed of total), matched/missed counts, and — once complete — the per-row results.',
+    method: 'GET',
+    path: '/v1/jobs/{id}',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'id',
+        type: 'string',
+        required: true,
+        description: 'The job id returned by POST /v1/jobs',
+        example: 'job_ab12cd34',
+        placeholder: 'job_...',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'view-jobs-console',
+        title: 'Async Jobs console',
+        description: 'Watch every job live, with progress bars and results.',
+        category: 'sdks',
+        link: '/console/async-jobs',
+      },
+    ],
+  },
+
+  {
+    id: 'async-job-list',
+    name: 'List Async Jobs',
+    description: 'List the recent async jobs created with your key, newest first, each with its current status and progress.',
+    method: 'GET',
+    path: '/v1/jobs',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'list-to-console',
+        title: 'Async Jobs console',
+        description: 'The same list, live-polling, in the dashboard.',
+        category: 'sdks',
+        link: '/console/async-jobs',
+      },
+    ],
+  },
+
+  {
+    id: 'async-job-cancel',
+    name: 'Cancel Async Job',
+    description: 'Cancel an async job that has not yet completed. Already-completed jobs cannot be cancelled; a cancelled job stops advancing and returns whatever it had processed.',
+    method: 'POST',
+    path: '/v1/jobs/{id}/cancel',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'id',
+        type: 'string',
+        required: true,
+        description: 'The job id to cancel',
+        example: 'job_ab12cd34',
+        placeholder: 'job_...',
+      },
+    ],
+    nextStepRecommendations: [],
   }
 ];
 

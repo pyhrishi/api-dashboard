@@ -46,6 +46,9 @@ export type TelemetryEventName =
   | 'coverage_viewed'
   | 'coverage_timeframe_changed'
   | 'match_recovery_clicked'
+  | 'async_jobs_viewed'
+  | 'async_job_created'
+  | 'async_job_cancelled'
   // navigation & workspace
   | 'command_palette_used'
   | 'roadmap_viewed'

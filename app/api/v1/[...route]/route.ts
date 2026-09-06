@@ -10,6 +10,7 @@ import { enforceSOC2Controls, attachISO27001Headers, enforceDDoSProtection, enfo
 import { inspectPayload } from '@/lib/gateway/waf';
 import { Logger } from '@/lib/gateway/logger';
 import { provisionDataShare, listDataShares, revokeDataShare, type DataShareDataset } from '@/lib/gateway/dataSharing';
+import { createAsyncJob, getAsyncJob, listAsyncJobs, cancelAsyncJob } from '@/lib/gateway/asyncJobs';
 import { getAllPartners, getPartnerDashboard, lookupPartner, attributeReferral, recordRevenueEvent, processMonthEndPayouts } from '@/lib/gateway/partnerRevenue';
 import { generateForecastReport, forecastCapacity, getCurrentUsageSnapshot, type ForecastHorizon, type RegionId, type ResourceType } from '@/lib/gateway/capacityForecast';
 import { API_BASE_URL } from '@/lib/api-config';
@@ -147,6 +148,63 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
         { status: result.success ? 201 : 400, headers: responseHeaders }
       );
     }
+  }
+
+  // ── Async Job API Routes ────────────────────────────────────────────────
+  // Handles /v1/jobs/* — create, poll, list, cancel — outside the main pipeline.
+  if (routeSegments[0] === 'jobs') {
+    const jobId = routeSegments[1];
+
+    // Create: POST /v1/jobs
+    if (!jobId && request.method === 'POST') {
+      let body: Record<string, unknown> = {};
+      try { body = await request.json(); } catch {}
+      // Accept inputs as a JSON array or a comma/newline-delimited string (Explorer sends a string).
+      const rawInputs = body.inputs;
+      const inputs = Array.isArray(rawInputs)
+        ? rawInputs
+        : typeof rawInputs === 'string'
+          ? rawInputs.replace(/^\s*\[|\]\s*$/g, '').split(/[\n,]/).map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean)
+          : rawInputs;
+      const result = createAsyncJob({
+        apiKey,
+        endpoint: typeof body.endpoint === 'string' ? body.endpoint : 'people-search',
+        inputs,
+        perRowCost: typeof body.per_row_cost === 'number' ? body.per_row_cost : 1,
+      });
+      if (!result.success) {
+        const status = result.code === 'PAYMENT_REQUIRED' ? 402 : result.code === 'JOB_TOO_LARGE' ? 413 : 400;
+        return NextResponse.json({ success: false, error: { code: result.code, message: result.message } }, { status, headers: responseHeaders });
+      }
+      return NextResponse.json({ success: true, data: result.job, metadata: { requestId, timestamp: Date.now() } }, { status: 202, headers: responseHeaders });
+    }
+
+    // List: GET /v1/jobs
+    if (!jobId && request.method === 'GET') {
+      const jobs = listAsyncJobs(apiKey);
+      return NextResponse.json({ success: true, data: { jobs }, metadata: { requestId, timestamp: Date.now() } }, { status: 200, headers: responseHeaders });
+    }
+
+    // Cancel: POST /v1/jobs/{id}/cancel
+    if (jobId && routeSegments[2] === 'cancel' && request.method === 'POST') {
+      const result = cancelAsyncJob(jobId);
+      if (!result.success) {
+        const status = result.code === 'NOT_FOUND' ? 404 : 409;
+        return NextResponse.json({ success: false, error: { code: result.code, message: result.message } }, { status, headers: responseHeaders });
+      }
+      return NextResponse.json({ success: true, data: result.job, metadata: { requestId, timestamp: Date.now() } }, { status: 200, headers: responseHeaders });
+    }
+
+    // Poll: GET /v1/jobs/{id}
+    if (jobId && request.method === 'GET') {
+      const job = getAsyncJob(jobId);
+      if (!job) {
+        return NextResponse.json({ success: false, error: { code: 'NOT_FOUND', message: `No job with id ${jobId}.` } }, { status: 404, headers: responseHeaders });
+      }
+      return NextResponse.json({ success: true, data: job, metadata: { requestId, timestamp: Date.now() } }, { status: 200, headers: responseHeaders });
+    }
+
+    return NextResponse.json({ success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Unsupported method or path for /v1/jobs.' } }, { status: 405, headers: responseHeaders });
   }
 
   // ── Partner & Affiliate API Routes ──────────────────────────────────────

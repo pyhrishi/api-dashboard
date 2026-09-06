@@ -1101,6 +1101,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-424', // Error-state design — EmptyState tone="error" + designed error screens
   'F-429', // Reusable UI primitives — components/ui/*
   'F-432', // Toast & notification system — components/Toast.tsx
+  'F-060', // Async job endpoints — POST/GET/cancel /v1/jobs (src/lib/gateway/asyncJobs.ts) + /console/async-jobs
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

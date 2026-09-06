@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.20', date: 'September 2026', headline: 'Async job endpoints',
+    changes: [
+      { kind: 'feature', text: 'Async job endpoints — kick off a long enrichment as a background job instead of holding a connection open for thousands of rows. POST /v1/jobs with a list of identifiers returns immediately with a job id; GET /v1/jobs/{id} polls live status (queued / running / completed / cancelled), progress, matched/missed counts, and the per-row results once done. List recent jobs with GET /v1/jobs and stop one with POST /v1/jobs/{id}/cancel. Credits are charged up front for the batch.' },
+      { kind: 'feature', text: 'A new Async Jobs console page runs the same API: start a job, watch its progress bar advance live, cancel it, and expand the results — every action is a real call to /v1/jobs. It sits alongside CSV Bulk Jobs (the upload path) and the synchronous Batch endpoint (small lists).' },
+      { kind: 'improvement', text: 'Job progress is deterministic — derived from elapsed time on every poll, so a job advances predictably with no background worker — and results reuse the same resolvers as single lookups, so an async row returns exactly what the equivalent direct call would. The Endpoint Explorer now also substitutes {id}-style path parameters, so job endpoints are runnable there too.' },
+    ],
+  },
+  {
     version: 'v4.19', date: 'September 2026', headline: 'Batch endpoint',
     changes: [
       { kind: 'feature', text: 'Batch endpoint — run one enrichment operation over many inputs in a single request instead of N calls. POST /v1/batch/enrich takes an operation (people, company, phone, or email-verify) and a comma- or newline-separated list (up to 50), and returns a per-item status (matched / missed) with the full result for each, plus a summary (total, matched, missed, match rate, credits). Only matched items are billed. Runnable from the Endpoint Explorer; for thousands of rows, Bulk Jobs remains the async path.' },
