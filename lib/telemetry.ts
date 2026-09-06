@@ -205,7 +205,12 @@ export type TelemetryEventName =
   // security — web application firewall (F-303)
   | 'waf_viewed'
   | 'waf_rule_tested'
-  | 'waf_live_probe';
+  | 'waf_live_probe'
+  // security — brute-force login protection (F-306)
+  | 'login_security_viewed'
+  | 'login_blocked'
+  | 'login_lockout_simulated'
+  | 'login_guard_unlocked';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

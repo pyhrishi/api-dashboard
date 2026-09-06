@@ -1,12 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/Logo';
 import { motion } from 'framer-motion';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, ShieldAlert } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { useLoginGuard, isLocked, lockRemainingMs, attemptsRemaining } from '@/lib/brute-force';
+import { track } from '@/lib/telemetry';
 import Link from 'next/link';
+
+/** Format a millisecond duration as a short human string (e.g. "2m 05s"). */
+function fmtDuration(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return `${m}m ${String(rem).padStart(2, '0')}s`;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +31,21 @@ export default function LoginPage() {
   
   const [mode, setMode] = useState<'login' | 'forgot'>('login');
   const [resetSent, setResetSent] = useState(false);
+
+  // Brute-force login protection (F-306).
+  const recordFailure = useLoginGuard(s => s.recordFailure);
+  const recordSuccess = useLoginGuard(s => s.recordSuccess);
+  const guards = useLoginGuard(s => s.guards);
+  const [, setTick] = useState(0);
+  const guard = guards[email.trim().toLowerCase()];
+  const locked = isLocked(guard, Date.now());
+
+  // Tick every second while an account is locked, so the countdown stays live.
+  useEffect(() => {
+    if (!locked) return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [locked]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,28 +63,42 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (!email || !password) {
       setError('All fields are required.');
       return;
     }
-    
-    // Simulate invalid credentials error
+
+    // Brute-force protection: refuse while locked.
+    const key = email.trim().toLowerCase();
+    if (isLocked(guards[key], Date.now())) {
+      setError(`Account temporarily locked after too many failed attempts. Try again in ${fmtDuration(lockRemainingMs(guards[key], Date.now()))}.`);
+      track('login_blocked', { reason: 'already_locked' });
+      return;
+    }
+
+    // Simulate invalid credentials (demo: an "error"/"invalid" email fails auth).
     if (email.includes('error') || email.includes('invalid')) {
-      setError('Invalid email or password.');
+      const next = recordFailure(key, 'password');
+      if (isLocked(next, Date.now())) {
+        setError(`Too many failed attempts — account locked for ${fmtDuration(lockRemainingMs(next, Date.now()))}.`);
+        track('login_blocked', { reason: 'threshold_reached', lockLevel: next.lockLevel });
+      } else {
+        const rem = attemptsRemaining(next);
+        setError(`Invalid email or password.${rem <= 2 ? ` ${rem} attempt${rem === 1 ? '' : 's'} left before lockout.` : ''}`);
+      }
       return;
     }
 
     setIsSubmitting(true);
     setStatusText('Signing in...');
-    
+
     // Simulate network delay for authentication
     await new Promise(r => setTimeout(r, 800));
 
-    // Update global state
+    // Successful sign-in clears the brute-force counter.
+    recordSuccess(key, 'password');
     login(email);
-    
-    // Redirect to console
     router.push('/console');
   };
 
@@ -109,7 +149,14 @@ export default function LoginPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                
+
+                {locked && (
+                  <div className="bg-semantic-error/10 border border-semantic-error/30 text-semantic-error px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+                    Account locked — {fmtDuration(lockRemainingMs(guard, Date.now()))} remaining
+                  </div>
+                )}
+
                 {error && (
                   <div className="bg-semantic-error/10 border border-semantic-error/20 text-semantic-error px-4 py-3 rounded-xl text-sm font-semibold flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-semantic-error flex-shrink-0" />
@@ -171,7 +218,7 @@ export default function LoginPage() {
 
                 <button 
                   type="submit" 
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || locked}
                   className="group w-full relative flex items-center justify-center gap-2 bg-teal text-ink font-bold py-3 rounded-xl hover:bg-teal-ice transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-[0_0_20px_rgba(70,189,198,0.2)] hover:shadow-[0_0_30px_rgba(70,189,198,0.4)]"
                 >
                   {isSubmitting ? (

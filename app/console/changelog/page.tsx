@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.87', date: 'September 2026', headline: 'Brute-force login protection',
+    changes: [
+      { kind: 'feature', text: 'Brute-force login protection — the account sign-in now locks out credential-stuffing. After 5 consecutive failed attempts an account is locked with a cooldown that escalates on each repeat (30s → 2m → 15m → 1h), so an attacker is throttled to uselessness while a legitimate mistyped password just waits a moment; a successful sign-in clears the counter. The login screen shows attempts remaining and a live lock countdown.' },
+      { kind: 'feature', text: 'A new Login Security console (admin) shows locked and at-risk accounts with live countdowns, the escalating-cooldown policy, a one-click unlock for false alarms, and a simulator to watch a lockout trigger. Deterministic policy, unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.86', date: 'September 2026', headline: 'Web Application Firewall',
     changes: [
       { kind: 'feature', text: 'A Web Application Firewall now inspects every request at the edge before it reaches your data — the URL, headers, and body — against a catalog of attack signatures: SQL injection, command injection, cross-site scripting, path traversal, and remote/local file inclusion. A request that trips a rule is stopped with a 406 Not Acceptable and never touches the pipeline. Registered security researchers can bypass it with a Safe-Harbor bug-bounty token to test deeper.' },
