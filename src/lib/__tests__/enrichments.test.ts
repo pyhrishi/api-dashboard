@@ -49,6 +49,19 @@ describe('enrichment registry', () => {
     expect(vm.provenance?.length).toBeGreaterThan(0);
   });
 
+  it('attributes every field to a named provider (F-043)', () => {
+    const person = resolvePersonFromEmail('jane.doe@acme.com');
+    const vm = toEnrichmentResult({ person })!;
+    expect(vm.sources).toBeDefined();
+    expect(vm.sources!.providerCount).toBeGreaterThan(1);
+    expect(vm.sources!.fieldCount).toBe(vm.provenance!.length);
+    // Every provider names a real category.
+    vm.sources!.providers.forEach((pr) => {
+      expect(['first-party', 'registry', 'partner', 'derived']).toContain(pr.provider.category);
+      expect(pr.provider.license.length).toBeGreaterThan(0);
+    });
+  });
+
   it('attaches a completeness score to field-bearing records (F-048)', () => {
     const person = resolvePersonFromEmail('jane.doe@acme.com');
     const vm = toEnrichmentResult({ person })!;

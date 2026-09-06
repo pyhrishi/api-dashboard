@@ -11,6 +11,7 @@ import { getEndpointById, type Endpoint } from '@/data/endpoints';
 import type { ResolvedPerson } from '@/lib/person-resolver';
 import type { EnrichedCompany } from '@/lib/company-resolver';
 import { scoreCompleteness, type CompletenessScore } from '@/lib/completeness-scorer';
+import { attributeSources, type SourceAttribution } from '@/lib/source-catalog';
 import { zidForPerson, zidForCompany } from '@/lib/zinbit-id';
 
 export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
@@ -365,6 +366,8 @@ export interface EnrichmentResult {
   dedupe?: DedupView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
   completeness?: CompletenessScore;
+  /** Per-field provider attribution (F-043) — grouped over provenance; present when the result has provenance. */
+  sources?: SourceAttribution;
   confidence?: number;
   provenance?: EnrichmentProvenance[];
   lastVerified?: string;
@@ -1217,10 +1220,16 @@ function withCompleteness(vm: EnrichmentResult): EnrichmentResult {
   return completeness ? { ...vm, completeness } : vm;
 }
 
-/** Normalize any endpoint response into one view-model, then stamp per-field freshness + completeness. */
+/** Attribute each field to its named data provider (F-043), grouped over the result's provenance. */
+function withSources(vm: EnrichmentResult): EnrichmentResult {
+  const sources = attributeSources(vm.provenance);
+  return sources ? { ...vm, sources } : vm;
+}
+
+/** Normalize any endpoint response into one view-model, then stamp freshness + completeness + source attribution. */
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   const vm = buildEnrichmentResult(data);
-  return vm ? withCompleteness(withFieldFreshness(vm)) : null;
+  return vm ? withSources(withCompleteness(withFieldFreshness(vm))) : null;
 }
 
 function buildEnrichmentResult(data: unknown): EnrichmentResult | null {

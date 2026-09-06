@@ -18,6 +18,7 @@ import {
   type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView, type NameCanonicalView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
+import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { sha256Hex } from '@/lib/sha256';
 import { track } from '@/lib/telemetry';
@@ -477,6 +478,51 @@ function CompletenessMeter({ c }: { c: CompletenessScore }) {
           Missing: <span className="font-semibold text-fg">{c.missing.join(', ')}</span>. Try another identifier to fill the gaps.
         </p>
       )}
+    </div>
+  );
+}
+
+const SOURCE_CATEGORY_STYLE: Record<SourceCategory, { tone: BadgeTone; label: string }> = {
+  'first-party': { tone: 'teal', label: 'First-party' },
+  registry: { tone: 'success', label: 'Registry' },
+  partner: { tone: 'info', label: 'Partner' },
+  derived: { tone: 'warning', label: 'Derived' },
+};
+
+function SourceAttributionPanel({ s }: { s: SourceAttribution }) {
+  return (
+    <div className="mt-5">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Sources — who supplied each field</span>
+        <div className="flex items-center gap-1.5">
+          {s.byCategory.map((c) => (
+            <StatusBadge key={c.category} tone={SOURCE_CATEGORY_STYLE[c.category].tone}>{SOURCE_CATEGORY_STYLE[c.category].label} {c.count}</StatusBadge>
+          ))}
+        </div>
+      </div>
+      <ul className="space-y-2">
+        {s.providers.map((p, i) => (
+          <motion.li key={p.provider.name} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }}
+            className="rounded-xl border border-border-subtle bg-surface-2 p-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-bold text-fg">{p.provider.name}</span>
+              <StatusBadge tone={SOURCE_CATEGORY_STYLE[p.provider.category].tone}>{SOURCE_CATEGORY_STYLE[p.provider.category].label}</StatusBadge>
+              <span className="ml-auto text-[10px] font-mono tabular-nums text-fg-subtle">reliability {Math.round(p.provider.reliability * 100)}%</span>
+            </div>
+            <p className="text-[12px] text-fg-muted mt-0.5">{p.provider.description}</p>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {p.fields.map((f) => (
+                <span key={f.field} className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-glass text-fg-muted border border-border-subtle capitalize">
+                  {f.field.replace(/_/g, ' ')}
+                </span>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 mt-2 text-[10px] text-fg-subtle">
+              <Lock className="w-3 h-3" /> {p.provider.license}
+            </div>
+          </motion.li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -1037,6 +1083,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.completeness && (
           <CompletenessMeter c={result.completeness} />
+        )}
+
+        {result.sources && result.sources.providers.length > 0 && (
+          <SourceAttributionPanel s={result.sources} />
         )}
 
         {result.social && result.social.profiles.length > 0 && (

@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.37', date: 'September 2026', headline: 'Source attribution',
+    changes: [
+      { kind: 'feature', text: 'Source attribution — every enrichment result now cites which data provider supplied each field. The result card gains a Sources panel that groups the fields by the named provider behind them (SMTP Verification, WHOIS Registry, Corporate Directory, Carrier HLR, Professional Graph, MCA Registry, and more), each with its category (first-party graph / government registry / partner feed / derived inference), a reliability rating, the license or lawful basis the data is used under, and the exact fields it produced — so buyers and compliance can see the sourcing behind every value.' },
+      { kind: 'improvement', text: 'Attribution is a layer over the existing per-field provenance, not a separate dataset — so it can never disagree with the confidence and provenance already shown. It applies across every field-carrying lookup (person, company, phone, socials, funding, and more), and is deterministic: the same result always attributes the same providers.' },
+    ],
+  },
+  {
     version: 'v4.36', date: 'September 2026', headline: 'Match audit trail',
     changes: [
       { kind: 'feature', text: 'Match audit trail — a new Match Audit Trail console (/console/match-audit) is a tamper-evident ledger of every match decision: each entry records the subject, the verdict (matched / missed / merged / reverted), the confidence, the rules applied (which engine, keyed on which identifier), the data sources consulted, and the actor. It is assembled from real decision records — coverage lookups and manual merge/unmerge decisions — with filters by verdict and timeframe and an expandable evidence view.' },
