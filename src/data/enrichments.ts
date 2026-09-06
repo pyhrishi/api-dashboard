@@ -13,6 +13,7 @@ import type { EnrichedCompany } from '@/lib/company-resolver';
 import { scoreCompleteness, type CompletenessScore } from '@/lib/completeness-scorer';
 import { attributeSources, type SourceAttribution } from '@/lib/source-catalog';
 import type { NormalizedText } from '@/lib/text-normalizer';
+import type { BuyerIntentProfile } from '@/lib/intent-resolver';
 import { zidForPerson, zidForCompany } from '@/lib/zinbit-id';
 
 export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
@@ -71,6 +72,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'funding', endpointId: 'funding-signals', param: 'domain', inputKind: 'domain', icon: 'Banknote', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Funding signals' },
   { id: 'offices', endpointId: 'company-offices', param: 'domain', inputKind: 'domain', icon: 'MapPin', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'HQ & office geo' },
   { id: 'news', endpointId: 'company-news', param: 'domain', inputKind: 'domain', icon: 'Newspaper', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Company news' },
+  { id: 'intent', endpointId: 'company-intent', param: 'domain', inputKind: 'domain', icon: 'Crosshair', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Buyer intent' },
   { id: 'hashed-email', endpointId: 'hashed-email', param: 'email_sha256', inputKind: 'email', icon: 'Hash', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'sarah.chen@notion.so'], label: 'Hashed-email lookup', transform: 'sha256' },
   { id: 'fuzzy', endpointId: 'fuzzy-match', param: 'query', inputKind: 'auto', icon: 'GitCompareArrows', category: 'identity', examples: ['Jhon Smith, Stipe', 'Bob Johnson, Datadog', 'Micheal Chen, notion'], label: 'Fuzzy match' },
   { id: 'dedupe', endpointId: 'records-dedupe', param: 'records', inputKind: 'auto', icon: 'Layers', category: 'identity', examples: ['John Smith, Stripe; Jhon Smith, Stipe; Jane Doe, Acme', 'Bob Johnson, Datadog; Robert Johnson, datadoghq.com; Bob Johnson, Datadog Inc'], label: 'De-duplicate records' },
@@ -390,6 +392,8 @@ export interface EnrichmentResult {
   officeGeo?: OfficeGeographyView;
   /** Structured company news feed (F-015) — rendered as an event timeline. */
   news?: NewsFeedView;
+  /** Buyer intent signals (F-012) — rendered as a scored intent panel. */
+  intent?: BuyerIntentProfile;
   /** Structured fuzzy-match result (F-024) — rendered as a ranked candidate list. */
   fuzzy?: FuzzyMatchView;
   /** Structured name-canonicalization result (F-030) — rendered as parsed forms + a change log. */
@@ -932,6 +936,27 @@ function newsToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Buyer intent signals (F-012): a scored, in-market intent profile with topic surges. */
+function intentToResult(d: Record<string, unknown>): EnrichmentResult {
+  const i = d as unknown as BuyerIntentProfile;
+  const company = typeof i.company === 'string' ? i.company : (typeof i.domain === 'string' ? i.domain : 'Company');
+  const tier = typeof i.tier === 'string' ? i.tier : 'cold';
+  const score = typeof i.score === 'number' ? i.score : 0;
+  const topTopic = Array.isArray(i.topics) && i.topics[0] ? i.topics[0].topic : '';
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: `Buyer intent · ${score}/100 · ${tier}${topTopic ? ` · top topic: ${topTopic}` : ''}`,
+    avatar: initialsOf(company),
+    badges: [tier, i.in_market ? 'In-market' : 'Not in-market', typeof i.trend === 'string' ? i.trend : ''].filter(Boolean),
+    fields: [],
+    intent: i,
+    confidence: typeof i.confidence === 'number' ? i.confidence : undefined,
+    lastVerified: typeof i.last_verified === 'string' ? i.last_verified : undefined,
+    raw: d,
+  };
+}
+
 /** Probabilistic fuzzy matching (F-024): ranked candidates for a messy name + company. */
 function fuzzyToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1407,6 +1432,7 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.offices) && isRecord(data.hq)) return officeGeoToResult(data);
   // Company news & event feed: an `events` array + a numeric `event_count` mark the shape.
   if (Array.isArray(data.events) && typeof data.event_count === 'number') return newsToResult(data);
+  if (typeof data.tier === 'string' && typeof data.in_market === 'boolean' && Array.isArray(data.topics) && Array.isArray(data.signals)) return intentToResult(data);
   // Probabilistic fuzzy matching: a `candidates` array + a `verdict` mark the shape.
   if (Array.isArray(data.candidates) && typeof data.verdict === 'string' && isRecord(data.interpreted)) return fuzzyToResult(data);
   // Name canonicalization: a `components` object + a `canonical` string + a `changes` array.

@@ -9,6 +9,7 @@ import {
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
   MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine, Languages, ArrowDown, Unplug,
+  Crosshair, Flame, TrendingUp, TrendingDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
@@ -20,6 +21,7 @@ import {
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
 import type { NormalizedText } from '@/lib/text-normalizer';
+import type { BuyerIntentProfile, IntentTopic, IntentSignal, IntentTier, IntentTrend } from '@/lib/intent-resolver';
 import { correctionEntityKey, acceptedCorrectionsFor } from '@/lib/corrections';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { sha256Hex } from '@/lib/sha256';
@@ -29,7 +31,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction, Modal, Field, Textarea } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages, Crosshair };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -149,6 +151,7 @@ function StudioInner() {
           result: vm, status: 'ok', environment, confidence: vm.confidence ?? 0, creditCost: p.creditCost, requestId, durationMs, timestamp: Date.now(),
         });
         track('enrichment_run', { preset: p.id, endpoint: p.endpointId, confidence: vm.confidence ?? null, environment, durationMs });
+        if (vm.intent) track('intent_resolved', { domain: raw, score: vm.intent.score, tier: vm.intent.tier, in_market: vm.intent.in_market, environment });
         if (vm.partial?.partial) track('partial_result_received', { preset: p.id, endpoint: p.endpointId, completeness: vm.partial.completeness, degraded: vm.partial.degraded_upstreams.join(','), environment });
         if (vm.deliverability) {
           track('email_deliverability_checked', { verdict: vm.deliverability.verdict, score: vm.deliverability.score, environment });
@@ -951,6 +954,95 @@ const SENTIMENT_DOT: Record<CompanyEventView['sentiment'], string> = {
   positive: 'bg-semantic-success', neutral: 'bg-fg-subtle', negative: 'bg-semantic-error',
 };
 
+const INTENT_TIER_STYLE: Record<IntentTier, { tone: BadgeTone; ring: string; text: string; label: string }> = {
+  hot: { tone: 'error', ring: 'border-semantic-error/30', text: 'text-semantic-error', label: 'Hot' },
+  warm: { tone: 'warning', ring: 'border-semantic-warning/30', text: 'text-semantic-warning', label: 'Warm' },
+  cool: { tone: 'info', ring: 'border-border', text: 'text-fg-muted', label: 'Cool' },
+  cold: { tone: 'neutral', ring: 'border-border', text: 'text-fg-subtle', label: 'Cold' },
+};
+const INTENT_TREND_META: Record<IntentTrend, { icon: React.ElementType; text: string }> = {
+  surging: { icon: Flame, text: 'text-semantic-error' },
+  rising: { icon: TrendingUp, text: 'text-semantic-success' },
+  steady: { icon: ArrowRight, text: 'text-fg-subtle' },
+  cooling: { icon: TrendingDown, text: 'text-fg-subtle' },
+};
+const INTENT_SIGNAL_ICON: Record<IntentSignal['category'], React.ElementType> = {
+  funding: Banknote, hiring: Users, technographic: Cpu, news: Newspaper, engagement: BarChart3,
+};
+
+function IntentPanel({ i }: { i: BuyerIntentProfile }) {
+  const tier = INTENT_TIER_STYLE[i.tier];
+  const TrendIcon = INTENT_TREND_META[i.trend].icon;
+  return (
+    <div className="mt-5 space-y-4">
+      {/* Score header */}
+      <div className={`rounded-xl border p-5 ${tier.ring}`}>
+        <div className="flex items-start gap-4">
+          <div className={`w-16 h-16 rounded-2xl bg-surface-2 border border-border flex flex-col items-center justify-center shrink-0 ${tier.text}`}>
+            <span className="text-2xl font-black tabular-nums leading-none">{i.score}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-fg-subtle mt-0.5">/ 100</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Buyer intent</span>
+              <StatusBadge tone={tier.tone}>{tier.label}</StatusBadge>
+              <StatusBadge tone={i.in_market ? 'success' : 'neutral'}>{i.in_market ? 'In-market' : 'Not in-market'}</StatusBadge>
+              <span className={`text-[11px] font-semibold inline-flex items-center gap-1 ${INTENT_TREND_META[i.trend].text}`}><TrendIcon className="w-3.5 h-3.5" /> {i.trend}</span>
+            </div>
+            <p className="text-sm text-fg mt-1.5 leading-snug">{i.recommended_action}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Topic surges */}
+      <div className="rounded-xl border border-border bg-surface-2 p-4">
+        <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">Topics being researched</div>
+        <ul className="space-y-2.5">
+          {i.topics.map((t: IntentTopic) => {
+            const tm = INTENT_TREND_META[t.trend];
+            const TI = tm.icon;
+            return (
+              <li key={t.topic}>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-sm font-semibold text-fg truncate">{t.topic}</span>
+                  <span className={`text-[11px] font-semibold inline-flex items-center gap-1 shrink-0 ${tm.text}`}>
+                    <TI className="w-3 h-3" /> {t.delta > 0 ? `+${t.delta}` : t.delta}
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-glass overflow-hidden">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${t.score}%` }} transition={{ duration: 0.5, ease: 'easeOut' }} className="h-full rounded-full bg-teal" />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {/* Contributing signals */}
+      <div className="rounded-xl border border-border bg-surface-2 p-4">
+        <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">Contributing signals</div>
+        <ul className="space-y-2.5">
+          {i.signals.map((s: IntentSignal, idx: number) => {
+            const SI = INTENT_SIGNAL_ICON[s.category];
+            return (
+              <li key={s.category + idx} className="flex items-start gap-2.5">
+                <span className="text-teal mt-0.5 shrink-0"><SI className="w-4 h-4" /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-fg">{s.label}</span>
+                    <span className="text-[10px] font-mono tabular-nums text-fg-subtle shrink-0">{Math.round(s.weight * 100)}%</span>
+                  </div>
+                  <p className="text-[12px] text-fg-muted leading-snug">{s.detail}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function NewsFeedPanel({ n }: { n: NewsFeedView }) {
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const shown = typeFilter ? n.events.filter((e) => e.type === typeFilter) : n.events;
@@ -1315,6 +1407,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorr
 
         {result.news && (
           <NewsFeedPanel n={result.news} />
+        )}
+
+        {result.intent && (
+          <IntentPanel i={result.intent} />
         )}
 
         {result.fuzzy && (

@@ -18,6 +18,7 @@ import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
 import { resolveCompanyNews } from '@/lib/company-news-resolver';
+import { resolveBuyerIntent } from '@/lib/intent-resolver';
 import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { deduplicateRecords } from '@/lib/entity-dedup';
@@ -578,6 +579,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...news };
+    }
+
+    case 'company-intent': {
+      // Deterministic buyer-intent signals (single source of truth, F-012).
+      const intent = resolveBuyerIntent(String(parameters.domain || ''));
+      if (!intent) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No company could be resolved for that domain (personal-email domains have no intent profile).' },
+        };
+      }
+      return { success: true, ...intent };
     }
 
     case 'hashed-email': {

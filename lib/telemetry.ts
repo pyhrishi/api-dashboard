@@ -112,7 +112,9 @@ export type TelemetryEventName =
   | 'cors_preflight_tested'
   // firmographics — company hierarchy graph (F-008)
   | 'hierarchy_viewed'
-  | 'hierarchy_resolved';
+  | 'hierarchy_resolved'
+  // intent — buyer intent signals (F-012)
+  | 'intent_resolved';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

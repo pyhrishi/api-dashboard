@@ -1835,6 +1835,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/hierarchy',
       },
     ],
+  },
+
+  {
+    id: 'company-intent',
+    name: 'Buyer Intent Signals',
+    description: "Surface the topics a company is actively researching and how in-market it is (F-012). Returns a composite intent score (0–100) and a hot / warm / cool / cold tier, the topics they're surging on (with a week-over-week trend), and the contributing signals — recent funding (budget), GTM/data hiring, competitive-tech evaluation, trigger events, and content engagement — plus a recommended action. Deterministic and coherent with company enrichment, funding, and news. Personal or unrecognized domains return no intent.",
+    method: 'GET',
+    path: '/v1/companies/intent',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'The company domain to score for buyer intent',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 253,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'intent-to-news',
+        title: 'See the trigger events',
+        description: 'Review the company news and events feeding the intent score.',
+        category: 'sdks',
+        link: '/console/studio?preset=news',
+      },
+    ],
   }
 ];
 

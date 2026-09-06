@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.55', date: 'September 2026', headline: 'Buyer intent signals',
+    changes: [
+      { kind: 'feature', text: 'Buyer intent signals — see which accounts are in-market. A new GET /v1/companies/intent (and a "Buyer intent" Studio lookup) scores a company 0–100 with a hot / warm / cool / cold tier, surfaces the topics they’re actively researching (Data Enrichment, Sales Intelligence, Lead Scoring, ABM, and more) each with a week-over-week trend, and lists the contributing signals — recent funding (fresh budget), GTM/data hiring, competitive-tech evaluation, trigger events, and content engagement — with a recommended next action.' },
+      { kind: 'improvement', text: 'The score is coherent with the rest of the platform: it reuses the real company, funding, and news resolvers, so a recently-funded account with hot trigger events reads hotter — intent and enrichment tell one story. Deterministic (the same domain always scores the same), state-aware (never random), and unit-tested. Personal or unrecognized domains return no intent.' },
+    ],
+  },
+  {
     version: 'v4.54', date: 'September 2026', headline: 'Company hierarchy graph',
     changes: [
       { kind: 'feature', text: 'Company hierarchy — resolve a company’s whole corporate family from a single domain. A new GET /v1/companies/hierarchy returns the ultimate parent, intermediate parents, subsidiaries, branches, and divisions as a tree, each entity with its ownership stake, entity type, headquarters, headcount, and a registry id (CIN-style for Indian entities) — so the structure is anchored to registry-backed identity, not guessed from a website.' },
