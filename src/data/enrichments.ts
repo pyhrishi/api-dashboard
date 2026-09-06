@@ -79,6 +79,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
   { id: 'email-disposable', endpointId: 'email-disposable', param: 'email', inputKind: 'email', icon: 'Trash2', category: 'person', examples: ['user@mailinator.com', 'signup@sneaky-tempmail.io', 'jane.doe@acme.com'], label: 'Detect disposable' },
+  { id: 'catch-all', endpointId: 'catch-all-detect', param: 'domain', inputKind: 'domain', icon: 'MailQuestion', category: 'company', examples: ['stripe.com', 'acme.com', 'datadoghq.com'], label: 'Catch-all detection' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -191,6 +192,23 @@ export interface DisposableView {
   reason: string;
   matchedOn: string;
   domain: string;
+  tone: ResultTone;
+}
+/** One piece of catch-all evidence. */
+export interface CatchAllEvidenceView {
+  label: string;
+  value: string;
+  tone: ResultTone;
+}
+/** Structured catch-all detection (F-049) — rendered as a status panel + evidence. */
+export interface CatchAllView {
+  status: 'catch_all' | 'not_catch_all' | 'unknown';
+  isCatchAll: boolean;
+  provider: string;
+  probeMailbox: string;
+  probeAccepted: boolean;
+  evidence: CatchAllEvidenceView[];
+  guidance: string;
   tone: ResultTone;
 }
 /** One detected technology, for the category-grouped technographic grid. */
@@ -350,6 +368,8 @@ export interface EnrichmentResult {
   deliverability?: DeliverabilityView;
   /** Structured disposable-detection verdict (F-051) — rendered as a tone-coded panel. */
   disposable?: DisposableView;
+  /** Structured catch-all detection (F-049) — rendered as a status panel. */
+  catchAll?: CatchAllView;
   /** Structured technographic profile (F-006) — rendered as a category-grouped stack. */
   technographic?: TechnographicView;
   /** Structured funding profile (F-009) — rendered as a round timeline + investor roster. */
@@ -1107,6 +1127,55 @@ function disposableToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Catch-all domain detection (F-049): accept-all status + probe evidence + guidance. */
+function catchAllToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const domain = str('domain') || 'Domain';
+  const statusRaw = str('status');
+  const status = (['catch_all', 'not_catch_all', 'unknown'].includes(statusRaw) ? statusRaw : 'unknown') as CatchAllView['status'];
+  const isCatchAll = d.is_catch_all === true;
+  const tone: ResultTone = status === 'catch_all' ? 'warning' : status === 'not_catch_all' ? 'success' : 'neutral';
+  const statusLabel = status === 'catch_all' ? 'Catch-all' : status === 'not_catch_all' ? 'Not catch-all' : 'Unknown';
+
+  const evTone = (s: string): ResultTone => (s === 'pass' ? 'success' : s === 'fail' ? 'error' : s === 'warn' ? 'warning' : 'neutral');
+  const rawEvidence = Array.isArray(d.evidence) ? (d.evidence as Record<string, unknown>[]) : [];
+  const evidence: CatchAllEvidenceView[] = rawEvidence.map((e) => ({
+    label: typeof e.label === 'string' ? e.label : '',
+    value: typeof e.value === 'string' ? e.value : '',
+    tone: evTone(typeof e.status === 'string' ? e.status : 'info'),
+  }));
+  const probe = isRecord(d.probe) ? (d.probe as Record<string, unknown>) : {};
+
+  const fields: EnrichmentField[] = [
+    { label: 'Status', value: statusLabel },
+    { label: 'Provider', value: str('provider') || '—' },
+    { label: 'MX', value: d.mx_found === true ? 'Found' : 'None' },
+  ];
+
+  return {
+    kind: 'company',
+    title: domain,
+    subtitle: `${statusLabel} · catch-all detection`,
+    avatar: initialsOf(domain),
+    badges: [statusLabel, str('provider')].filter(Boolean),
+    fields,
+    catchAll: {
+      status,
+      isCatchAll,
+      provider: str('provider') || '—',
+      probeMailbox: typeof probe.sample_mailbox === 'string' ? probe.sample_mailbox : '',
+      probeAccepted: probe.accepted === true,
+      evidence,
+      guidance: str('guidance'),
+      tone,
+    },
+    confidence: num('confidence'),
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 /** Email domain authentication: SPF/DKIM/DMARC posture as a scored company card. */
 function domainAuthToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1273,6 +1342,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.rules) && typeof data.integrity_score === 'number') return validationToResult(data);
   // Disposable detection: `is_disposable` + a `matched_on` provenance marker.
   if (typeof data.is_disposable === 'boolean' && typeof data.matched_on === 'string' && typeof data.category === 'string') return disposableToResult(data);
+  // Catch-all detection: `is_catch_all` + a `probe` object + an `evidence` array mark the shape.
+  if (typeof data.is_catch_all === 'boolean' && isRecord(data.probe) && Array.isArray(data.evidence)) return catchAllToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.40', date: 'September 2026', headline: 'Catch-all domain detection',
+    changes: [
+      { kind: 'feature', text: 'Catch-all domain detection — a new GET /v1/email/catch-all tells you whether a domain is catch-all (accept-all): one that accepts mail for any local part, so an SMTP probe can never confirm a specific mailbox exists. It returns a decisive status (catch-all / not catch-all / unknown), a confidence, the MX provider, the random-mailbox probe result (RCPT TO a non-existent address → accepted means catch-all), per-signal evidence, and guidance on how to enrich safely against the domain. Shipped as a Studio preset with a status + evidence panel.' },
+      { kind: 'improvement', text: 'Catch-all is now single-sourced: Verify Email Deliverability and this detector share the exact same catch-all decision (lib/catch-all-detector.ts), so a domain flagged catch-all here is flagged catch-all there — they can never disagree. For a catch-all domain the guidance points to pattern confidence and the bounce feedback loop; for a non-catch-all domain it confirms per-address verification is reliable. Deterministic.' },
+    ],
+  },
+  {
     version: 'v4.39', date: 'September 2026', headline: 'Bounce feedback loop',
     changes: [
       { kind: 'feature', text: 'Bounce feedback loop — close the deliverability loop by feeding your bounces back to Zinbit. POST /v1/feedback/bounce reports an address that hard-bounced or was marked spam, and it\'s suppressed immediately (soft bounces suppress once they repeat) — so a subsequent Verify Email Deliverability call returns undeliverable with a “reported bounce” reason at the top of its checks. What you observe when you send now improves what Zinbit tells you next time.' },

@@ -1501,6 +1501,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/explorer?endpoint=bounce-report',
       },
     ],
+  },
+
+  {
+    id: 'catch-all-detect',
+    name: 'Catch-All Domain Detection',
+    description: "Detect whether a domain is catch-all (accept-all) — one that accepts mail for any local part, so an SMTP probe can never confirm a specific mailbox exists. Returns a decisive status (catch-all / not catch-all / unknown), a confidence, the MX provider, the random-mailbox probe result, per-signal evidence, and guidance on how to enrich safely against the domain. Uses the same catch-all decision as Verify Email Deliverability, so the two never disagree.",
+    method: 'GET',
+    path: '/v1/email/catch-all',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'The email domain to check for catch-all behavior',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 100,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'catch-all-to-verify',
+        title: 'Verify a specific address',
+        description: 'On a non-catch-all domain, per-mailbox verification is reliable.',
+        category: 'sdks',
+        link: '/console/studio?preset=email-verify',
+      },
+    ],
   }
 ];
 

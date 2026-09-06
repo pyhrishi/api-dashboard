@@ -24,6 +24,7 @@ import { resolveZinbitId } from '@/lib/zinbit-id';
 import { canonicalizeName } from '@/lib/name-canonicalizer';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { getBounce, isSuppressed } from '@/lib/gateway/bounceFeedback';
+import { detectCatchAll } from '@/lib/catch-all-detector';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
 import { checkDomainAuth } from '@/lib/email-domain-auth';
@@ -664,6 +665,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...deliverability };
+    }
+
+    case 'catch-all-detect': {
+      // Deterministic catch-all domain detection (shared SSOT with email-verify).
+      const catchAll = detectCatchAll(String(parameters.domain || ''));
+      if (!catchAll) {
+        return {
+          success: false,
+          error: { code: 'INVALID_DOMAIN', message: 'Provide a valid email domain to check for catch-all behavior.' },
+        };
+      }
+      return { success: true, ...catchAll };
     }
 
     case 'email-disposable': {

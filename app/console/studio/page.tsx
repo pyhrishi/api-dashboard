@@ -8,14 +8,14 @@ import {
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
-  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck,
+  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
-  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView, type NameCanonicalView,
+  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView, type NameCanonicalView, type CatchAllView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
@@ -26,7 +26,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -559,6 +559,47 @@ function DisposablePanel({ d }: { d: DisposableView }) {
             </span>
             <span className="capitalize">Matched: {d.matchedOn}</span>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CatchAllPanel({ c }: { c: CatchAllView }) {
+  const toneRing = c.tone === 'warning' ? 'border-semantic-warning/30' : c.tone === 'success' ? 'border-semantic-success/25' : 'border-border';
+  const toneText = c.tone === 'warning' ? 'text-semantic-warning' : c.tone === 'success' ? 'text-semantic-success' : 'text-fg-subtle';
+  const toneBadge: BadgeTone = c.tone === 'warning' ? 'warning' : c.tone === 'success' ? 'success' : 'neutral';
+  const statusLabel = c.status === 'catch_all' ? 'Catch-all' : c.status === 'not_catch_all' ? 'Not catch-all' : 'Unknown';
+  const evDot = (t: ResultTone) => t === 'success' ? 'bg-semantic-success' : t === 'error' ? 'bg-semantic-error' : t === 'warning' ? 'bg-semantic-warning' : 'bg-fg-subtle';
+  return (
+    <div className="mt-5 space-y-4">
+      <div className={`rounded-xl border p-5 flex items-start gap-4 ${toneRing}`}>
+        <div className={`w-11 h-11 rounded-xl bg-surface-2 border border-border flex items-center justify-center shrink-0 ${toneText}`}><MailQuestion className="w-5 h-5" /></div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Catch-all detection</span>
+            <StatusBadge tone={toneBadge}>{statusLabel}</StatusBadge>
+            <span className="text-[11px] font-semibold text-fg-muted">{c.provider}</span>
+          </div>
+          <p className="text-sm text-fg mt-1.5 leading-snug">{c.guidance}</p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface-2 p-4">
+        <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">Evidence</div>
+        <ul className="space-y-2">
+          {c.evidence.map((e, i) => (
+            <li key={i} className="flex items-start gap-2.5">
+              <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${evDot(e.tone)}`} aria-hidden />
+              <div className="min-w-0">
+                <span className="text-sm font-semibold text-fg">{e.label}</span>
+                <p className="text-[12px] text-fg-muted leading-snug">{e.value}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 pt-3 border-t border-border-subtle text-[11px] font-mono text-fg-subtle break-all">
+          RCPT TO {c.probeMailbox} → <span className={c.probeAccepted ? 'text-semantic-error' : 'text-semantic-success'}>{c.probeAccepted ? 'accepted (catch-all)' : 'rejected (per-mailbox verifiable)'}</span>
         </div>
       </div>
     </div>
@@ -1099,6 +1140,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.disposable && (
           <DisposablePanel d={result.disposable} />
+        )}
+
+        {result.catchAll && (
+          <CatchAllPanel c={result.catchAll} />
         )}
 
         {result.technographic && (

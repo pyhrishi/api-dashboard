@@ -12,6 +12,7 @@
  */
 
 import { isDisposableDomain } from '@/lib/disposable-detector';
+import { catchAllSignal } from '@/lib/catch-all-detector';
 
 export type DeliverabilityVerdict = 'deliverable' | 'risky' | 'undeliverable' | 'unknown';
 export type DeliverabilityCheckStatus = 'pass' | 'warn' | 'fail' | 'info';
@@ -162,7 +163,8 @@ export function verifyEmailDeliverability(rawEmail: string): EmailDeliverability
   else provider = CORPORATE_PROVIDERS[(hd >>> 5) % CORPORATE_PROVIDERS.length];
 
   // ── 3. Domain posture (catch-all, greylist) + mailbox SMTP handshake ─────────
-  const is_catch_all = mx_found && !is_free_provider && !is_disposable && ((hd >>> 7) % 100) < 16;
+  // Catch-all decision comes from the shared SSOT so verify + F-049 never diverge.
+  const is_catch_all = catchAllSignal(domain, { mxFound: mx_found, isFreeProvider: is_free_provider, isDisposable: is_disposable });
   const is_greylisted = mx_found && !is_disposable && ((hd >>> 9) % 100) < 7;
   // SMTP mailbox handshake (RCPT TO): mailbox-level, so it varies per address.
   // Fails for a small minority of corporate mailboxes (bounced / unknown user).
