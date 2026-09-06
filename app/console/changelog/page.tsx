@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.85', date: 'September 2026', headline: 'Graceful 429 handling with Retry-After',
+    changes: [
+      { kind: 'feature', text: 'A 429 isn’t a failure — it’s a schedule. When the gateway rate-limits you, it now tells you exactly when to come back with a Retry-After header, and we’ve shipped the client-side pattern to match: honour Retry-After when it’s there, fall back to exponential backoff with jitter when it isn’t, and retry only what’s retryable (429 and 5xx — never a 4xx). It ships as a real, tested fetchWithRetry helper you can copy, not just prose.' },
+      { kind: 'feature', text: 'A new Retry Strategy console visualizes the backoff schedule for any Retry-After, and lets you trigger a real 429 against the live gateway and read the actual Retry-After it returns — the missing client-side half of the rate-limiting story. Pair it with an idempotency key so retried writes stay safe.' },
+    ],
+  },
+  {
     version: 'v4.84', date: 'September 2026', headline: 'Tier-based throughput',
     changes: [
       { kind: 'feature', text: 'Tier-based throughput — your plan now sets your rate limit. Each tier sizes both the burst capacity and the sustained requests/second the gateway allows: Starter (the base), Growth (3×), and Enterprise (12×). The standard RateLimit-Limit header — and a new X-RateLimit-Tier — advertise exactly what your key gets on every response, so clients can pace to their real ceiling.' },

@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces, Merge, Navigation, Download, Cable, FlaskConical, KeyRound, Fingerprint, LineChart, Siren, UserCheck, Timer, Rocket } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces, Merge, Navigation, Download, Cable, FlaskConical, KeyRound, Fingerprint, LineChart, Siren, UserCheck, Timer, Rocket, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -90,6 +90,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Rate Limits', href: '/console/rate-limits', icon: <Timer className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Rate-Limit Headers', href: '/console/rate-limit-headers', icon: <Gauge className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Throughput Tiers', href: '/console/throughput-tiers', icon: <Rocket className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Retry Strategy', href: '/console/retry-strategy', icon: <RotateCw className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Match Rate', href: '/console/coverage', icon: <Target className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Coverage Gaps', href: '/console/coverage-gaps', icon: <Radar className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Match Thresholds', href: '/console/thresholds', icon: <SlidersHorizontal className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },

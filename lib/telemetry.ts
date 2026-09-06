@@ -198,7 +198,10 @@ export type TelemetryEventName =
   | 'rate_limit_inspected'
   // rate limiting — tier-based throughput (F-131)
   | 'throughput_tiers_viewed'
-  | 'throughput_tier_checked';
+  | 'throughput_tier_checked'
+  // resilience — graceful 429 with retry-after (F-134)
+  | 'retry_strategy_viewed'
+  | 'retry_429_triggered';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
