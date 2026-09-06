@@ -124,7 +124,10 @@ export type TelemetryEventName =
   | 'company_alias_resolved'
   // accounts — household & account grouping (F-032)
   | 'accounts_viewed'
-  | 'accounts_grouped';
+  | 'accounts_grouped'
+  // identity — historical identity graph (F-035)
+  | 'identity_history_viewed'
+  | 'identity_history_resolved';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

@@ -1144,6 +1144,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-027', // Cross-source reconciliation — lib/reconciliation.ts (weight observations by provider reliability × recency, cluster variants via jaroWinkler, winner+confidence+conflicts) + GET /v1/reconcile + /console/reconciliation
   'F-031', // Company alias resolution — lib/company-alias-resolver.ts (brand/legal/DBA/former/ticker/abbreviation/domain → canonical company via exact+jaroWinkler; catches rebrands) + GET /v1/companies/resolve + Studio preset
   'F-032', // Household & account grouping — lib/account-grouping.ts (cluster contacts into buying accounts by domain + corporate-family rollup via hierarchy + buying-committee inference) + POST /v1/accounts/group + /console/accounts
+  'F-035', // Historical identity graph — lib/identity-history-resolver.ts (career identity timeline: prior companies/emails/titles + typed transitions, tied to one persistent Zinbit ID) + GET /v1/people/identity-history + /console/identity-history timeline
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

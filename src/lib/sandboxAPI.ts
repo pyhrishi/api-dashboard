@@ -18,6 +18,7 @@ import { appendDemographics } from '@/lib/demographic-resolver';
 import { resolveJobGrowthSignals } from '@/lib/job-signal-resolver';
 import { enrichMerchant } from '@/lib/ecommerce-merchant-resolver';
 import { groupIntoAccounts } from '@/lib/account-grouping';
+import { resolveIdentityHistory } from '@/lib/identity-history-resolver';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -599,6 +600,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...jobs };
+    }
+
+    case 'people-identity-history': {
+      // Deterministic identity timeline across a career (single source of truth).
+      const history = resolveIdentityHistory(String(parameters.email || ''));
+      if (!history) {
+        return {
+          success: false,
+          error: { code: 'NO_HISTORY', message: 'No identity history could be resolved. Provide a valid work email (personal mailboxes have no career timeline).' },
+        };
+      }
+      return { success: true, ...history };
     }
 
     case 'accounts-group': {

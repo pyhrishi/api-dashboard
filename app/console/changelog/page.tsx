@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.63', date: 'September 2026', headline: 'Historical identity graph',
+    changes: [
+      { kind: 'feature', text: 'Identity history — see how a contact’s identity changed over their career. A new GET /v1/people/identity-history (and an Identity History console at /console/identity-history) reconstructs the person’s timeline: the companies they worked at, the emails and titles they held, and the typed transitions between them (job change, promotion, relocation, email change) — rendered as a career timeline.' },
+      { kind: 'feature', text: 'Every state on the timeline resolves to the same persistent Zinbit ID, so jane@oldco.com and j.doe@newco.com are one identity — the key to keeping a CRM from decaying as people change jobs. The current state agrees with a direct person lookup, and seniority progresses coherently into the past.' },
+      { kind: 'improvement', text: 'Built on the shared person resolver and the persistent Zinbit ID. Deterministic (same email → same history) and unit-tested (contiguous non-overlapping periods, one current state, seniority progression, an email-change transition per prior role). Personal or unresolvable emails return no history.' },
+    ],
+  },
+  {
     version: 'v4.62', date: 'September 2026', headline: 'Household & account grouping',
     changes: [
       { kind: 'feature', text: 'Account grouping — turn a messy contact list into clean buying accounts. A new POST /v1/accounts/group (and an Account Grouping console at /console/accounts) takes a list of emails and domains and clusters them by company: all contacts at the same employer roll up into one account, each enriched with its firmographics and — via the company hierarchy — its corporate family, so a contact at a subsidiary is attributed to the parent account.' },

@@ -2082,6 +2082,35 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/hierarchy',
       },
     ],
+  },
+
+  {
+    id: 'people-identity-history',
+    name: 'Identity History',
+    description: "Reconstruct a contact's identity timeline over their career (F-035): the companies they worked at, the emails and titles they held, and the typed transitions between them (job change, promotion, relocation, email change) — all tied together by one persistent Zinbit ID, so jane@oldco.com and j.doe@newco.com resolve to the same person. This is what keeps a CRM record from decaying as people change jobs. Personal or unresolvable emails return no history.",
+    method: 'GET',
+    path: '/v1/people/identity-history',
+    creditCost: 3,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'A work email for the contact whose identity timeline to trace.',
+        example: 'sarah.chen@shopify.com',
+        placeholder: 'user@company.com',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'identity-history-to-zid',
+        title: 'Look up the persistent Zinbit ID',
+        description: 'Resolve any of the contact\'s addresses to the same identity.',
+        category: 'sdks',
+        link: '/console/studio?preset=zid',
+      },
+    ],
   }
 ];
 
