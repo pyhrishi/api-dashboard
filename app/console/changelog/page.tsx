@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.51', date: 'September 2026', headline: 'Query filtering & sorting',
+    changes: [
+      { kind: 'feature', text: 'Query filtering & sorting — list endpoints now speak a universal query grammar. Add filter=field:op:value (comma-separated clauses are ANDed) with operators eq, ne, gt, gte, lt, lte, contains, startsWith, endsWith, and in (a pipe list) — e.g. filter=department:in:Sales|Engineering,name:contains:smith — plus sort=field or -field with multiple comma-separated keys. Comparisons are numeric when both sides are numbers, otherwise case-insensitive strings, and the response echoes the parsed filters/sorts, the unfiltered total, and any malformed-clause errors instead of silently ignoring them.' },
+      { kind: 'feature', text: 'A new Query Builder playground (/console/query) makes it visual: add filter clauses (field · operator · value), pick a multi-field sort, and run live against the real gateway — with a copyable request URL and a result count. filter and sort are universal gateway params (like ?fields=), so they compose with field selection and pagination on any list endpoint.' },
+      { kind: 'improvement', text: 'The old one-field department filter and single-key sort on GET /v1/companies/employees are now powered by this engine (department= still works as sugar for filter=department:eq:…). Single-sourced in src/lib/gateway/queryEngine.ts, deterministic (stable sort), and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.50', date: 'September 2026', headline: 'Request replay & debug echo',
     changes: [
       { kind: 'feature', text: 'Debug echo — add X-Debug-Echo: true to any request and the gateway does NOT execute it; instead it returns exactly how it read the request: the parsed params, the redacted headers, which endpoint matched, the resolved region and node, your key type and environment, the privacy framework that would apply, what the call would cost, and which edge policies fired. A dry run for integration debugging — see the gateway’s interpretation before spending a credit.' },

@@ -97,9 +97,18 @@ export const ENDPOINTS: Endpoint[] = [
         name: 'sort',
         type: 'string',
         required: false,
-        description: 'Field to sort by (e.g., name, -name, department)',
-        example: '-name',
-        placeholder: 'name or -name',
+        description: 'Sort by one or more fields, comma-separated; prefix a field with "-" for descending (e.g. -department,name). (F-078)',
+        example: '-name,department',
+        placeholder: '-name,department',
+      },
+      {
+        name: 'filter',
+        type: 'string',
+        required: false,
+        description: 'Filter clauses "field:op:value", comma-separated (ANDed). Operators: eq, ne, gt, gte, lt, lte, contains, startsWith, endsWith, in ("in" takes a pipe list). E.g. department:in:Sales|Engineering,name:contains:smith. (F-078)',
+        example: 'department:eq:Engineering',
+        placeholder: 'department:eq:Engineering',
+        maxLength: 300,
       }
     ],
     nextStepRecommendations: [

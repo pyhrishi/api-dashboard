@@ -28,6 +28,7 @@ import { detectCatchAll } from '@/lib/catch-all-detector';
 import { normalizeText } from '@/lib/text-normalizer';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
+import { parseQuery, applyQuery } from '@/lib/gateway/queryEngine';
 import { checkDomainAuth } from '@/lib/email-domain-auth';
 import { validateRecord } from '@/lib/record-validator';
 
@@ -219,8 +220,9 @@ function validateRequestParameters(
   const allowedParamNames = new Set(endpoint.parameters.map(p => p.name));
 
   // Universal gateway params accepted on every endpoint (handled by the gateway,
-  // not the endpoint): `fields` selects a sparse response (F-062).
-  const GLOBAL_PARAMS = new Set(['fields']);
+  // not the endpoint): `fields` selects a sparse response (F-062); `filter` + `sort`
+  // filter/order list results (F-078).
+  const GLOBAL_PARAMS = new Set(['fields', 'filter', 'sort']);
 
   // 1. Strict unknown parameter check
   for (const key of Object.keys(parameters)) {
@@ -422,27 +424,17 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       });
 
-      // Apply Filter
-      if (parameters.department) {
-        allEmployees = allEmployees.filter(e => 
-          e.department.toLowerCase() === String(parameters.department).toLowerCase()
-        );
-      }
+      // Universal query engine (F-078): rich filter operators + multi-field sort.
+      // `department=X` stays supported as sugar for `filter=department:eq:X`.
+      const filterStr = [
+        parameters.department ? `department:eq:${parameters.department}` : '',
+        typeof parameters.filter === 'string' ? parameters.filter : '',
+      ].filter(Boolean).join(',');
+      const querySpec = parseQuery({ filter: filterStr, sort: parameters.sort });
+      const queried = applyQuery(allEmployees, querySpec);
+      allEmployees = queried.rows;
 
-      // Apply Sort
-      if (parameters.sort) {
-        const sortKey = String(parameters.sort);
-        const desc = sortKey.startsWith('-');
-        const field = (desc ? sortKey.substring(1) : sortKey) as keyof (typeof allEmployees)[number];
-
-        allEmployees.sort((a, b) => {
-          if (a[field] < b[field]) return desc ? 1 : -1;
-          if (a[field] > b[field]) return desc ? -1 : 1;
-          return 0;
-        });
-      }
-
-      const totalEmployees = allEmployees.length;
+      const totalEmployees = queried.matched; // rows after filtering, before pagination
       const hasMore = offset + limit < totalEmployees;
       const nextCursor = hasMore ? btoa(JSON.stringify({ offset: offset + limit })) : null;
 
@@ -451,6 +443,12 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
       return {
         success: true,
         employees,
+        query: {
+          filters: querySpec.filters,
+          sorts: querySpec.sorts,
+          errors: querySpec.errors,
+          unfiltered_total: queried.total,
+        },
         pagination: {
           total: totalEmployees,
           limit,

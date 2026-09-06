@@ -100,7 +100,10 @@ export type TelemetryEventName =
   // debugging — request replay & debug echo (F-074)
   | 'debug_inspector_viewed'
   | 'debug_echo_run'
-  | 'request_replayed';
+  | 'request_replayed'
+  // querying — query filtering & sorting (F-078)
+  | 'query_viewed'
+  | 'query_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

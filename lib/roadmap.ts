@@ -1132,6 +1132,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-071', // Partial-result responses — src/lib/gateway/partialResult.ts (strip degraded-upstream fields + partial meta) + upstreams CONTRIBUTIONS map + route 206 + partial billing + Studio partial banner
   'F-072', // Webhook-backed async results — src/lib/gateway/webhookDelivery.ts (signed delivery registry, retry/backoff/DLQ/replay) + async job callback_url + GET /v1/deliveries + POST /v1/deliveries/{id}/replay + /console/webhook-deliveries
   'F-074', // Request replay & debug echo — src/lib/gateway/debugEcho.ts (parsed-request inspection) + X-Debug-Echo short-circuit (0 credits) + /console/debug inspector + real Logs replay (was a mock)
+  'F-078', // Query filtering & sorting — src/lib/gateway/queryEngine.ts (filter grammar + multi-sort SSOT) + sandbox company-employees rewire + filter/sort GLOBAL_PARAMS + /console/query playground
 ]);
 
 export function isFeatureBuilt(id: string): boolean {
