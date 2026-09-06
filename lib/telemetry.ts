@@ -136,7 +136,10 @@ export type TelemetryEventName =
   | 'decay_alert_actioned'
   | 'decay_threshold_changed'
   | 'accuracy_benchmark_viewed'
-  | 'accuracy_benchmark_run';
+  | 'accuracy_benchmark_run'
+  | 'coverage_gaps_viewed'
+  | 'coverage_gaps_filtered'
+  | 'coverage_expansion_requested';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

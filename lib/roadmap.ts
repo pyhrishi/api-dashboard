@@ -1149,6 +1149,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-039', // Cross-reference ID mapping — lib/xref-resolver.ts (any identifier → canonical entity + its ID in every system: CRM/data-provider/social/registry/financial, each with a public URL, forward + reverse anchor-scan) + GET /v1/identity/xref + Studio preset + /console/xref ID Map
   'F-042', // Data decay alerts — lib/data-decay.ts (proactive decay-risk scoring over the F-041 record pool: age-vs-window + field volatility + role mobility + company-event signal → probability/severity/projected-decay + explainable factors; alert inbox with snooze/resolve lifecycle) + store slice + GET /v1/records/decay-score + /console/data-decay
   'F-044', // Accuracy benchmarking — lib/accuracy-benchmark.ts (sampled precision/recall per data category from an integer confusion matrix + Wilson CI, registry/hybrid/lookup engines, competitor comparison with lead) + store re-sample slice + GET /v1/quality/benchmark + /console/benchmarks
+  'F-053', // Coverage gap reporting — lib/coverage-gaps.ts (per-tenant demand profile joined against the region-coverage supply ceiling → ranked region×data-type gaps with missed volume, wasted credits, addressable uplift + state-aware recommendation) + expansion-request store slice + GET /v1/coverage/gaps + /console/coverage-gaps
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

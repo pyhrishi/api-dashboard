@@ -22,6 +22,7 @@ import { resolveIdentityHistory } from '@/lib/identity-history-resolver';
 import { linkDomainToEmployer } from '@/lib/domain-employer-linker';
 import { decayScoreForEmail } from '@/lib/data-decay';
 import { benchmarkForCategory } from '@/lib/accuracy-benchmark';
+import { gapReportForAccount } from '@/lib/coverage-gaps';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -640,6 +641,11 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...bench };
+    }
+
+    case 'coverage-gaps': {
+      // The account's demand-vs-supply coverage gap report (single source of truth).
+      return { success: true, ...gapReportForAccount() };
     }
 
     case 'people-identity-history': {

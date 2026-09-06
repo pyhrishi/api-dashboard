@@ -2230,6 +2230,26 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/quality-sla',
       },
     ],
+  },
+
+  {
+    id: 'coverage-gaps',
+    name: 'Coverage Gaps',
+    description: "Report where your enrichment traffic hits thin data (F-053). Overlays your account's request mix (region × data type) on Zinbit's regional coverage and returns the segments costing you the most — each with your match rate, missed lookups, wasted credits, addressable uplift, a severity, and a concrete recommendation. The demand-vs-supply view that Regional Coverage (the global map) can't give you.",
+    method: 'GET',
+    path: '/v1/coverage/gaps',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'gaps-to-regions',
+        title: 'See the global coverage map',
+        description: 'Compare your gaps against Zinbit\'s regional coverage.',
+        category: 'sdks',
+        link: '/console/regions',
+      },
+    ],
   }
 ];
 

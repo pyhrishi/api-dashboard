@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.67', date: 'September 2026', headline: 'Coverage gap reporting',
+    changes: [
+      { kind: 'feature', text: 'Coverage gaps — see exactly where your enrichment traffic hits thin data and what it costs you. A new Coverage Gaps console (and GET /v1/coverage/gaps) overlays your account\'s request mix (region × data type) on Zinbit\'s regional coverage and ranks the segments burning the most: your match rate, missed lookups, wasted credits, and addressable uplift, each with a concrete fix — enable email-first fallback where direct dials are thin, supplement technographics with firmographics, or request a coverage expansion.' },
+      { kind: 'feature', text: 'One-click coverage-expansion requests flag a costly gap straight to the data team, with your context attached — turning an honest coverage gap into a prioritized ask instead of a silent miss.' },
+      { kind: 'improvement', text: 'The gap report is the demand side of Regional Coverage (the global supply map): it reuses the same coverage snapshot as its ceiling, so the two always agree, and the demand profile is per-account (deterministic, multi-tenant) — switching orgs shows a different, coherent picture. Billing role is read-only.' },
+    ],
+  },
+  {
     version: 'v4.66', date: 'September 2026', headline: 'Data decay alerts & accuracy benchmarks',
     changes: [
       { kind: 'feature', text: 'Data decay alerts — see which enriched records are about to go stale before they do. A new Data Decay console (and GET /v1/records/decay-score) scores every monitored record for decay risk from its age versus its re-check window, field volatility (employment > email > phone), role mobility, and company events (M&A, layoffs, rapid growth) — returning a probability, a severity, the projected date it crosses the decay line, and the explainable factors behind it. Triage the inbox with snooze/resolve, and re-verify the riskiest first.' },

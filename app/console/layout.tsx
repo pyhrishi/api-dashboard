@@ -78,6 +78,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Compression', href: '/console/compression', icon: <Archive className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Match Rate', href: '/console/coverage', icon: <Target className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Coverage Gaps', href: '/console/coverage-gaps', icon: <Radar className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Match Thresholds', href: '/console/thresholds', icon: <SlidersHorizontal className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Match Audit Trail', href: '/console/match-audit', icon: <ScrollText className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Quality SLA', href: '/console/quality-sla', icon: <Gauge className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
