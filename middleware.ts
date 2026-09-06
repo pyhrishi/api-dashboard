@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { validateApiKey } from './src/lib/gateway/auth';
 import { checkRateLimit } from './src/lib/gateway/rateLimiter';
+import { buildRateLimitHeaders, buildRateLimitedHeaders } from './src/lib/gateway/rateLimitHeaders';
 
 export function middleware(request: NextRequest) {
   // Only apply to API routes
@@ -56,30 +57,25 @@ export function middleware(request: NextRequest) {
           timestamp,
         },
       },
-      { 
+      {
         status: 429,
-        headers: {
-          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-          'X-RateLimit-Reset': rateLimitResult.reset.toString(),
-        }
+        // Standard IETF RateLimit-* + RateLimit-Policy + Retry-After (and legacy X-).
+        headers: buildRateLimitedHeaders(rateLimitResult),
       }
     );
   }
 
-  // 3. Forward request with injected headers
+  // 3. Forward request with injected headers (route handler reads these), and set the
+  //    standard rate-limit headers on the RESPONSE so every /api/v1 success carries them.
+  const rateHeaders = buildRateLimitHeaders(rateLimitResult);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-request-id', requestId);
   requestHeaders.set('x-api-key', authResult.apiKey!);
-  requestHeaders.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
-  requestHeaders.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
-  requestHeaders.set('X-RateLimit-Reset', rateLimitResult.reset.toString());
+  Object.entries(rateHeaders).forEach(([k, v]) => requestHeaders.set(k, v));
 
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  Object.entries(rateHeaders).forEach(([k, v]) => response.headers.set(k, v));
+  return response;
 }
 
 export const config = {

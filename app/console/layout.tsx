@@ -88,6 +88,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Compression', href: '/console/compression', icon: <Archive className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Rate Limits', href: '/console/rate-limits', icon: <Timer className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Rate-Limit Headers', href: '/console/rate-limit-headers', icon: <Gauge className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Match Rate', href: '/console/coverage', icon: <Target className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Coverage Gaps', href: '/console/coverage-gaps', icon: <Radar className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Match Thresholds', href: '/console/thresholds', icon: <SlidersHorizontal className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },

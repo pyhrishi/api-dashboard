@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.83', date: 'September 2026', headline: 'Standard rate-limit headers',
+    changes: [
+      { kind: 'feature', text: 'Standard rate-limit headers — every response now carries the emerging IETF-standard set: RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset (as seconds-until-reset), and RateLimit-Policy, plus Retry-After on a 429. The legacy X-RateLimit-* headers are kept alongside, so existing clients keep working while standard SDKs and off-the-shelf rate-limit middleware pace themselves automatically.' },
+      { kind: 'feature', text: 'A new Rate-Limit Headers console inspects the exact headers on a live call — quota gauge, standard-vs-legacy detection, and the raw header dump — and a one-click burst shows the headers (and Retry-After) on a real 429. One shared source of truth builds the headers the gateway sends and parses the ones the console shows, so the documented contract is the emitted contract.' },
+    ],
+  },
+  {
     version: 'v4.82', date: 'September 2026', headline: 'Token-bucket rate limiting',
     changes: [
       { kind: 'feature', text: 'Rate Limits — a new console that makes the gateway\'s token bucket visible and testable. Every key can burst up to the capacity instantly, then throttles to the steady refill rate; the page explains the model, previews a burst with a deterministic simulator (no requests sent), and can fire a real burst against the gateway to watch the bucket drain to 429s with a Retry-After.' },

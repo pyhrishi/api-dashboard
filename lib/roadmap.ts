@@ -1048,7 +1048,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-075', // Sandbox vs. live routing — sk_test vs sk_live environments, live masking; app-wide
   'F-079', // Strict payload validation — validateRequestParameters (strict unknown-param + typed checks)
   'F-129', // Token-bucket rate limiting — lib/rate-limit.ts SSOT (RATE_LIMIT capacity/refill constants + deterministic simulateBurst client simulator) wired into src/lib/gateway/rateLimiter.ts (real per-key token bucket, burst→throttle) + /console/rate-limits (bucket KPIs, burst simulator preview, REAL live burst against the gateway showing X-RateLimit drain + 429/Retry-After)
-  'F-130', // Standard rate-limit headers — X-RateLimit-Limit / Remaining / Reset on every response (middleware.ts)
+  'F-130', // Standard rate-limit headers — src/lib/gateway/rateLimitHeaders.ts SSOT (IETF RateLimit-Limit/Remaining/Reset delta-seconds + RateLimit-Policy + Retry-After on 429; legacy X- kept) emitted on EVERY response via middleware.ts + a live header inspector at /console/rate-limit-headers
   'F-134', // Graceful 429 with retry-after — 429 RATE_LIMITED with X-RateLimit-Reset
   'F-199', // Trace ID on every request — X-Request-Id set + returned on every request
   'F-303', // Web application firewall — src/lib/gateway/waf.ts (inspectPayload) blocks malicious payloads

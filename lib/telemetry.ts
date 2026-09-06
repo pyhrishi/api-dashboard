@@ -192,7 +192,10 @@ export type TelemetryEventName =
   // rate limiting — token-bucket rate limiting (F-129)
   | 'rate_limits_viewed'
   | 'rate_limit_simulated'
-  | 'rate_limit_burst_tested';
+  | 'rate_limit_burst_tested'
+  // rate limiting — standard rate-limit headers (F-130)
+  | 'rate_limit_headers_viewed'
+  | 'rate_limit_inspected';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
