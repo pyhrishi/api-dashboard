@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.26', date: 'September 2026', headline: 'Multi-region coverage',
+    changes: [
+      { kind: 'feature', text: 'Multi-region coverage — a new Regional Coverage dashboard (/console/regions) shows where the Zinbit dataset is deep and where it is thin: coverage and match rate across North America, EMEA, APAC, and LATAM, broken down by data type (email, direct phone, firmographics, technographics, social) and by top country, with dataset size and median record freshness.' },
+      { kind: 'feature', text: 'A coverage matrix heat-maps every region × data-type cell, a per-region detail view surfaces top countries and honest coverage notes (e.g. “direct dials thin outside Brazil & Mexico in LATAM”), and the numbers are contact-weighted when rolled up globally — so you can answer “do you cover my market?” before you buy.' },
+      { kind: 'improvement', text: 'Coverage is a deterministic, stable snapshot of the dataset (the same region always reports the same figures) and links straight to the Studio to confirm coverage with a live lookup against your own market.' },
+    ],
+  },
+  {
     version: 'v4.25', date: 'September 2026', headline: 'Company news & event feed',
     changes: [
       { kind: 'feature', text: 'Company news & event feed — turn a domain into a chronological feed of the company\'s trigger events: funding rounds, leadership changes, office expansions, product launches, M&A, partnerships, and hiring surges. Each event carries a type, date, headline, summary, source, sentiment, and a 0-100 importance score, so a rep can open a call knowing exactly what just happened. New GET /v1/companies/news endpoint (2 credits), shipped as a Studio preset with an event timeline and type filters.' },

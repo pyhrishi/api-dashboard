@@ -45,6 +45,8 @@ export type TelemetryEventName =
   | 'email_deliverability_checked'
   | 'technographic_detected'
   | 'offices_resolved'
+  | 'region_coverage_viewed'
+  | 'region_selected'
   | 'coverage_viewed'
   | 'coverage_timeframe_changed'
   | 'match_recovery_clicked'
