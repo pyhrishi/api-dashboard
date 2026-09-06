@@ -23,6 +23,7 @@ import { deduplicateRecords } from '@/lib/entity-dedup';
 import { resolveZinbitId } from '@/lib/zinbit-id';
 import { canonicalizeName } from '@/lib/name-canonicalizer';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
+import { getBounce, isSuppressed } from '@/lib/gateway/bounceFeedback';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
 import { checkDomainAuth } from '@/lib/email-domain-auth';
@@ -643,6 +644,23 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         return {
           success: false,
           error: { code: 'INVALID_PARAMETERS', message: 'Provide an email address to verify.' },
+        };
+      }
+      // Bounce feedback loop: a reported hard bounce / complaint suppresses the
+      // address, so deliverability reflects what the customer actually observed.
+      const bounce = getBounce(deliverability.email);
+      if (bounce && isSuppressed(deliverability.email)) {
+        return {
+          success: true,
+          ...deliverability,
+          verdict: 'undeliverable',
+          score: Math.min(deliverability.score, 3),
+          smtp_check: false,
+          suppressed: true,
+          checks: [
+            { key: 'bounce_feedback', label: 'Bounce feedback', status: 'fail', detail: `Reported ${bounce.type === 'complaint' ? 'spam complaint' : `${bounce.type} bounce`} on ${bounce.reported_at}${bounce.count > 1 ? ` (${bounce.count}×)` : ''} — address suppressed.` },
+            ...deliverability.checks,
+          ],
         };
       }
       return { success: true, ...deliverability };

@@ -1443,6 +1443,64 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/billing',
       },
     ],
+  },
+
+  {
+    id: 'bounce-report',
+    name: 'Report a Bounce',
+    description: "Close the deliverability feedback loop: when a send hard-bounces or is marked spam, report it here and the address is suppressed — a subsequent Verify Email Deliverability call returns undeliverable with a 'reported bounce' reason. POST an email and a bounce type (hard / soft / complaint). Free, keyless-billed. Hard bounces and complaints suppress immediately; soft bounces suppress once they repeat.",
+    method: 'POST',
+    path: '/v1/feedback/bounce',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'The address that bounced',
+        example: 'old.contact@acme.com',
+        placeholder: 'user@company.com',
+      },
+      {
+        name: 'type',
+        type: 'string',
+        required: false,
+        description: 'Bounce type: hard, soft, or complaint (default hard)',
+        example: 'hard',
+        placeholder: 'hard',
+        maxLength: 10,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'bounce-to-verify',
+        title: 'Verify the address',
+        description: 'Re-check deliverability — the suppressed address now returns undeliverable.',
+        category: 'sdks',
+        link: '/console/studio?preset=email-verify',
+      },
+    ],
+  },
+
+  {
+    id: 'bounce-stats',
+    name: 'Bounce Feedback Stats',
+    description: 'Read the bounce feedback registry: how many addresses are suppressed, total reports, a breakdown by bounce type (hard / soft / complaint), and the most recent reports. Free, keyless-billed.',
+    method: 'GET',
+    path: '/v1/feedback/bounce',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'bounce-stats-to-report',
+        title: 'Report a bounce',
+        description: 'Feed a hard bounce back to suppress an address.',
+        category: 'sdks',
+        link: '/console/explorer?endpoint=bounce-report',
+      },
+    ],
   }
 ];
 

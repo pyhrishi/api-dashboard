@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.39', date: 'September 2026', headline: 'Bounce feedback loop',
+    changes: [
+      { kind: 'feature', text: 'Bounce feedback loop — close the deliverability loop by feeding your bounces back to Zinbit. POST /v1/feedback/bounce reports an address that hard-bounced or was marked spam, and it\'s suppressed immediately (soft bounces suppress once they repeat) — so a subsequent Verify Email Deliverability call returns undeliverable with a “reported bounce” reason at the top of its checks. What you observe when you send now improves what Zinbit tells you next time.' },
+      { kind: 'feature', text: 'A free GET /v1/feedback/bounce reports the registry — suppressed addresses, total reports, a breakdown by bounce type (hard / soft / complaint), and the most recent reports. Both endpoints are keyless-billed (zero credits).' },
+      { kind: 'improvement', text: 'The loop is real and wired into the live gateway pipeline: a reported bounce genuinely changes the deliverability result for that address on the very next check. Suppression is deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.38', date: 'September 2026', headline: 'Automated re-verification',
     changes: [
       { kind: 'feature', text: 'Automated re-verification — a new Re-verification console (/console/re-verification) keeps enriched data fresh by re-checking high-value fields (email, direct phone, employment) on a rolling, per-field-type schedule. Set the cadence for each field, see which records are past it, and run re-verification — every field that decayed (a bounced mailbox, a disconnected phone, a job change) or changed value surfaces with a plain-English explanation and the new value, so records self-heal instead of quietly going stale.' },

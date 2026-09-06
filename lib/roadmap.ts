@@ -1120,6 +1120,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-038', // Match audit trail — /console/match-audit tamper-evident ledger (lib/match-audit.ts, SHA-256 hash chain) derived from apiLogs + entityMerges
   'F-043', // Source attribution — lib/source-catalog.ts (named-provider catalog) + a withSources post-processor + Studio Sources panel over provenance
   'F-041', // Automated re-verification — /console/re-verification rolling schedule (lib/reverification.ts + store slice) — re-check fields, surface decay
+  'F-045', // Bounce feedback loop — src/lib/gateway/bounceFeedback.ts + POST/GET /v1/feedback/bounce — report a bounce → email-verify suppresses the address
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

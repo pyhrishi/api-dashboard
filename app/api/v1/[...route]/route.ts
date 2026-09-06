@@ -3,6 +3,7 @@ import { resolveEndpoint } from '@/lib/gateway/router';
 import { logRequest } from '@/lib/gateway/logger';
 import { checkCache, setCache, generateCacheKey, checkIdempotency, setIdempotency } from '@/lib/gateway/cache';
 import { checkNegativeCache, recordNegativeMiss, registerNegativeHit, getNegativeCacheStats } from '@/lib/gateway/negativeCache';
+import { getBounceStats, recordBounce, isSuppressed, type BounceType } from '@/lib/gateway/bounceFeedback';
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure } from '@/lib/gateway/circuitBreaker';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
@@ -354,9 +355,44 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     );
   }
 
+  // Bounce feedback loop — report a bounce (POST) or read the registry (GET).
+  // Free meta endpoint; handled before route resolution + billing.
+  if (path === '/v1/feedback/bounce') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getBounceStats(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'POST') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const body = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const email = typeof body.email === 'string' ? body.email : '';
+      const typeRaw = typeof body.type === 'string' ? body.type : 'hard';
+      const type = (['hard', 'soft', 'complaint'].includes(typeRaw) ? typeRaw : 'hard') as BounceType;
+      if (!email) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_PARAMETERS', message: 'Provide an "email" to report a bounce.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      const record = recordBounce(email, type);
+      return NextResponse.json(
+        { success: true, data: { reported: record, suppressed: isSuppressed(email) }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET or POST /v1/feedback/bounce.' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
   // 1. Route resolution
   const endpoint = resolveEndpoint(path);
-  
+
   if (!endpoint || endpoint.method !== request.method) {
     const duration = Date.now() - startTime;
     logRequest(requestId, request.method, path, 404, duration);
