@@ -812,6 +812,36 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'technographic-detect',
+    name: 'Technographic Detection',
+    description: "Detect the software, vendors, and infrastructure a company runs — categorized (cloud, data, security, CRM…), each technology with its detection method (DNS, HTTP header, JS fingerprint, job posting), confidence, and first/last-seen dates. Derives GTM signals (data-warehouse modernization, Salesforce-led motion, observability gaps) and a stack-spend estimate.",
+    method: 'GET',
+    path: '/v1/companies/technographics',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'Company domain to scan for its technology stack',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 100,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'technographic-to-company',
+        title: 'Full company dossier',
+        description: 'Enrich the same domain into firmographics, headcount, and funding.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
+  },
+
+  {
     id: 'email-verify',
     name: 'Verify Email Deliverability',
     description: 'Score any email for inbox reachability before you send. Returns a 0-100 deliverability score and a decisive verdict, decomposed into every check behind it — syntax, MX, SMTP mailbox handshake, catch-all, disposable, role-based, and free-provider — each with its own result and provenance. Catches typos with a did-you-mean suggestion.',

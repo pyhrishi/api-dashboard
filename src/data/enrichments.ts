@@ -60,6 +60,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'email-to-social', endpointId: 'email-to-social', param: 'email', inputKind: 'email', icon: 'Share2', category: 'person', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'priya.nair@zomato.in'], label: 'Social profiles' },
   { id: 'title-normalize', endpointId: 'title-normalize', param: 'title', inputKind: 'title', icon: 'Tags', category: 'person', examples: ['VP, Engineering', 'Sr. SWE II', 'Head of Growth'], label: 'Normalize a title' },
   { id: 'firmographics', endpointId: 'firmographic-append', param: 'domain', inputKind: 'domain', icon: 'BarChart3', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Firmographic append' },
+  { id: 'technographics', endpointId: 'technographic-detect', param: 'domain', inputKind: 'domain', icon: 'Cpu', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Technographic detection' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -176,6 +177,37 @@ export interface DisposableView {
   domain: string;
   tone: ResultTone;
 }
+/** One detected technology, for the category-grouped technographic grid. */
+export interface TechDetectionView {
+  name: string;
+  category: string;
+  vendor: string;
+  method: string;
+  confidence: number;
+  premium: boolean;
+  firstDetected: string;
+  lastDetected: string;
+}
+/** One category rollup of the detected stack. */
+export interface TechCategoryView {
+  category: string;
+  count: number;
+  items: TechDetectionView[];
+}
+/** One derived GTM signal from the stack mix. */
+export interface TechSignalView {
+  label: string;
+  detail: string;
+  tone: ResultTone;
+}
+/** Structured technographic profile — rendered as a category-grouped stack + signals. */
+export interface TechnographicView {
+  total: number;
+  sophistication: number;
+  spendBand: string;
+  categories: TechCategoryView[];
+  signals: TechSignalView[];
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -190,6 +222,8 @@ export interface EnrichmentResult {
   deliverability?: DeliverabilityView;
   /** Structured disposable-detection verdict (F-051) — rendered as a tone-coded panel. */
   disposable?: DisposableView;
+  /** Structured technographic profile (F-006) — rendered as a category-grouped stack. */
+  technographic?: TechnographicView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
   completeness?: CompletenessScore;
   confidence?: number;
@@ -454,6 +488,68 @@ function firmographicToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Technographic detection: a company's categorized tech stack + derived GTM signals. */
+function technographicToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const company = str('company') || str('domain') || 'Company';
+
+  const rawDetections = Array.isArray(d.detections) ? (d.detections as Record<string, unknown>[]) : [];
+  const detections: TechDetectionView[] = rawDetections.map((t) => ({
+    name: typeof t.name === 'string' ? t.name : '',
+    category: typeof t.category === 'string' ? t.category : 'Other',
+    vendor: typeof t.vendor === 'string' ? t.vendor : '',
+    method: typeof t.method === 'string' ? t.method : '',
+    confidence: typeof t.confidence === 'number' ? t.confidence : 0,
+    premium: t.premium === true,
+    firstDetected: typeof t.first_detected === 'string' ? t.first_detected : '',
+    lastDetected: typeof t.last_detected === 'string' ? t.last_detected : '',
+  }));
+
+  const rawCategories = Array.isArray(d.categories) ? (d.categories as Record<string, unknown>[]) : [];
+  const categories: TechCategoryView[] = rawCategories.map((c) => {
+    const category = typeof c.category === 'string' ? c.category : 'Other';
+    return { category, count: typeof c.count === 'number' ? c.count : 0, items: detections.filter((x) => x.category === category) };
+  });
+
+  const signalToneByKind: Record<string, ResultTone> = {
+    modernization: 'teal', adoption: 'info', gtm: 'success', security: 'success', gap: 'warning',
+  };
+  const rawSignals = Array.isArray(d.signals) ? (d.signals as Record<string, unknown>[]) : [];
+  const signals: TechSignalView[] = rawSignals.map((s) => ({
+    label: typeof s.label === 'string' ? s.label : '',
+    detail: typeof s.detail === 'string' ? s.detail : '',
+    tone: signalToneByKind[typeof s.kind === 'string' ? s.kind : ''] ?? 'neutral',
+  }));
+
+  const total = num('total') ?? detections.length;
+  const sophistication = num('sophistication') ?? 0;
+  const spendBand = str('estimated_stack_spend') || '—';
+
+  const fields: EnrichmentField[] = [
+    { label: 'Technologies', value: String(total) },
+    { label: 'Categories', value: String(categories.length) },
+    { label: 'Sophistication', value: `${sophistication}/100` },
+    { label: 'Est. stack spend', value: spendBand },
+    { label: 'Industry', value: str('industry') || '—' },
+    { label: 'GTM signals', value: String(signals.length) },
+  ];
+
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: str('domain') || undefined,
+    avatar: initialsOf(company),
+    badges: [str('industry'), `${total} technologies`].filter(Boolean),
+    fields,
+    technographic: { total, sophistication, spendBand, categories, signals },
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 /** Email deliverability scoring: a 0-100 reachability score + a decomposed signal breakdown. */
 function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -671,6 +767,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.canonical_title === 'string' && typeof data.seniority === 'string') return titleToResult(data);
   // Firmographic append: naics_code + sic_code mark the shape.
   if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);
+  // Technographic detection: a `detections` array + numeric `sophistication` mark the shape.
+  if (Array.isArray(data.detections) && typeof data.sophistication === 'number') return technographicToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.

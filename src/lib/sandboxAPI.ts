@@ -13,6 +13,7 @@ import { verifyPhoneForEmail } from '@/lib/phone-verifier';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
+import { detectTechnographics } from '@/lib/technographic-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -503,6 +504,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...firmo };
+    }
+
+    case 'technographic-detect': {
+      // Deterministic technographic detection (single source of truth).
+      const techno = detectTechnographics(String(parameters.domain || ''));
+      if (!techno) {
+        return {
+          success: false,
+          error: { code: 'INVALID_DOMAIN', message: 'No technology stack could be detected. Provide a valid corporate domain (personal mailbox domains have no corporate stack).' },
+        };
+      }
+      return { success: true, ...techno };
     }
 
     case 'email-verify': {

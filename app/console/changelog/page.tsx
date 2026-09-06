@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.22', date: 'September 2026', headline: 'Technographic detection',
+    changes: [
+      { kind: 'feature', text: 'Technographic detection — GET /v1/companies/technographics turns a domain into its technology stack, categorized (cloud & infrastructure, data & analytics, monitoring & security, CRM, payments, martech…). Every technology carries the method it was detected by (DNS record, HTTP header, JS fingerprint, job posting), a confidence, a vendor, and first/last-seen dates.' },
+      { kind: 'feature', text: 'Beyond the raw stack, it derives buying & intent signals from the mix — “cloud data warehouse in production”, “Salesforce-led revenue motion”, “no observability detected (greenfield)” — plus a 0–100 stack-sophistication score and an estimated annual stack spend, so GTM teams get talking points, not just a tool list.' },
+      { kind: 'improvement', text: 'Available as a one-input preset in the Enrichment Studio with a category-grouped stack view and a signals panel. Deterministic and coherent — it enriches the company dossier’s own tech stack rather than inventing a divergent one.' },
+    ],
+  },
+  {
     version: 'v4.21', date: 'September 2026', headline: 'Health & status endpoint',
     changes: [
       { kind: 'feature', text: 'Health & status endpoint — a public, keyless GET /api/health now reports platform health programmatically: per-component status (API Gateway, Identity Engine, Company Graph, Billing, Webhook Dispatcher, Console), latency, a 60-day uptime history, an overall status, and a degraded flag — returning 200 when healthy and 503 when down, so any uptime monitor can consume it directly.' },

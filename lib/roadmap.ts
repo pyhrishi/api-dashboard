@@ -1103,6 +1103,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-432', // Toast & notification system — components/Toast.tsx
   'F-060', // Async job endpoints — POST/GET/cancel /v1/jobs (src/lib/gateway/asyncJobs.ts) + /console/async-jobs
   'F-073', // Health & status endpoint — public GET /api/health (lib/health.ts SSOT) + data-driven /status page
+  'F-006', // Technographic detection — GET /v1/companies/technographics (lib/technographic-resolver.ts) + Studio panel
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

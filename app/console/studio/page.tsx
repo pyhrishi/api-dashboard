@@ -7,12 +7,14 @@ import {
   Sparkles, Search, ArrowRight, Copy, Check, Lock, ShieldCheck, Clock, Trash2, RefreshCw,
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
+  Cpu, Server, Database, Gauge, Lightbulb, Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
+  type TechnographicView, type ResultTone,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
@@ -21,7 +23,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -115,6 +117,9 @@ function StudioInner() {
         track('enrichment_run', { preset: p.id, endpoint: p.endpointId, confidence: vm.confidence ?? null, environment, durationMs });
         if (vm.deliverability) {
           track('email_deliverability_checked', { verdict: vm.deliverability.verdict, score: vm.deliverability.score, environment });
+        }
+        if (vm.technographic) {
+          track('technographic_detected', { technologies: vm.technographic.total, categories: vm.technographic.categories.length, signals: vm.technographic.signals.length, sophistication: vm.technographic.sophistication, environment });
         }
         if (!isFirstCallMade) markFirstCallMade({ endpoint: p.endpointId, method: p.endpoint.method, statusCode: res.status, responseTime: durationMs, response: body });
       } else if (res.status === 402) {
@@ -506,6 +511,94 @@ function DisposablePanel({ d }: { d: DisposableView }) {
   );
 }
 
+const TECH_CATEGORY_ICON: Record<string, React.ElementType> = {
+  'Cloud & Infrastructure': Server,
+  'Languages & Frameworks': Code2,
+  'Data & Analytics': Database,
+  'Monitoring & Security': ShieldCheck,
+  'Payments & Commerce': Wallet,
+  'Marketing & CDP': Sparkles,
+  'CRM & Sales': Users,
+  'Vertical Software': Layers,
+};
+const SIGNAL_TONE: Record<ResultTone, { text: string; dot: string }> = {
+  success: { text: 'text-semantic-success', dot: 'bg-semantic-success' },
+  warning: { text: 'text-semantic-warning', dot: 'bg-semantic-warning' },
+  error: { text: 'text-semantic-error', dot: 'bg-semantic-error' },
+  teal: { text: 'text-teal', dot: 'bg-teal' },
+  info: { text: 'text-teal', dot: 'bg-teal' },
+  neutral: { text: 'text-fg-muted', dot: 'bg-fg-muted' },
+};
+
+function TechnographicPanel({ t }: { t: TechnographicView }) {
+  return (
+    <div className="mt-5 space-y-4">
+      {/* Sophistication + spend */}
+      <div className="rounded-xl border border-border bg-surface-2 p-4">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle flex items-center gap-1.5"><Gauge className="w-3.5 h-3.5" /> Stack sophistication</span>
+          <span className="text-xs font-mono tabular-nums font-bold text-fg flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5 text-fg-subtle" /> {t.spendBand}</span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <span className="h-2 flex-1 rounded-full bg-glass overflow-hidden">
+            <motion.span initial={{ width: 0 }} animate={{ width: `${t.sophistication}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} className="block h-full rounded-full bg-gradient-to-r from-teal/60 to-teal" />
+          </span>
+          <span className="text-xs font-mono tabular-nums font-bold text-teal shrink-0">{t.sophistication}/100</span>
+        </div>
+      </div>
+
+      {/* Category-grouped stack */}
+      <div className="space-y-3">
+        {t.categories.map((cat) => {
+          const Icon = TECH_CATEGORY_ICON[cat.category] ?? Cpu;
+          return (
+            <div key={cat.category} className="rounded-xl border border-border bg-surface-2 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-7 h-7 rounded-lg bg-glass border border-border-subtle flex items-center justify-center text-teal shrink-0"><Icon className="w-4 h-4" /></span>
+                <span className="text-sm font-bold text-fg">{cat.category}</span>
+                <span className="text-[11px] font-semibold text-fg-subtle tabular-nums">{cat.count}</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {cat.items.map((tech) => (
+                  <span
+                    key={tech.name}
+                    title={`${tech.vendor} · detected via ${tech.method} · ${Math.round(tech.confidence * 100)}% confidence · first seen ${tech.firstDetected}`}
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-md border ${tech.premium ? 'bg-teal/10 text-teal border-teal/30' : 'bg-glass text-fg-muted border-border-subtle'}`}
+                  >
+                    {tech.premium && <Sparkles className="w-3 h-3 shrink-0" aria-label="Premium platform" />}
+                    {tech.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Derived GTM signals */}
+      {t.signals.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface-2 p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3 flex items-center gap-1.5"><Lightbulb className="w-3.5 h-3.5" /> Buying &amp; intent signals</div>
+          <div className="space-y-3">
+            {t.signals.map((s) => {
+              const tone = SIGNAL_TONE[s.tone] ?? SIGNAL_TONE.neutral;
+              return (
+                <div key={s.label} className="flex items-start gap-2.5">
+                  <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${tone.dot}`} aria-hidden />
+                  <div className="min-w-0">
+                    <div className={`text-sm font-bold ${tone.text}`}>{s.label}</div>
+                    <p className="text-[12px] text-fg-muted leading-snug mt-0.5">{s.detail}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -574,6 +667,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.disposable && (
           <DisposablePanel d={result.disposable} />
+        )}
+
+        {result.technographic && (
+          <TechnographicPanel t={result.technographic} />
         )}
 
         {result.chips && result.chips.items.length > 0 && (
