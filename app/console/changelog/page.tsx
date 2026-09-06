@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.35', date: 'September 2026', headline: 'Negative-match caching',
+    changes: [
+      { kind: 'feature', text: 'Negative-match caching — the gateway now remembers coverage misses (a lookup that resolved to no match) and serves an identical repeat from cache at zero credits. The positive edge cache speeds up repeat hits, but billing runs before it, so a repeated miss used to cost a credit every time; negative-match caching consults a short-TTL miss cache before billing, so re-querying an identifier you already know isn\'t in the dataset is free. Responses carry an X-Negative-Cache header (HIT / STORE / MISS) and a cached hit reports X-Credits-Cost: 0.' },
+      { kind: 'improvement', text: 'A new free GET /v1/cache/negative endpoint reports how much the cache has saved — active cached negatives, hits served, total credits saved, hit rate, and the top entries. Misses expire after a short TTL, so a lookup that starts resolving as the dataset grows is never blocked by a stale negative. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.34', date: 'September 2026', headline: 'Match threshold tuning',
     changes: [
       { kind: 'feature', text: 'Match threshold tuning — a new Match Thresholds console (/console/thresholds) lets teams set the confidence floor for each matching use case (contact matching, company de-dup, lead routing). Drag one slider and watch a labeled sample of record pairs split into accepted and rejected in real time, with live precision, recall, and F1 — plus a suggested F1-maximizing floor and a per-pair breakdown showing exactly which decisions the floor gets right or wrong. Floors persist per use case and are RBAC-gated (billing role is read-only).' },

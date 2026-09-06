@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { resolveEndpoint } from '@/lib/gateway/router';
 import { logRequest } from '@/lib/gateway/logger';
 import { checkCache, setCache, generateCacheKey, checkIdempotency, setIdempotency } from '@/lib/gateway/cache';
+import { checkNegativeCache, recordNegativeMiss, registerNegativeHit, getNegativeCacheStats } from '@/lib/gateway/negativeCache';
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure } from '@/lib/gateway/circuitBreaker';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
@@ -343,6 +344,16 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
   }
 
+  // Negative-cache stats — a free meta endpoint reporting credits saved by
+  // remembering misses. Handled before route resolution + billing.
+  if (path === '/v1/cache/negative' && request.method === 'GET') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    return NextResponse.json(
+      { success: true, data: getNegativeCacheStats(), metadata: { requestId, timestamp: Date.now() } },
+      { status: 200, headers: responseHeaders },
+    );
+  }
+
   // 1. Route resolution
   const endpoint = resolveEndpoint(path);
   
@@ -502,12 +513,28 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
   }
 
+  // Negative-match cache: a repeat of a known-miss GET is served free, BEFORE
+  // billing — so repeat unresolved lookups don't cost credits.
+  if (!result && request.method === 'GET' && !simulateStatus && !isIdempotentReplay && endpoint) {
+    const negKey = generateCacheKey(path, parameters);
+    const neg = checkNegativeCache(negKey);
+    if (neg.hit) {
+      const wouldCharge = calculateVolumeDiscount(apiKey, endpoint.creditCost || 1).cost;
+      registerNegativeHit(negKey, wouldCharge);
+      result = { status: neg.status ?? 200, data: neg.payload, duration: 3, timestamp: Date.now() } as APIResponse;
+      responseHeaders['X-Negative-Cache'] = 'HIT';
+      responseHeaders['X-Credits-Cost'] = '0';
+      const bal = (keyRecord as { creditBalance?: number } | null)?.creditBalance;
+      if (typeof bal === 'number') responseHeaders['X-Credits-Remaining'] = String(bal);
+    }
+  }
+
   let appliedCreditCost = 0;
   let remainingCredits = 0;
   let appliedDiscount = 0;
 
   // 4. Metered Billing Engine
-  if (!isIdempotentReplay && endpoint) {
+  if (!result && !isIdempotentReplay && endpoint) {
     let baseCreditCost = endpoint.creditCost || 1;
     // Scale batch requests
     if (endpoint.id === 'batch-company-enrich' && Array.isArray(parameters.domains)) {
@@ -646,11 +673,23 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
           setIdempotency(apiKey, idempotencyKey, result.data);
         }
       }
+
+      // Record a genuine coverage miss so the identical repeat GET is free.
+      if (!isAPIError(result) && !simulateStatus && request.method === 'GET') {
+        const payloadData = result.data as { success?: boolean } | null;
+        if (payloadData && payloadData.success === false) {
+          recordNegativeMiss(cacheKey, result.data, result.status);
+          if (!responseHeaders['X-Negative-Cache']) responseHeaders['X-Negative-Cache'] = 'STORE';
+        }
+      }
     }
   }
 
   // Inject Cache & Idempotency Headers
   responseHeaders['X-Cache'] = cacheHeader;
+  if (request.method === 'GET' && !responseHeaders['X-Negative-Cache']) {
+    responseHeaders['X-Negative-Cache'] = 'MISS';
+  }
   responseHeaders['X-Trace-Id'] = traceId;
   if (isIdempotentReplay) {
     responseHeaders['X-Idempotency-Replayed'] = 'true';

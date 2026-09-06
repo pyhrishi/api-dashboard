@@ -1423,6 +1423,26 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'negative-cache-stats',
+    name: 'Negative-Cache Stats',
+    description: "Report how much spend negative-match caching has saved. The gateway remembers coverage misses (lookups that resolved to no match) for a short TTL and serves an identical repeat from cache at zero credits — this free, keyless-billed endpoint returns active cached negatives, cache hits served, total credits saved, hit rate, and the top entries.",
+    method: 'GET',
+    path: '/v1/cache/negative',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'negative-cache-to-billing',
+        title: 'See credits saved in Billing',
+        description: 'Negative-cache hits never touch your credit balance.',
+        category: 'sdks',
+        link: '/console/billing',
+      },
+    ],
   }
 ];
 

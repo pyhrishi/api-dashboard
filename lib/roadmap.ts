@@ -1116,6 +1116,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-030', // Name canonicalization — GET /v1/names/canonicalize (lib/name-canonicalizer.ts SSOT, also powering F-024) + Studio panel
   'F-033', // Merge & unmerge controls — /console/identity merge center (lib/merge-seed.ts + store slice) — confirm/split entity resolution, audited & reversible
   'F-034', // Match threshold tuning — /console/thresholds (lib/threshold-tuning.ts, live precision/recall over the fuzzy engine) + persisted per-use-case floors
+  'F-036', // Negative-match caching — src/lib/gateway/negativeCache.ts wired into the live pipeline (serve repeat misses free) + GET /v1/cache/negative stats
 ]);
 
 export function isFeatureBuilt(id: string): boolean {
