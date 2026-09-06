@@ -20,6 +20,7 @@ import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { deduplicateRecords } from '@/lib/entity-dedup';
+import { resolveZinbitId } from '@/lib/zinbit-id';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -606,6 +607,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...dedup };
+    }
+
+    case 'identity-zid': {
+      // Persistent Zinbit ID resolution (single source of truth).
+      const zid = resolveZinbitId(String(parameters.query || ''));
+      if (!zid) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a corporate email or a company domain to resolve a Zinbit ID.' },
+        };
+      }
+      return { success: true, ...zid };
     }
 
     case 'email-verify': {

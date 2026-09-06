@@ -1363,6 +1363,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=fuzzy',
       },
     ],
+  },
+
+  {
+    id: 'identity-zid',
+    name: 'Persistent Zinbit ID',
+    description: "Resolve any identifier (a corporate email or a company domain) to its persistent Zinbit ID — a stable canonical entity ID (zid_p_… for people, zid_c_… for companies) that is the same no matter which identifier you look the entity up by, and that survives an email change. Returns the ID, the entity type, the aliases that all unify to it, and when it was first seen. Key your records on it to join and dedupe across sources.",
+    method: 'GET',
+    path: '/v1/identity/zid',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'query',
+        type: 'string',
+        required: true,
+        description: 'A corporate email (→ person) or a company domain (→ company)',
+        example: 'jane.doe@acme.com',
+        placeholder: 'email or company domain',
+        maxLength: 160,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'zid-to-person',
+        title: 'Enrich the entity',
+        description: 'Take the same identifier into a full person or company profile.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

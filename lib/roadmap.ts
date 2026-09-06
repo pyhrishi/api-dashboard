@@ -1112,6 +1112,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-021', // Hashed-email (SHA-256) lookups — GET /v1/identity/hashed (lib/hashed-email-resolver.ts, lib/sha256.ts) + Studio hash-on-send preset
   'F-024', // Probabilistic fuzzy matching — GET /v1/match/fuzzy (lib/fuzzy-matcher.ts, Jaro-Winkler) + Studio candidate panel
   'F-026', // Entity de-duplication — GET /v1/records/dedupe (lib/entity-dedup.ts, reuses jaroWinkler) + Studio golden-records panel
+  'F-028', // Persistent Zinbit ID — GET /v1/identity/zid (lib/zinbit-id.ts, frozen normalization) + zid on every person/company result
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

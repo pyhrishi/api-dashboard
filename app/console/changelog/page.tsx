@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.31', date: 'September 2026', headline: 'Persistent Zinbit ID',
+    changes: [
+      { kind: 'feature', text: 'Persistent Zinbit ID — every resolved entity now has a stable canonical ID (zid_p_… for people, zid_c_… for companies) that is the same no matter which identifier you look them up by and that survives an email change, because it is derived from who the entity is — a frozen normalization of name @ company domain — not from the query. New GET /v1/identity/zid resolves any email or domain to its Zinbit ID, entity type, first-seen date, and the aliases (email, LinkedIn, hashed email, phone) that all unify to it. Key your records on it to join and dedupe across sources.' },
+      { kind: 'improvement', text: 'The Zinbit ID now appears on every person and company enrichment result, so the same stable ID is visible everywhere you resolve an entity. The hashed-email alias is generated with the same SHA-256 used by Hashed-email lookups, so a Zinbit ID and a hashed-email lookup agree on the same person. Deterministic and frozen — an ID never changes once assigned.' },
+    ],
+  },
+  {
     version: 'v4.30', date: 'September 2026', headline: 'Entity de-duplication',
     changes: [
       { kind: 'feature', text: 'Entity de-duplication — collapse a messy list of records into golden records. New GET /v1/records/dedupe takes a ";"-separated list of "Name, Company" rows (typos, nicknames, and company-vs-domain variants welcome) and clusters near-duplicates into one golden record each — returning the merged members, every member\'s similarity to the golden, and a per-cluster merge confidence, plus a dedup summary (input, golden, duplicates, rate). Dedupe an import before you enrich, so you pay once per real entity.' },

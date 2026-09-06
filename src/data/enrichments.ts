@@ -11,6 +11,7 @@ import { getEndpointById, type Endpoint } from '@/data/endpoints';
 import type { ResolvedPerson } from '@/lib/person-resolver';
 import type { EnrichedCompany } from '@/lib/company-resolver';
 import { scoreCompleteness, type CompletenessScore } from '@/lib/completeness-scorer';
+import { zidForPerson, zidForCompany } from '@/lib/zinbit-id';
 
 export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
 export type EnrichmentCategory = 'person' | 'company' | 'identity';
@@ -71,6 +72,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'hashed-email', endpointId: 'hashed-email', param: 'email_sha256', inputKind: 'email', icon: 'Hash', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'sarah.chen@notion.so'], label: 'Hashed-email lookup', transform: 'sha256' },
   { id: 'fuzzy', endpointId: 'fuzzy-match', param: 'query', inputKind: 'auto', icon: 'GitCompareArrows', category: 'identity', examples: ['Jhon Smith, Stipe', 'Bob Johnson, Datadog', 'Micheal Chen, notion'], label: 'Fuzzy match' },
   { id: 'dedupe', endpointId: 'records-dedupe', param: 'records', inputKind: 'auto', icon: 'Layers', category: 'identity', examples: ['John Smith, Stripe; Jhon Smith, Stipe; Jane Doe, Acme', 'Bob Johnson, Datadog; Robert Johnson, datadoghq.com; Bob Johnson, Datadog Inc'], label: 'De-duplicate records' },
+  { id: 'zid', endpointId: 'identity-zid', param: 'query', inputKind: 'auto', icon: 'Fingerprint', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'stripe.com'], label: 'Persistent Zinbit ID' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -369,6 +371,7 @@ function personToResult(p: ResolvedPerson): EnrichmentResult {
       { label: 'Phone', value: p.phone, verified: p.phone_verified, masked: true, mono: true },
       { label: 'Company', value: `${p.company} · ${p.company_domain}` },
       { label: 'Location', value: `${p.location} · ${p.timezone}` },
+      { label: 'Zinbit ID', value: zidForPerson(p), mono: true },
     ],
     confidence: p.confidence, provenance: p.provenance, lastVerified: p.last_verified,
     links: [{ label: 'LinkedIn', href: p.linkedin_url }, ...(p.github_url ? [{ label: 'GitHub', href: p.github_url }] : []), ...(p.twitter_url ? [{ label: 'X', href: p.twitter_url }] : [])],
@@ -406,11 +409,45 @@ function companyToResult(c: EnrichedCompany): EnrichmentResult {
       { label: 'Headquarters', value: `${c.hq_city}, ${c.hq_country}` },
       { label: 'Industry', value: `${c.industry} · ${c.sub_industry}` },
       { label: 'Funding', value: `${c.funding_stage}${c.total_raised_usd ? ` · ${money(c.total_raised_usd)} raised` : ''}` },
+      { label: 'Zinbit ID', value: zidForCompany(c), mono: true },
     ],
     chips: { label: 'Tech stack', items: c.tech_stack },
     confidence: c.confidence, provenance: c.provenance, lastVerified: c.last_verified,
     links: [{ label: 'LinkedIn', href: c.linkedin_url }, ...(c.twitter_url ? [{ label: 'X', href: c.twitter_url }] : [])],
     raw: c,
+  };
+}
+
+/** Persistent Zinbit ID (F-028): the stable canonical entity ID + its unifying aliases. */
+function zidToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const zid = str('zinbit_id');
+  const type = str('entity_type') === 'company' ? 'company' : 'person';
+  const canonical = str('canonical') || zid || 'Entity';
+
+  const rawAliases = Array.isArray(d.aliases) ? (d.aliases as Record<string, unknown>[]) : [];
+  const aliases = rawAliases
+    .map((a) => ({ type: typeof a.type === 'string' ? a.type : '', value: typeof a.value === 'string' ? a.value : '' }))
+    .filter((a) => a.value);
+
+  const fields: EnrichmentField[] = [
+    { label: 'Zinbit ID', value: zid || '—', mono: true, verified: true },
+    { label: 'Entity type', value: type },
+    { label: 'Derived from', value: str('derived_from') || '—' },
+    { label: 'First seen', value: str('first_seen') || '—' },
+  ];
+
+  return {
+    kind: type === 'company' ? 'company' : 'person',
+    title: canonical,
+    subtitle: str('display') || `Persistent ID · ${type}`,
+    avatar: initialsOf(canonical),
+    badges: [type, 'Persistent ID'],
+    fields,
+    chips: aliases.length ? { label: `Unifies ${aliases.length} identifier${aliases.length === 1 ? '' : 's'}`, items: aliases.map((a) => `${a.type}: ${a.value}`) } : undefined,
+    confidence: num('confidence'),
+    raw: d,
   };
 }
 
@@ -1166,6 +1203,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.candidates) && typeof data.verdict === 'string' && isRecord(data.interpreted)) return fuzzyToResult(data);
   // Entity de-duplication: a `clusters` array + numeric `dedup_rate` mark the shape.
   if (Array.isArray(data.clusters) && typeof data.dedup_rate === 'number') return dedupToResult(data);
+  // Persistent Zinbit ID: a `zinbit_id` string + an `aliases` array mark the shape.
+  if (typeof data.zinbit_id === 'string' && Array.isArray(data.aliases)) return zidToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.
