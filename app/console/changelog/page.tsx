@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.17', date: 'September 2026', headline: 'Completeness scoring',
+    changes: [
+      { kind: 'feature', text: 'Completeness scoring — every resolved record now shows a "record completeness" meter: what share of the record\'s expected attributes actually came back with a real value versus a blank. The Studio result card displays a 0-100 score, a complete / partial / sparse tier, and names exactly which fields are missing (e.g. "Missing: Phone, Location"), so you know how much of the record you got before you act on it. Applies to every field-bearing lookup — person, company, and identity records.' },
+      { kind: 'improvement', text: 'Completeness is deterministic and computed from the resolved record itself — placeholders like "—" and "N/A" count as empty, so the score reflects real coverage of the record, not just whether the lookup succeeded.' },
+    ],
+  },
+  {
     version: 'v4.16', date: 'September 2026', headline: 'Match-rate transparency',
     changes: [
       { kind: 'feature', text: 'Match-rate transparency — a new Match Rate dashboard answers the question every enrichment buyer asks: what is your real match rate? It reads your own request history and shows an honest match rate (matched ÷ matched-plus-missed), broken down by endpoint and by identifier type (email, domain, phone, LinkedIn, IP, CIN), plus a miss-reason breakdown and a recent-lookups list explaining why each request matched or missed. Find it at Match Rate in the console nav.' },

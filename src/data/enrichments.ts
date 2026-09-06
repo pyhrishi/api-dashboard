@@ -10,6 +10,7 @@
 import { getEndpointById, type Endpoint } from '@/data/endpoints';
 import type { ResolvedPerson } from '@/lib/person-resolver';
 import type { EnrichedCompany } from '@/lib/company-resolver';
+import { scoreCompleteness, type CompletenessScore } from '@/lib/completeness-scorer';
 
 export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
 export type EnrichmentCategory = 'person' | 'company' | 'identity';
@@ -176,6 +177,8 @@ export interface EnrichmentResult {
   social?: { profiles: SocialProfileView[] };
   /** Structured email-deliverability breakdown — rendered as a scored panel when present. */
   deliverability?: DeliverabilityView;
+  /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
+  completeness?: CompletenessScore;
   confidence?: number;
   provenance?: EnrichmentProvenance[];
   lastVerified?: string;
@@ -599,10 +602,16 @@ function withFieldFreshness(vm: EnrichmentResult): EnrichmentResult {
   };
 }
 
-/** Normalize any endpoint response into one view-model, then stamp per-field freshness. */
+/** Rate how filled-out a field-bearing record is (F-048). Structured-only results score null. */
+function withCompleteness(vm: EnrichmentResult): EnrichmentResult {
+  const completeness = scoreCompleteness(vm.fields);
+  return completeness ? { ...vm, completeness } : vm;
+}
+
+/** Normalize any endpoint response into one view-model, then stamp per-field freshness + completeness. */
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   const vm = buildEnrichmentResult(data);
-  return vm ? withFieldFreshness(vm) : null;
+  return vm ? withCompleteness(withFieldFreshness(vm)) : null;
 }
 
 function buildEnrichmentResult(data: unknown): EnrichmentResult | null {

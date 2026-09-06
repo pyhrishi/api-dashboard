@@ -44,6 +44,22 @@ describe('enrichment registry', () => {
     expect(vm.provenance?.length).toBeGreaterThan(0);
   });
 
+  it('attaches a completeness score to field-bearing records (F-048)', () => {
+    const person = resolvePersonFromEmail('jane.doe@acme.com');
+    const vm = toEnrichmentResult({ person })!;
+    expect(vm.completeness).toBeDefined();
+    expect(vm.completeness!.total).toBe(vm.fields.length);
+    expect(vm.completeness!.score).toBeGreaterThanOrEqual(0);
+    expect(vm.completeness!.score).toBeLessThanOrEqual(100);
+    expect(['complete', 'partial', 'sparse']).toContain(vm.completeness!.tier);
+  });
+
+  it('omits completeness on structured-only results (social has no flat fields)', () => {
+    const social = discoverSocialProfiles('jane.doe@acme.com')!;
+    const vm = toEnrichmentResult({ ...social })!;
+    expect(vm.completeness).toBeUndefined();
+  });
+
   it('normalizes a company response to a rich view-model with chips', () => {
     const company = resolveCompanyFromDomain('stripe.com');
     const vm = toEnrichmentResult({ company })!;

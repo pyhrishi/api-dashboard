@@ -14,6 +14,7 @@ import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness,
 } from '@/data/enrichments';
+import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { track } from '@/lib/telemetry';
 import RoleGuard from '@/components/RoleGuard';
@@ -435,6 +436,38 @@ function DeliverabilityPanel({ d }: { d: DeliverabilityView }) {
   );
 }
 
+const COMPLETENESS_STYLE: Record<CompletenessScore['tier'], { bar: string; text: string; label: string }> = {
+  complete: { bar: 'bg-semantic-success', text: 'text-semantic-success', label: 'Complete record' },
+  partial: { bar: 'bg-semantic-warning', text: 'text-semantic-warning', label: 'Partial record' },
+  sparse: { bar: 'bg-semantic-error', text: 'text-semantic-error', label: 'Sparse record' },
+};
+
+function CompletenessMeter({ c }: { c: CompletenessScore }) {
+  const style = COMPLETENESS_STYLE[c.tier];
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-surface-2 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Record completeness</span>
+          <span className={`text-[11px] font-bold ${style.text}`}>{style.label}</span>
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-lg font-black text-fg tabular-nums">{c.score}%</span>
+          <span className="text-[11px] font-mono text-fg-subtle">{c.populated}/{c.total} fields</span>
+        </div>
+      </div>
+      <div className="h-2 rounded-full bg-glass mt-2.5 overflow-hidden">
+        <motion.div initial={{ width: 0 }} animate={{ width: `${c.score}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} className={`h-full rounded-full ${style.bar}`} />
+      </div>
+      {c.missing.length > 0 && (
+        <p className="text-[11px] text-fg-muted mt-2">
+          Missing: <span className="font-semibold text-fg">{c.missing.join(', ')}</span>. Try another identifier to fill the gaps.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -487,6 +520,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
               </motion.div>
             ))}
           </div>
+        )}
+
+        {result.completeness && (
+          <CompletenessMeter c={result.completeness} />
         )}
 
         {result.social && result.social.profiles.length > 0 && (
