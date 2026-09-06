@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces, Merge, Navigation, Download, Cable, FlaskConical, KeyRound, Fingerprint, LineChart } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces, Merge, Navigation, Download, Cable, FlaskConical, KeyRound, Fingerprint, LineChart, Siren } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -64,6 +64,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Key Scopes', href: '/console/scopes', icon: <KeyRound className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Key Pairs', href: '/console/key-pairs', icon: <Fingerprint className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Key Usage', href: '/console/key-usage', icon: <LineChart className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Kill Switch', href: '/console/kill-switch', icon: <Siren className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Endpoint Explorer', href: '/console/explorer', icon: <Compass className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'GraphQL', href: '/console/graphql', icon: <Braces className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'gRPC Channel', href: '/console/grpc', icon: <Cable className="w-5 h-5" />, roles: ['admin', 'developer'] },

@@ -16,6 +16,7 @@ import { execute } from '@/lib/graphql/executor';
 import { buildSDL } from '@/lib/graphql/schema';
 import { deductCredits } from '@/lib/gateway/billing';
 import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
+import { isKeyBlocked, getBlock } from '@/lib/gateway/keyBlock';
 
 function requestId(): string {
   return `gql_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -44,6 +45,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { data: null, errors: [{ message: 'Unauthorized. Provide a Zinbit key (sk_test_* or sk_live_*) as a Bearer token.' }], extensions: { code: 'UNAUTHORIZED', requestId: rid } },
       { status: 401, headers: { 'X-Request-Id': rid } },
+    );
+  }
+
+  // Compromised-key kill switch (F-119) — a revoked key is dead on GraphQL too.
+  if (isKeyBlocked(apiKey)) {
+    const block = getBlock(apiKey);
+    return NextResponse.json(
+      { data: null, errors: [{ message: `This API key has been revoked${block ? ` (${block.reason})` : ''} and can no longer be used.` }], extensions: { code: 'KEY_REVOKED', reason: block?.reason ?? 'compromised', requestId: rid } },
+      { status: 401, headers: { 'X-Request-Id': rid, 'X-Key-Revoked': block?.reason ?? 'compromised' } },
     );
   }
 

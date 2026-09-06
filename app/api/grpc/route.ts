@@ -20,6 +20,7 @@ import { renderProto, GRPC_SERVICE, METHODS } from '@/lib/grpc/schema';
 import { invoke, invokeBatch, benchmark } from '@/lib/grpc/transcoder';
 import { deductCredits } from '@/lib/gateway/billing';
 import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
+import { isKeyBlocked, getBlock } from '@/lib/gateway/keyBlock';
 
 function rid(): string {
   return `grpc_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -44,6 +45,11 @@ export async function POST(request: NextRequest) {
   const apiKey = apiKeyFrom(request);
   if (!apiKey.startsWith('sk_test_') && !apiKey.startsWith('sk_live_')) {
     return NextResponse.json({ error: { code: 'UNAUTHENTICATED', message: 'Provide a Zinbit key (sk_test_* or sk_live_*) as a Bearer token.' }, requestId: id }, { status: 401, headers: H });
+  }
+  // Compromised-key kill switch (F-119) — a revoked key is dead on the gRPC channel too.
+  if (isKeyBlocked(apiKey)) {
+    const block = getBlock(apiKey);
+    return NextResponse.json({ error: { code: 'KEY_REVOKED', message: `This API key has been revoked${block ? ` (${block.reason})` : ''}.`, reason: block?.reason ?? 'compromised' }, requestId: id }, { status: 401, headers: { ...H, 'X-Key-Revoked': block?.reason ?? 'compromised' } });
   }
 
   let body: { service?: unknown; method?: unknown; message?: unknown; messages?: unknown; benchmark?: unknown };

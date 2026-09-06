@@ -32,6 +32,23 @@ async function syncKeyScopes(key: string, scopes: string[], revoke = false): Pro
   }
 }
 
+/**
+ * Sync a key kill/restore to the gateway kill switch (F-119) so a revoked or leaked
+ * key is actually blocked everywhere (401 KEY_REVOKED), not just marked in the UI.
+ * Fire-and-forget; auth with any active key so a compromised key can't unblock itself.
+ */
+async function syncKeyBlock(activeKey: string, targetKey: string, reason: string, restore = false): Promise<void> {
+  try {
+    await fetch('/api/v1/keys/revoke', {
+      method: restore ? 'DELETE' : 'POST',
+      headers: { Authorization: authHeaderValue(activeKey), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: targetKey, reason }),
+    });
+  } catch {
+    // Best-effort; the console state remains the source of truth.
+  }
+}
+
 function KeyCountdown({ expiresAt }: { expiresAt: string }) {
   const [timeLeft, setTimeLeft] = useState('');
 
@@ -244,6 +261,7 @@ export default function ApiKeysPage() {
     setRevokingId(revokeConfirmId);
     await new Promise(r => setTimeout(r, 600));
     revokeKey(revokeConfirmId);
+    if (key) void syncKeyBlock(key.key, key.key, 'manual'); // kill it at the gateway (everywhere)
     setRevokingId(null);
     setRevokeConfirmId(null);
     setRevokeInput('');
@@ -460,8 +478,8 @@ export default function ApiKeysPage() {
                             {!['revoked', 'compromised', 'expired'].includes(k.status || 'active') && (
                               <>
                                 <RoleGuard allowedRoles={['admin']}>
-                                  <button 
-                                    onClick={() => simulateKeyLeak(k.id)}
+                                  <button
+                                    onClick={() => { simulateKeyLeak(k.id); void syncKeyBlock(k.key, k.key, 'leaked'); }}
                                     className="text-fg-muted hover:text-semantic-error p-2 hover:bg-semantic-error/10 rounded-lg transition-all text-xs font-bold flex items-center gap-1.5"
                                     title="Simulate Key Leak"
                                   >

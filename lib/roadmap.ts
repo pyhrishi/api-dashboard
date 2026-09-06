@@ -1057,7 +1057,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-113', // Scoped key permissions — lib/scopes.ts SSOT (catalog + scopeForEndpoint + keyHasScope) + src/lib/gateway/scopes.ts registry ENFORCED in the pipeline (403 INSUFFICIENT_SCOPE) + POST /v1/keys/scopes sync (console registers on create/roll/restrict) + /console/scopes matrix + live key-vs-endpoint probe. Seam closed: scopes now actually restrict access.
   'F-115', // One-time secret reveal — lib/secret-reveal.ts (deterministic fingerprint + tail + maskedWithFingerprint + canReveal on rawToken presence); key-pair secrets shown in full ONCE at creation (reveal modal → clearRawToken on ack) then only fingerprint+last4 forever — the Stripe model
   'F-118', // Last-used & usage per key — lib/key-usage.ts (freshness active/idle/dormant/stale/never from lastUsed, deterministic 14-day usage timeline, roll-up, security-hygiene insights: rotate stale live / revoke never-used) + /console/key-usage dashboard (KPIs, insights, sparkline per key, freshness filter)
-  'F-119', // Compromised-key kill switch — revokeKey + simulateKeyLeak
+  'F-119', // Compromised-key kill switch — src/lib/gateway/keyBlock.ts registry ENFORCED everywhere (REST /v1 + /api/graphql + /api/grpc → 401 KEY_REVOKED) + POST/DELETE /v1/keys/revoke sync + keys/page.tsx revoke/leak sync + /console/kill-switch incident console (kill w/ reason, live leak drill 200→401, restore, audit). Seam closed: a killed key is dead everywhere instantly.
   'F-124', // Key labels & ownership — named keys
   // Billing & metering (verified in src/lib/gateway/billing.ts, store, console)
   'F-145', // Usage-based metering — billing.ts meters credits per call

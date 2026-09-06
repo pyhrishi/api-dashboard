@@ -13,6 +13,7 @@ import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forc
 import { getCoalescingStats, runCoalescingDrill } from '@/lib/gateway/coalescing';
 import { planExport, serializeExport } from '@/lib/gateway/bulkExport';
 import { checkEndpointScope, registerKeyScopes, unregisterKeyScopes, getScopeRegistrySnapshot } from '@/lib/gateway/scopes';
+import { isKeyBlocked, blockKey, unblockKey, getBlock, getKillSwitchSnapshot, type RevocationReason } from '@/lib/gateway/keyBlock';
 import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gateway/upstreams';
 import { getDeliveryStats, replayDelivery } from '@/lib/gateway/webhookDelivery';
 import { buildDebugEcho } from '@/lib/gateway/debugEcho';
@@ -41,6 +42,23 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   const apiKey = request.headers.get('x-api-key') || '';
   const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
   const keyRecord = getApiKeyRecord(apiKey);
+
+  // 0. Compromised-key kill switch (F-119) — a killed key is dead everywhere,
+  //    before auth, billing, scopes, or routing. The /v1/keys/revoke registry
+  //    itself is exempt so an operator can manage the kill switch (they auth with
+  //    an ACTIVE key). Every rejected call is counted for the incident view.
+  if (apiKey && path !== '/v1/keys/revoke' && isKeyBlocked(apiKey)) {
+    const block = getBlock(apiKey);
+    return NextResponse.json({
+      success: false,
+      error: {
+        code: 'KEY_REVOKED',
+        message: `This API key has been revoked${block ? ` (${block.reason})` : ''} and can no longer be used. Issue a new key in the console.`,
+        reason: block?.reason ?? 'compromised',
+      },
+      metadata: { requestId, timestamp: Date.now() },
+    }, { status: 401, headers: { 'X-Request-Id': requestId, 'X-Key-Revoked': block?.reason ?? 'compromised' } });
+  }
 
   // 1. Edge Firewall: Layer 7 DDoS Adaptive Mitigation
   const ddosCheck = enforceDDoSProtection(clientIp);
@@ -686,6 +704,44 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
     return NextResponse.json(
       { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/keys/scopes (registry), POST (register {key,scopes}), or DELETE (revoke {key}).' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
+  // Compromised-key kill switch (F-119) — the block registry the gateway enforces
+  // everywhere. GET reads it; POST kills a key { key, reason }; DELETE restores.
+  // Free meta path (exempt from the block check so operators can manage it).
+  if (path === '/v1/keys/revoke') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getKillSwitchSnapshot(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'POST' || request.method === 'DELETE') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const bodyObj = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const targetKey = typeof bodyObj.key === 'string' ? bodyObj.key : '';
+      if (!targetKey) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_PARAMETERS', message: 'Provide a "key" to revoke or restore.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      const by = typeof bodyObj.by === 'string' ? bodyObj.by : 'console';
+      if (request.method === 'DELETE') {
+        unblockKey(targetKey, by);
+        return NextResponse.json({ success: true, data: { key: targetKey, restored: true }, metadata: { requestId, timestamp: Date.now() } }, { status: 200, headers: responseHeaders });
+      }
+      const validReasons: RevocationReason[] = ['compromised', 'leaked', 'rotated', 'manual'];
+      const reason = (validReasons.includes(bodyObj.reason as RevocationReason) ? bodyObj.reason : 'manual') as RevocationReason;
+      blockKey(targetKey, reason, by);
+      return NextResponse.json({ success: true, data: { key: targetKey, revoked: true, reason }, metadata: { requestId, timestamp: Date.now() } }, { status: 200, headers: responseHeaders });
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/keys/revoke (registry), POST (kill {key,reason}), or DELETE (restore {key}).' } },
       { status: 405, headers: responseHeaders },
     );
   }

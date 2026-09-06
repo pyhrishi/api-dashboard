@@ -179,7 +179,12 @@ export type TelemetryEventName =
   | 'secret_reveal_acknowledged'
   // observability — last-used & usage per key (F-118)
   | 'key_usage_viewed'
-  | 'key_usage_filtered';
+  | 'key_usage_filtered'
+  // security — compromised-key kill switch (F-119)
+  | 'kill_switch_viewed'
+  | 'key_killed'
+  | 'key_restored'
+  | 'leak_drill_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

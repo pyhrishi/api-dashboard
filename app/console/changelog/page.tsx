@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.80', date: 'September 2026', headline: 'Compromised-key kill switch',
+    changes: [
+      { kind: 'feature', text: 'Compromised-key kill switch — instantly revoke a leaked key everywhere. Killing a key now blocks it across every surface at once (REST, GraphQL, and gRPC), returning 401 KEY_REVOKED on the very next call. A new Kill Switch console lists your keys with a one-click kill (compromised / leaked / rotated / manual), shows recent kill events, and lets you restore a false alarm.' },
+      { kind: 'feature', text: 'Prove it with the leak drill: fire a live call with a key (200), kill it, and fire again — watch the same key return 401 KEY_REVOKED in the same breath. Revoking or simulating a leak on a key in API Keys now propagates to the gateway automatically, so a killed key is genuinely dead — closing the gap where revocation was only cosmetic.' },
+      { kind: 'improvement', text: 'The block is enforced before auth, billing, and scopes, and counts every rejected attempt for the incident view. Deterministic registry, unit-tested; the demo compromised key is dead out of the box.' },
+    ],
+  },
+  {
     version: 'v4.79', date: 'September 2026', headline: 'Last-used & usage per key',
     changes: [
       { kind: 'feature', text: 'Key Usage — a new console that shows when and how much each API key is exercised: a freshness status (active / idle / dormant / stale / never used), request volume, and a 14-day usage sparkline per key. Filter to the keys that have gone quiet in one click.' },
