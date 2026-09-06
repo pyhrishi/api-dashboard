@@ -8,14 +8,14 @@ import {
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
-  MapPin, Globe, Sun, Hash,
+  MapPin, Globe, Sun, Hash, GitCompareArrows,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
-  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView,
+  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
@@ -25,7 +25,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -823,6 +823,58 @@ function NewsFeedPanel({ n }: { n: NewsFeedView }) {
   );
 }
 
+function fuzzyVerdictTone(v: FuzzyMatchView['verdict']): BadgeTone {
+  if (v === 'strong') return 'success';
+  if (v === 'likely') return 'teal';
+  if (v === 'weak') return 'warning';
+  return 'error';
+}
+
+function FuzzyMatchPanel({ f }: { f: FuzzyMatchView }) {
+  const verdictLabel = f.verdict === 'no_match' ? 'No match' : f.verdict.charAt(0).toUpperCase() + f.verdict.slice(1);
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="rounded-xl border border-border bg-surface-2 p-4 flex items-center gap-3 flex-wrap">
+        <StatusBadge tone={fuzzyVerdictTone(f.verdict)}>{verdictLabel}</StatusBadge>
+        <span className="text-sm text-fg-muted">
+          Interpreted as <span className="font-bold text-fg">{f.interpreted.name}</span>
+          {f.interpreted.company && <> at <span className="font-bold text-fg">{f.interpreted.company}</span></>}
+        </span>
+      </div>
+
+      <div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-2">Ranked candidates</div>
+        <ul className="space-y-2">
+          {f.candidates.map((c, i) => (
+            <motion.li
+              key={c.email + i}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }}
+              className={`rounded-xl border p-3 ${c.best ? 'border-teal/30 bg-teal/5' : 'border-border-subtle bg-surface-2'}`}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold text-fg">{c.fullName}</span>
+                {c.best && <StatusBadge tone="teal">Best match</StatusBadge>}
+                <span className="ml-auto text-sm font-black text-fg tabular-nums">{Math.round(c.matchProbability * 100)}%</span>
+              </div>
+              <div className="text-[12px] text-fg-muted mt-0.5">{c.title} · {c.company} · <span className="font-mono">{c.email}</span></div>
+              <div className="h-1.5 rounded-full bg-glass mt-2 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }} animate={{ width: `${c.matchProbability * 100}%` }} transition={{ duration: 0.6, ease: 'easeOut' }}
+                  className={`h-full rounded-full ${c.matchProbability >= 0.9 ? 'bg-semantic-success' : c.matchProbability >= 0.75 ? 'bg-teal' : c.matchProbability >= 0.55 ? 'bg-semantic-warning' : 'bg-semantic-error'}`}
+                />
+              </div>
+              <div className="flex items-center gap-4 mt-1.5 text-[10px] text-fg-subtle">
+                <span>name {Math.round(c.nameSimilarity * 100)}%</span>
+                <span>company {Math.round(c.companySimilarity * 100)}%</span>
+              </div>
+            </motion.li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -907,6 +959,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.news && (
           <NewsFeedPanel n={result.news} />
+        )}
+
+        {result.fuzzy && (
+          <FuzzyMatchPanel f={result.fuzzy} />
         )}
 
         {result.chips && result.chips.items.length > 0 && (

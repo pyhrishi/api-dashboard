@@ -69,6 +69,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'offices', endpointId: 'company-offices', param: 'domain', inputKind: 'domain', icon: 'MapPin', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'HQ & office geo' },
   { id: 'news', endpointId: 'company-news', param: 'domain', inputKind: 'domain', icon: 'Newspaper', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Company news' },
   { id: 'hashed-email', endpointId: 'hashed-email', param: 'email_sha256', inputKind: 'email', icon: 'Hash', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'sarah.chen@notion.so'], label: 'Hashed-email lookup', transform: 'sha256' },
+  { id: 'fuzzy', endpointId: 'fuzzy-match', param: 'query', inputKind: 'auto', icon: 'GitCompareArrows', category: 'identity', examples: ['Jhon Smith, Stipe', 'Bob Johnson, Datadog', 'Micheal Chen, notion'], label: 'Fuzzy match' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -280,6 +281,23 @@ export interface NewsFeedView {
   eventCount: number;
   byType: { type: string; count: number }[];
 }
+/** One ranked fuzzy-match candidate (F-024). */
+export interface FuzzyCandidateView {
+  fullName: string;
+  title: string;
+  company: string;
+  email: string;
+  nameSimilarity: number;
+  companySimilarity: number;
+  matchProbability: number;
+  best: boolean;
+}
+/** Structured probabilistic fuzzy-match result — rendered as a ranked candidate list. */
+export interface FuzzyMatchView {
+  verdict: 'strong' | 'likely' | 'weak' | 'no_match';
+  interpreted: { name: string; company: string };
+  candidates: FuzzyCandidateView[];
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -302,6 +320,8 @@ export interface EnrichmentResult {
   officeGeo?: OfficeGeographyView;
   /** Structured company news feed (F-015) — rendered as an event timeline. */
   news?: NewsFeedView;
+  /** Structured fuzzy-match result (F-024) — rendered as a ranked candidate list. */
+  fuzzy?: FuzzyMatchView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
   completeness?: CompletenessScore;
   confidence?: number;
@@ -799,6 +819,49 @@ function newsToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Probabilistic fuzzy matching (F-024): ranked candidates for a messy name + company. */
+function fuzzyToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const verdictRaw = str('verdict');
+  const verdict = (['strong', 'likely', 'weak', 'no_match'].includes(verdictRaw) ? verdictRaw : 'no_match') as FuzzyMatchView['verdict'];
+  const interp = isRecord(d.interpreted) ? (d.interpreted as Record<string, unknown>) : {};
+  const interpreted = {
+    name: typeof interp.name === 'string' ? interp.name : '',
+    company: typeof interp.company === 'string' ? interp.company : '',
+  };
+  const bestEmail = isRecord(d.best_match) ? (d.best_match as Record<string, unknown>).email : undefined;
+
+  const rawCandidates = Array.isArray(d.candidates) ? (d.candidates as Record<string, unknown>[]) : [];
+  const candidates: FuzzyCandidateView[] = rawCandidates.map((c) => ({
+    fullName: typeof c.full_name === 'string' ? c.full_name : '',
+    title: typeof c.title === 'string' ? c.title : '',
+    company: typeof c.company === 'string' ? c.company : '',
+    email: typeof c.email === 'string' ? c.email : '',
+    nameSimilarity: typeof c.name_similarity === 'number' ? c.name_similarity : 0,
+    companySimilarity: typeof c.company_similarity === 'number' ? c.company_similarity : 0,
+    matchProbability: typeof c.match_probability === 'number' ? c.match_probability : 0,
+    best: typeof c.email === 'string' && c.email === bestEmail,
+  }));
+
+  const verdictLabel = verdict === 'no_match' ? 'No match' : verdict.charAt(0).toUpperCase() + verdict.slice(1);
+  const query = isRecord(d.query) ? (d.query as Record<string, unknown>) : {};
+  const queryName = typeof query.name === 'string' ? query.name : interpreted.name;
+
+  return {
+    kind: 'person',
+    title: interpreted.name || queryName || 'Fuzzy match',
+    subtitle: `Interpreted "${queryName}" → ${interpreted.name}${interpreted.company ? ` · ${interpreted.company}` : ''}`,
+    avatar: initialsOf(interpreted.name || queryName || 'FM'),
+    badges: [verdictLabel, `${candidates.length} candidate${candidates.length === 1 ? '' : 's'}`],
+    fields: [],
+    fuzzy: { verdict, interpreted, candidates },
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    raw: d,
+  };
+}
+
 /** Email deliverability scoring: a 0-100 reachability score + a decomposed signal breakdown. */
 function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1026,6 +1089,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.offices) && isRecord(data.hq)) return officeGeoToResult(data);
   // Company news & event feed: an `events` array + a numeric `event_count` mark the shape.
   if (Array.isArray(data.events) && typeof data.event_count === 'number') return newsToResult(data);
+  // Probabilistic fuzzy matching: a `candidates` array + a `verdict` mark the shape.
+  if (Array.isArray(data.candidates) && typeof data.verdict === 'string' && isRecord(data.interpreted)) return fuzzyToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.

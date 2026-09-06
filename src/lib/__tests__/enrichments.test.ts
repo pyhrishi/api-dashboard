@@ -4,6 +4,7 @@ import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveCompanyNews } from '@/lib/company-news-resolver';
+import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 
@@ -112,6 +113,19 @@ describe('enrichment registry', () => {
     const tallied = (vm.news?.byType ?? []).reduce((a, b) => a + b.count, 0);
     expect(tallied).toBe(vm.news?.eventCount);
     expect(vm.badges.some((b) => /event/.test(b))).toBe(true);
+  });
+
+  it('maps a fuzzy-match response to the ranked-candidate view-model (F-024)', () => {
+    const m = fuzzyMatch('Jhon Smith', 'Stipe')!;
+    const vm = toEnrichmentResult({ ...m })!;
+    expect(vm.fuzzy).toBeDefined();
+    expect(vm.fuzzy?.verdict).toBe(m.verdict);
+    expect(vm.fuzzy?.interpreted.name).toBe('John Smith');
+    expect(vm.fuzzy?.candidates.length).toBe(m.candidates.length);
+    expect(vm.fields).toHaveLength(0); // rendered via the candidate panel
+    // exactly the best_match candidate is flagged best.
+    expect(vm.fuzzy?.candidates.filter((c) => c.best).length).toBe(1);
+    expect(vm.fuzzy?.candidates[0].best).toBe(true);
   });
 
   it('flattens a generic flat response into fields', () => {

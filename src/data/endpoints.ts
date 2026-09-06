@@ -1303,6 +1303,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/legal',
       },
     ],
+  },
+
+  {
+    id: 'fuzzy-match',
+    name: 'Probabilistic Fuzzy Matching',
+    description: "Resolve a messy name + company (typos, nicknames, spelling variants) to the people it most likely refers to. Returns ranked candidates each with a match probability and the per-field name/company similarity behind it (real Jaro-Winkler), a canonical interpretation of your query, and a decisive verdict (strong / likely / weak / no match). Pass the query as \"Name, Company\".",
+    method: 'GET',
+    path: '/v1/match/fuzzy',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'query',
+        type: 'string',
+        required: true,
+        description: 'The name and company to match, as "Name, Company" (or "Name at Company")',
+        example: 'Jhon Smith, Stipe',
+        placeholder: 'Jane Doe, Acme',
+        maxLength: 160,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'fuzzy-to-person',
+        title: 'Resolve the match',
+        description: 'Take the best-match email into a full person profile.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

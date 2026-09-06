@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.29', date: 'September 2026', headline: 'Probabilistic fuzzy matching',
+    changes: [
+      { kind: 'feature', text: 'Probabilistic fuzzy matching — resolve a messy name + company (typos, nicknames, spelling variants) to the people it most likely refers to. New GET /v1/match/fuzzy takes a "Name, Company" query and returns ranked candidates, each with a match probability and the per-field name and company similarity behind it (real Jaro-Winkler), a canonical interpretation of your query, and a decisive verdict (strong / likely / weak / no match). Shipped as a Studio preset with a ranked-candidate panel.' },
+      { kind: 'improvement', text: 'It corrects as it matches — "Jhon Smith, Stipe" is interpreted as "John Smith" at Stripe, "Bob" expands to "Robert" — and stays honest: a name it cannot reconcile to a real company drops to a weak or no-match verdict instead of a false positive. Deterministic — the same query always scores the same.' },
+    ],
+  },
+  {
     version: 'v4.28', date: 'September 2026', headline: 'Hashed-email (SHA-256) lookups',
     changes: [
       { kind: 'feature', text: 'Hashed-email (SHA-256) lookups — enrich against a SHA-256 hash of an email instead of the raw address, so raw PII never leaves your system. New GET /v1/identity/hashed takes the hex digest of the lowercased, trimmed email and, if it matches an opted-in record, returns the full resolved person — name, title, company, and contact — without ever receiving the plaintext. Built for GDPR-conscious and adtech match workflows.' },

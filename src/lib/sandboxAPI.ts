@@ -18,6 +18,7 @@ import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
 import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
+import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -574,6 +575,24 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...hashed };
+    }
+
+    case 'fuzzy-match': {
+      // Probabilistic fuzzy matching (single source of truth). The query is
+      // "Name, Company" (or "Name at Company"); split it into the two fields.
+      const query = String(parameters.query || '').trim();
+      const atSplit = query.split(/\s+at\s+/i);
+      const [namePart, companyPart] = atSplit.length === 2
+        ? atSplit
+        : (() => { const i = query.lastIndexOf(','); return i >= 0 ? [query.slice(0, i), query.slice(i + 1)] : [query, '']; })();
+      const match = fuzzyMatch(String(namePart).trim(), String(companyPart).trim());
+      if (!match) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a name to match, e.g. "Jane Doe, Acme".' },
+        };
+      }
+      return { success: true, ...match };
     }
 
     case 'email-verify': {
