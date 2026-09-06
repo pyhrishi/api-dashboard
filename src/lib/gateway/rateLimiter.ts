@@ -7,7 +7,7 @@
  * this Map may reset per-isolate, but it's sufficient for sandbox testing.
  */
 
-import { RATE_LIMIT } from '@/lib/rate-limit';
+import { tierLimitForKey, type ThroughputTier } from '@/lib/throughput-tiers';
 
 interface RateLimitData {
   tokens: number;
@@ -22,15 +22,20 @@ export interface RateLimitResult {
   limit: number;
   remaining: number;
   reset: number;
+  /** The plan tier that sized this bucket (F-131). */
+  tier: ThroughputTier;
 }
 
 export function checkRateLimit(apiKey: string): RateLimitResult {
   const now = Date.now();
-  
-  // Token Bucket Configuration — single source of truth (lib/rate-limit.ts),
-  // shared with the console so the visualizer and the real limiter agree (F-129).
-  const capacity = RATE_LIMIT.capacity; // Maximum burst capacity
-  const refillRatePerMinute = RATE_LIMIT.refillPerMinute;
+
+  // Tier-based throughput (F-131): the key's plan tier sizes its bucket — burst
+  // capacity + steady refill — so higher plans sustain more RPS. Starter reuses the
+  // F-129 baseline. lib/throughput-tiers.ts is the shared SSOT (Edge-safe).
+  const tierLimit = tierLimitForKey(apiKey);
+  const tier = tierLimit.tier;
+  const capacity = tierLimit.capacity; // Maximum burst capacity for this tier
+  const refillRatePerMinute = tierLimit.refillPerMinute;
   const refillRatePerMs = refillRatePerMinute / 60000;
 
   let currentData = store.get(apiKey);
@@ -65,6 +70,7 @@ export function checkRateLimit(apiKey: string): RateLimitResult {
       limit: capacity,
       remaining: Math.floor(currentData.tokens),
       reset: resetTimestamp,
+      tier,
     };
   } else {
     // Rate limited
@@ -79,6 +85,7 @@ export function checkRateLimit(apiKey: string): RateLimitResult {
       limit: capacity,
       remaining: 0,
       reset: nextTokenTimestamp,
+      tier,
     };
   }
 }

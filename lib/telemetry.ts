@@ -195,7 +195,10 @@ export type TelemetryEventName =
   | 'rate_limit_burst_tested'
   // rate limiting — standard rate-limit headers (F-130)
   | 'rate_limit_headers_viewed'
-  | 'rate_limit_inspected';
+  | 'rate_limit_inspected'
+  // rate limiting — tier-based throughput (F-131)
+  | 'throughput_tiers_viewed'
+  | 'throughput_tier_checked';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

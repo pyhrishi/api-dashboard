@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.84', date: 'September 2026', headline: 'Tier-based throughput',
+    changes: [
+      { kind: 'feature', text: 'Tier-based throughput — your plan now sets your rate limit. Each tier sizes both the burst capacity and the sustained requests/second the gateway allows: Starter (the base), Growth (3×), and Enterprise (12×). The standard RateLimit-Limit header — and a new X-RateLimit-Tier — advertise exactly what your key gets on every response, so clients can pace to their real ceiling.' },
+      { kind: 'feature', text: 'A new Throughput Tiers console shows the ladder, your key’s current tier and live limit (verified straight from the gateway headers), and a one-click upgrade path to more headroom. Higher plans get real, enforced throughput — not just a bigger number on the pricing page.' },
+    ],
+  },
+  {
     version: 'v4.83', date: 'September 2026', headline: 'Standard rate-limit headers',
     changes: [
       { kind: 'feature', text: 'Standard rate-limit headers — every response now carries the emerging IETF-standard set: RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset (as seconds-until-reset), and RateLimit-Policy, plus Retry-After on a 429. The legacy X-RateLimit-* headers are kept alongside, so existing clients keep working while standard SDKs and off-the-shelf rate-limit middleware pace themselves automatically.' },

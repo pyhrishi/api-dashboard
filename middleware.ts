@@ -60,14 +60,14 @@ export function middleware(request: NextRequest) {
       {
         status: 429,
         // Standard IETF RateLimit-* + RateLimit-Policy + Retry-After (and legacy X-).
-        headers: buildRateLimitedHeaders(rateLimitResult),
+        headers: { ...buildRateLimitedHeaders(rateLimitResult), 'X-RateLimit-Tier': rateLimitResult.tier },
       }
     );
   }
 
   // 3. Forward request with injected headers (route handler reads these), and set the
   //    standard rate-limit headers on the RESPONSE so every /api/v1 success carries them.
-  const rateHeaders = buildRateLimitHeaders(rateLimitResult);
+  const rateHeaders = { ...buildRateLimitHeaders(rateLimitResult), 'X-RateLimit-Tier': rateLimitResult.tier };
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-request-id', requestId);
   requestHeaders.set('x-api-key', authResult.apiKey!);
