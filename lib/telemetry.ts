@@ -176,7 +176,10 @@ export type TelemetryEventName =
   | 'key_pair_created'
   | 'key_pair_revoked'
   // security — one-time secret reveal (F-115)
-  | 'secret_reveal_acknowledged';
+  | 'secret_reveal_acknowledged'
+  // observability — last-used & usage per key (F-118)
+  | 'key_usage_viewed'
+  | 'key_usage_filtered';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

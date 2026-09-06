@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.79', date: 'September 2026', headline: 'Last-used & usage per key',
+    changes: [
+      { kind: 'feature', text: 'Key Usage — a new console that shows when and how much each API key is exercised: a freshness status (active / idle / dormant / stale / never used), request volume, and a 14-day usage sparkline per key. Filter to the keys that have gone quiet in one click.' },
+      { kind: 'improvement', text: 'Security hygiene built in: a live key idle for weeks, or one that has never authenticated a call, is a standing liability — the dashboard surfaces those with a severity and a one-click path to rotate or revoke. An unused live key is almost always a mistake, and now you\'ll see it.' },
+    ],
+  },
+  {
     version: 'v4.78', date: 'September 2026', headline: 'One-time secret reveal',
     changes: [
       { kind: 'feature', text: 'One-time secret reveal — a new API key\'s full secret is now shown exactly once, at creation, and never again. When you generate a key pair, both secrets appear in a reveal dialog to copy and store; once you acknowledge it, they\'re gone. This is the Stripe model, and the safe default — a secret left revealable in a dashboard is a leak waiting to happen.' },
