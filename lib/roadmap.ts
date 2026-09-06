@@ -1119,6 +1119,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-036', // Negative-match caching — src/lib/gateway/negativeCache.ts wired into the live pipeline (serve repeat misses free) + GET /v1/cache/negative stats
   'F-038', // Match audit trail — /console/match-audit tamper-evident ledger (lib/match-audit.ts, SHA-256 hash chain) derived from apiLogs + entityMerges
   'F-043', // Source attribution — lib/source-catalog.ts (named-provider catalog) + a withSources post-processor + Studio Sources panel over provenance
+  'F-041', // Automated re-verification — /console/re-verification rolling schedule (lib/reverification.ts + store slice) — re-check fields, surface decay
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

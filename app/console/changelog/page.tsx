@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.38', date: 'September 2026', headline: 'Automated re-verification',
+    changes: [
+      { kind: 'feature', text: 'Automated re-verification — a new Re-verification console (/console/re-verification) keeps enriched data fresh by re-checking high-value fields (email, direct phone, employment) on a rolling, per-field-type schedule. Set the cadence for each field, see which records are past it, and run re-verification — every field that decayed (a bounced mailbox, a disconnected phone, a job change) or changed value surfaces with a plain-English explanation and the new value, so records self-heal instead of quietly going stale.' },
+      { kind: 'improvement', text: 'Each run reports unchanged / updated / decayed counts with the actionable outcomes first, and keeps a run history. Deterministic (the same rolling cycle always produces the same outcomes) and RBAC-gated — the schedule and run action are read-only for the billing role. Builds on the field-level freshness model.' },
+    ],
+  },
+  {
     version: 'v4.37', date: 'September 2026', headline: 'Source attribution',
     changes: [
       { kind: 'feature', text: 'Source attribution — every enrichment result now cites which data provider supplied each field. The result card gains a Sources panel that groups the fields by the named provider behind them (SMTP Verification, WHOIS Registry, Corporate Directory, Carrier HLR, Professional Graph, MCA Registry, and more), each with its category (first-party graph / government registry / partner feed / derived inference), a reliability rating, the license or lawful basis the data is used under, and the exact fields it produced — so buyers and compliance can see the sourcing behind every value.' },
