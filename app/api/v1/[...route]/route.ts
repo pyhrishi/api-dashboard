@@ -4,6 +4,7 @@ import { logRequest } from '@/lib/gateway/logger';
 import { checkCache, setCache, generateCacheKey, checkIdempotency, setIdempotency } from '@/lib/gateway/cache';
 import { checkNegativeCache, recordNegativeMiss, registerNegativeHit, getNegativeCacheStats } from '@/lib/gateway/negativeCache';
 import { getBounceStats, recordBounce, isSuppressed, type BounceType } from '@/lib/gateway/bounceFeedback';
+import { getCorrectionStats, recordCorrection } from '@/lib/gateway/corrections';
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure } from '@/lib/gateway/circuitBreaker';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
@@ -386,6 +387,43 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
     return NextResponse.json(
       { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET or POST /v1/feedback/bounce.' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
+  // User-reported corrections (F-046) — report a wrong field (POST) or read the
+  // registry (GET). Free meta endpoint; reports land pending for console review.
+  if (path === '/v1/feedback/correction') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getCorrectionStats(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'POST') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const body = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const target = typeof body.target === 'string' ? body.target : '';
+      const field = typeof body.field === 'string' ? body.field : '';
+      const newValue = typeof body.new_value === 'string' ? body.new_value : '';
+      const oldValue = typeof body.old_value === 'string' ? body.old_value : '';
+      const reason = typeof body.reason === 'string' ? body.reason : '';
+      if (!target || !field || !newValue) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_PARAMETERS', message: 'Provide "target", "field", and "new_value" to report a correction.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      const record = recordCorrection({ target, field, old_value: oldValue, new_value: newValue, reason });
+      return NextResponse.json(
+        { success: true, data: { reported: record, status: 'pending', note: 'Pending review — accepted corrections apply to future results.' }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET or POST /v1/feedback/correction.' } },
       { status: 405, headers: responseHeaders },
     );
   }

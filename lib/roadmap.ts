@@ -1122,6 +1122,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-041', // Automated re-verification — /console/re-verification rolling schedule (lib/reverification.ts + store slice) — re-check fields, surface decay
   'F-045', // Bounce feedback loop — src/lib/gateway/bounceFeedback.ts + POST/GET /v1/feedback/bounce — report a bounce → email-verify suppresses the address
   'F-049', // Catch-all domain detection — lib/catch-all-detector.ts (SSOT, shared with email-verify) + GET /v1/email/catch-all + Studio panel
+  'F-046', // User-reported corrections — lib/corrections.ts SSOT + insight-engine triage + /console/corrections review queue + Studio inline flag/overlay + POST/GET /v1/feedback/correction
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

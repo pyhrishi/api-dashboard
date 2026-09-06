@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.41', date: 'September 2026', headline: 'User-reported corrections',
+    changes: [
+      { kind: 'feature', text: 'User-reported corrections — spot a wrong value on any enrichment result and flag it right there in the Studio: hover a field, hit the flag, and tell us what it should be. Corrections are governed, not silent — each one gets an AI triage verdict (likely-valid / needs-review / suspect, scored on format validity, how material the change is, how specific the reason is, and reporter trust) and lands pending in a new Corrections review queue.' },
+      { kind: 'feature', text: 'The loop closes: once a reviewer accepts a correction, that field comes back corrected on future lookups — overlaid on the result, badged “corrected”, and re-attributed to “Customer Correction” (a first-party source) in the Sources panel. Reviewers can accept, reject, or send a decision back to pending; every review is written to the audit log. Admin + developer only; billing can view but not review.' },
+      { kind: 'feature', text: 'Report corrections programmatically too: a new POST /v1/feedback/correction lets your pipeline flag a wrong field (target, field, new_value, plus an optional reason that triages higher), and a free GET /v1/feedback/correction reads the registry — totals, pending count, and a breakdown by triage verdict. Both are keyless-billed (zero credits).' },
+    ],
+  },
+  {
     version: 'v4.40', date: 'September 2026', headline: 'Catch-all domain detection',
     changes: [
       { kind: 'feature', text: 'Catch-all domain detection — a new GET /v1/email/catch-all tells you whether a domain is catch-all (accept-all): one that accepts mail for any local part, so an SMTP probe can never confirm a specific mailbox exists. It returns a decisive status (catch-all / not catch-all / unknown), a confidence, the MX provider, the random-mailbox probe result (RCPT TO a non-existent address → accepted means catch-all), per-signal evidence, and guidance on how to enrich safely against the domain. Shipped as a Studio preset with a status + evidence panel.' },

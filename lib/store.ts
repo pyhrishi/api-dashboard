@@ -6,6 +6,8 @@ import { generateSeedRequestHistory, SEED_LOOKUP_COUNT } from '@/lib/seed-reques
 import { generateMergeCandidates, type MergeableEntity, type EntityMerge } from '@/lib/merge-seed';
 import { DEFAULT_THRESHOLDS, type MatchUseCase } from '@/lib/threshold-tuning';
 import { generateReverifiableRecords, reverifyRecords, computeDueRecords, DEFAULT_CADENCE, CADENCE_BOUNDS, type ReverificationCadence, type ReVerificationRun } from '@/lib/reverification';
+import { generateSeedCorrections, correctionEntityKey, inferFieldKind, makeCorrectionId, type Correction, type CorrectionInput } from '@/lib/corrections';
+import { triageCorrection } from '@/lib/insight-engine';
 
 /**
  * One enrichment run in the Enrichment Studio (any preset/endpoint), persisted per
@@ -497,6 +499,8 @@ export interface TenantState {
   invoices: Invoice[];
   bulkJobs: BulkJob[];
   enrichments: EnrichmentRecord[];
+  /** User-reported field corrections (F-046) — the review queue + applied overlay. */
+  corrections: Correction[];
 }
 
 export const extractTenantState = (state: AppState): TenantState => ({
@@ -539,6 +543,7 @@ export const extractTenantState = (state: AppState): TenantState => ({
   invoices: state.invoices,
   bulkJobs: state.bulkJobs,
   enrichments: state.enrichments,
+  corrections: state.corrections,
 });
 
 export const defaultTenantState = (): TenantState => ({
@@ -581,6 +586,7 @@ export const defaultTenantState = (): TenantState => ({
   invoices: [],
   bulkJobs: [],
   enrichments: [],
+  corrections: [],
 });
 
 interface AppState extends FirstCallState, TenantState {
@@ -638,6 +644,15 @@ interface AppState extends FirstCallState, TenantState {
   runReVerification: () => ReVerificationRun;
   /** Sets one field-type's cadence (clamped to CADENCE_BOUNDS). Billing role cannot. */
   setReverificationCadence: (field: keyof ReverificationCadence, days: number) => void;
+  // User-reported corrections — governed field-correction feedback loop (F-046).
+  /** Idempotently seeds demo corrections on mount (like seedMergeCandidates). No audit log. */
+  seedCorrections: () => void;
+  /** Reports a correction to one field of a result. Any role may report. Returns the new id. */
+  reportCorrection: (input: CorrectionInput) => string;
+  /** Accepts/rejects a pending correction. Billing role cannot review. */
+  reviewCorrection: (id: string, decision: 'accepted' | 'rejected') => void;
+  /** Sends a reviewed correction back to pending (undo). Billing role cannot. */
+  revertCorrectionReview: (id: string) => void;
   webhooks: WebhookEndpoint[];
   webhookLogs: WebhookLog[];
   webhookRetryQueue: WebhookRetryItem[];
@@ -851,6 +866,7 @@ export const useStore = create<AppState>()(
       telemetryEvents: [],
       bulkJobs: [],
       enrichments: [],
+      corrections: [],
       mergeableEntities: [],
       entityMerges: [],
       reverificationCadence: DEFAULT_CADENCE,
@@ -2606,6 +2622,68 @@ export const useStore = create<AppState>()(
         return { reverificationCadence: { ...state.reverificationCadence, [field]: clamped } };
       }),
 
+      // ─── User-reported corrections (F-046) ──────────────────────────────────
+      seedCorrections: () => set((state) => {
+        if (state.corrections.length > 0) return {};
+        return { corrections: generateSeedCorrections() };
+      }),
+
+      reportCorrection: (input) => {
+        const state = get();
+        const reportedAt = Date.now();
+        // Deterministic per-report sequence within the same ms, so ids stay unique.
+        const seq = state.corrections.filter((c) => c.reportedAt === reportedAt).length + 1;
+        const fieldKind = inferFieldKind(input.field);
+        const reportedBy = state.user?.email || 'anonymous@unknown';
+        const triage = triageCorrection({ fieldKind, oldValue: input.oldValue, newValue: input.newValue, reason: input.reason, reportedBy });
+        const correction: Correction = {
+          id: makeCorrectionId(reportedAt, seq),
+          entityKey: correctionEntityKey(input.presetId, input.input),
+          presetId: input.presetId,
+          presetLabel: input.presetLabel,
+          input: input.input,
+          field: input.field,
+          fieldKind,
+          oldValue: input.oldValue,
+          newValue: input.newValue,
+          reason: input.reason,
+          status: 'pending',
+          reportedBy,
+          reportedAt,
+          environment: input.environment,
+          triage,
+        };
+        const log = generateAuditLog('correction.reported', `${input.field} on ${input.input}`, reportedBy, input.environment, {
+          changes: { before: { value: input.oldValue }, after: { value: input.newValue } },
+        });
+        set((s) => ({ corrections: [correction, ...s.corrections], auditLogs: [log, ...s.auditLogs] }));
+        return correction.id;
+      },
+
+      reviewCorrection: (id, decision) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot review corrections');
+        const target = state.corrections.find((c) => c.id === id);
+        if (!target || target.status !== 'pending') return {};
+        const reviewer = state.user?.email || 'System';
+        const reviewedAt = Date.now();
+        const log = generateAuditLog(`correction.${decision}`, `${target.field} on ${target.input}`, reviewer, target.environment, {
+          changes: { after: { value: decision === 'accepted' ? target.newValue : target.oldValue } },
+        });
+        return {
+          corrections: state.corrections.map((c) => c.id === id ? { ...c, status: decision, reviewedBy: reviewer, reviewedAt } : c),
+          auditLogs: [log, ...state.auditLogs],
+        };
+      }),
+
+      revertCorrectionReview: (id) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot change corrections');
+        const target = state.corrections.find((c) => c.id === id);
+        if (!target || target.status === 'pending') return {};
+        return {
+          corrections: state.corrections.map((c) => c.id === id ? { ...c, status: 'pending', reviewedBy: undefined, reviewedAt: undefined } : c),
+        };
+      }),
+
       setMatchThreshold: (useCase, value) => set((state) => {
         if (state.user?.role === 'billing') throw new Error('Billing users cannot change match thresholds');
         const clamped = Math.max(0.5, Math.min(0.99, Math.round(value * 100) / 100));
@@ -2673,6 +2751,7 @@ export const useStore = create<AppState>()(
         telemetryEvents: state.telemetryEvents,
         bulkJobs: state.bulkJobs,
         enrichments: state.enrichments,
+        corrections: state.corrections,
         // Merge audit trail (candidates are re-seeded, so only the merges persist)
         entityMerges: state.entityMerges,
         reverificationCadence: state.reverificationCadence,

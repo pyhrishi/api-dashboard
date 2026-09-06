@@ -1,4 +1,4 @@
-import { getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult } from '@/data/enrichments';
+import { getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, applyCorrections } from '@/data/enrichments';
 import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
@@ -196,5 +196,30 @@ describe('enrichment registry', () => {
     expect(vm.deliverability?.flags.some((f) => f.label === 'Role-based')).toBe(true);
     // The verdict is echoed as a badge.
     expect(vm.badges).toContain('Undeliverable');
+  });
+
+  it('overlays an accepted correction onto the matching field and re-attributes it (F-046)', () => {
+    const person = resolvePersonFromEmail('jane.doe@acme.com')!;
+    const vm = toEnrichmentResult({ person })!;
+    const companyField = vm.fields.find((f) => f.label === 'Company')!;
+    expect(companyField).toBeDefined();
+    const corrected = applyCorrections(vm, [{ field: 'Company', oldValue: companyField.value, newValue: 'Acme Corp · acme.com' }]);
+    const cf = corrected.fields.find((f) => f.label === 'Company')!;
+    expect(cf.value).toBe('Acme Corp · acme.com');
+    expect(cf.corrected).toBe(true);
+    expect(cf.correctionNote).toMatch(/Corrected from/);
+    // Provenance re-attributed to the Customer Correction source.
+    expect(corrected.provenance?.some((p) => p.field.toLowerCase() === 'company' && p.source === 'User-reported correction')).toBe(true);
+    // Source attribution now lists Customer Correction.
+    expect(corrected.sources?.providers.some((pr) => pr.provider.name === 'Customer Correction')).toBe(true);
+    // The original view-model is untouched (pure).
+    expect(vm.fields.find((f) => f.label === 'Company')!.corrected).toBeUndefined();
+  });
+
+  it('is a no-op when there are no corrections or nothing matches (F-046)', () => {
+    const person = resolvePersonFromEmail('jane.doe@acme.com')!;
+    const vm = toEnrichmentResult({ person })!;
+    expect(applyCorrections(vm, [])).toBe(vm);
+    expect(applyCorrections(vm, [{ field: 'Nonexistent Field', oldValue: 'a', newValue: 'b' }])).toBe(vm);
   });
 });

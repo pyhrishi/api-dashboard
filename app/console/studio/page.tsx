@@ -8,22 +8,24 @@ import {
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
-  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion,
+  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
-  getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
+  getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel, applyCorrections,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
   type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView, type NameCanonicalView, type CatchAllView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
+import { correctionEntityKey, acceptedCorrectionsFor } from '@/lib/corrections';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { sha256Hex } from '@/lib/sha256';
 import { track } from '@/lib/telemetry';
+import { useToast } from '@/components/Toast';
 import RoleGuard from '@/components/RoleGuard';
-import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
+import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction, Modal, Field, Textarea } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
 const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion };
@@ -48,12 +50,15 @@ function StudioInner() {
   const initialPreset = getPresetById(search.get('preset') ?? '') ?? presets[0];
 
   const { environment, activeKeys, deductCredits, incrementKeyUsage, enrichments,
-    addEnrichment, removeEnrichment, clearEnrichments, isFirstCallMade, markFirstCallMade } = useStore();
+    addEnrichment, removeEnrichment, clearEnrichments, isFirstCallMade, markFirstCallMade,
+    corrections, reportCorrection } = useStore();
+  const toast = useToast();
 
   const [preset, setPreset] = useState<EnrichmentPreset>(initialPreset);
   const [value, setValue] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<EnrichmentResult | null>(null);
+  const [resultCtx, setResultCtx] = useState<{ presetId: string; presetLabel: string; input: string; entityKey: string } | null>(null);
   const [meta, setMeta] = useState<{ message?: string; durationMs?: number; status?: number }>({});
   const [copied, setCopied] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +83,22 @@ function StudioInner() {
   const copy = (text: string, id: string) => {
     navigator.clipboard.writeText(text); setCopied(id);
     setTimeout(() => setCopied(c => (c === id ? null : c)), 1600);
+  };
+
+  // Overlay any accepted user-reported corrections (F-046) onto the shown result.
+  const displayResult = useMemo(() => {
+    if (!result || !resultCtx) return result;
+    return applyCorrections(result, acceptedCorrectionsFor(corrections, resultCtx.entityKey));
+  }, [result, resultCtx, corrections]);
+
+  const handleReportCorrection = (field: string, oldValue: string, newValue: string, reason: string) => {
+    if (!resultCtx) return;
+    reportCorrection({
+      presetId: resultCtx.presetId, presetLabel: resultCtx.presetLabel, input: resultCtx.input,
+      field, oldValue, newValue, reason, environment,
+    });
+    track('correction_reported', { field, presetId: resultCtx.presetId, environment });
+    toast.success('Correction submitted', 'It’s pending review in Corrections. Accepted corrections apply to future results.');
   };
 
   const selectPreset = (p: EnrichmentPreset) => {
@@ -115,7 +136,8 @@ function StudioInner() {
 
       if (res.ok && vm) {
         deductCredits(p.creditCost); incrementKeyUsage(key?.id ?? '', p.creditCost);
-        setResult(vm); setPhase('ok'); setMeta({ durationMs, status: res.status });
+        setResult(vm); setResultCtx({ presetId: p.id, presetLabel: p.label, input: raw, entityKey: correctionEntityKey(p.id, raw) });
+        setPhase('ok'); setMeta({ durationMs, status: res.status });
         addEnrichment({
           id: requestId || `enr_${Date.now().toString(36)}`, presetId: p.id, endpointId: p.endpointId, input: raw,
           result: vm, status: 'ok', environment, confidence: vm.confidence ?? 0, creditCost: p.creditCost, requestId, durationMs, timestamp: Date.now(),
@@ -216,7 +238,7 @@ function StudioInner() {
 
       <AnimatePresence mode="wait">
         {phase === 'running' && <ResultSkeleton key="loading" />}
-        {phase === 'ok' && result && <ResultCard key="result" result={result} preset={preset} isLive={isLive} meta={meta} copied={copied} onCopy={copy} />}
+        {phase === 'ok' && displayResult && <ResultCard key="result" result={displayResult} preset={preset} isLive={isLive} meta={meta} copied={copied} onCopy={copy} onReportCorrection={handleReportCorrection} />}
         {phase === 'not_found' && (
           <motion.div key="nf" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <EmptyState icon={<Search className="w-8 h-8" />} title="No result" description={meta.message || 'That input returned no match. Try another value or lookup.'}
@@ -1068,12 +1090,14 @@ function NameCanonicalPanel({ n }: { n: NameCanonicalView }) {
   );
 }
 
-function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
+function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorrection }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
+  onReportCorrection?: (field: string, oldValue: string, newValue: string, reason: string) => void;
 }) {
   const maskVal = (v: string) => (isLive ? v.replace(/[^@.\s+()-]/g, '•') : v);
   const curl = `curl "${consoleApiUrl(preset.path, { [preset.param]: '<VALUE>' })}" \\\n  -H "Authorization: Bearer <YOUR_KEY>"`;
+  const [correcting, setCorrecting] = useState<{ field: string; oldValue: string } | null>(null);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
@@ -1101,24 +1125,40 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.fields.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border rounded-xl overflow-hidden border border-border mt-5">
-            {result.fields.map((f, i) => (
-              <motion.div key={f.label + i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }} className="bg-surface-2 p-3.5">
+            {result.fields.map((f, i) => {
+              const canReport = !!onReportCorrection && !(f.masked && isLive);
+              return (
+              <motion.div key={f.label + i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }} className="group relative bg-surface-2 p-3.5">
                 <div className="flex items-center justify-between gap-1.5 text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">
                   <span className="flex items-center gap-1.5 min-w-0">
                     <span className="truncate">{f.label}</span>
-                    {f.verified && <ShieldCheck className="w-3 h-3 text-semantic-success shrink-0" aria-label="Verified" />}
+                    {f.verified && !f.corrected && <ShieldCheck className="w-3 h-3 text-semantic-success shrink-0" aria-label="Verified" />}
                     {f.masked && isLive && <Lock className="w-3 h-3 text-fg-subtle shrink-0" aria-label="Masked in live" />}
+                    {f.corrected && <PencilLine className="w-3 h-3 text-teal shrink-0" aria-label="Corrected" />}
                   </span>
-                  {f.freshness && f.verifiedAt && (
+                  {f.corrected ? (
+                    <span title={f.correctionNote} className="flex items-center gap-1 shrink-0 normal-case tracking-normal font-semibold text-teal">corrected</span>
+                  ) : f.freshness && f.verifiedAt ? (
                     <span title={`Last verified ${f.verifiedAt}`} className={`flex items-center gap-1 shrink-0 normal-case tracking-normal font-semibold ${FRESHNESS_STYLE[f.freshness].text}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${FRESHNESS_STYLE[f.freshness].dot}`} aria-hidden />
                       {freshnessAgeLabel(f.verifiedAt)}
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <div className={`text-sm font-semibold text-fg ${f.mono ? 'font-mono break-all' : ''}`}>{f.masked ? maskVal(f.value) : f.value}</div>
+                {f.corrected && f.correctionNote && <div className="text-[11px] text-fg-subtle mt-1 normal-case tracking-normal font-normal">{f.correctionNote}</div>}
+                {canReport && (
+                  <button
+                    onClick={() => setCorrecting({ field: f.label, oldValue: f.value })}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-fg-subtle hover:text-teal p-1 rounded-md hover:bg-glass"
+                    aria-label={`Report a correction for ${f.label}`} title="Flag a wrong value"
+                  >
+                    <Flag className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -1242,7 +1282,57 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
           </div>
         </GlassCard>
       )}
+
+      <CorrectionModal
+        open={!!correcting}
+        field={correcting?.field ?? ''}
+        oldValue={correcting?.oldValue ?? ''}
+        onClose={() => setCorrecting(null)}
+        onSubmit={(newValue, reason) => {
+          if (correcting) onReportCorrection?.(correcting.field, correcting.oldValue, newValue, reason);
+          setCorrecting(null);
+        }}
+      />
     </motion.div>
+  );
+}
+
+function CorrectionModal({ open, field, oldValue, onClose, onSubmit }: {
+  open: boolean; field: string; oldValue: string; onClose: () => void;
+  onSubmit: (newValue: string, reason: string) => void;
+}) {
+  const [newValue, setNewValue] = useState('');
+  const [reason, setReason] = useState('');
+  useEffect(() => { if (open) { setNewValue(''); setReason(''); } }, [open, field]);
+  const changed = newValue.trim().length > 0 && newValue.trim() !== oldValue.trim();
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Report a correction"
+      description={`Flag the value of "${field}" and tell us what it should be. Corrections are reviewed before they apply.`}
+      footer={
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" disabled={!changed} onClick={() => onSubmit(newValue.trim(), reason.trim())}>
+            <Flag className="w-4 h-4" /> Submit correction
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <Field label="Current value">
+          <div className="text-sm font-semibold text-fg-muted bg-surface-2 border border-border rounded-lg px-3 py-2 line-through break-all">{oldValue || '—'}</div>
+        </Field>
+        <Field label="Correct value" required htmlFor="correction-new-value" hint={newValue.trim() && !changed ? 'That matches the current value.' : undefined}>
+          <Input id="correction-new-value" value={newValue} onChange={(e) => setNewValue(e.target.value)} placeholder="What it should be" autoFocus />
+        </Field>
+        <Field label="Why (optional but speeds up review)" htmlFor="correction-reason">
+          <Textarea id="correction-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="e.g. Promoted to CEO in July 2026 — confirmed on the company blog." />
+        </Field>
+      </div>
+    </Modal>
   );
 }
 

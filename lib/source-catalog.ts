@@ -50,6 +50,7 @@ const CATALOG: Record<string, SourceProvider> = {
   'Freemail classifier': { name: 'Freemail Classifier', category: 'derived', reliability: 0.6, license: 'Derived signal', description: 'Consumer-mailbox domain classification.' },
   'Jaro-Winkler match': { name: 'Fuzzy Match Engine', category: 'derived', reliability: 0.75, license: 'Derived signal', description: 'String-similarity scoring for name/company variants.' },
   'Company reconciliation': { name: 'Company Reconciliation', category: 'derived', reliability: 0.78, license: 'Derived signal', description: 'Messy company name resolved to a known company.' },
+  'User-reported correction': { name: 'Customer Correction', category: 'first-party', reliability: 0.96, license: 'Customer-submitted (reviewed)', description: 'A value corrected by a customer and accepted on review (F-046).' },
 };
 
 const clamp01 = (n: number) => Math.max(0, Math.min(0.99, Math.round(n * 100) / 100));

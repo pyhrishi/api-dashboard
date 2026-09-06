@@ -78,7 +78,11 @@ export type TelemetryEventName =
   | 'bulk_job_started'
   | 'bulk_job_completed'
   | 'bulk_job_cancelled'
-  | 'bulk_job_retried';
+  | 'bulk_job_retried'
+  // data quality — user-reported corrections (F-046)
+  | 'corrections_viewed'
+  | 'correction_reported'
+  | 'correction_reviewed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

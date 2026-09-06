@@ -156,6 +156,87 @@ export function suggestTriage(log: TriageLog | null | undefined): TriageSuggesti
   };
 }
 
+// ─── User-reported correction triage (F-046) ──────────────────────────────────
+
+import { validateFieldValue, type CorrectionFieldKind, type CorrectionTriage } from '@/lib/corrections';
+
+/** What the triage engine reasons over — a proposed correction to one field. */
+export interface CorrectionTriageInput {
+  fieldKind: CorrectionFieldKind;
+  oldValue: string;
+  newValue: string;
+  reason: string;
+  /** The reporter's email — a disposable domain lowers trust. */
+  reportedBy?: string;
+}
+
+const DISPOSABLE_HINTS = ['tempmail', 'mailinator', 'guerrilla', 'throwaway', '10minute', 'trashmail', 'temp-mail', 'yopmail'];
+
+/**
+ * Score how plausible a reported correction is, deterministically. Format-valid,
+ * materially-different, well-explained corrections from trusted reporters score
+ * high; no-op or implausible ones from disposable domains score low. Same input →
+ * same verdict (no randomness), so the review queue is stable across reloads.
+ */
+export function triageCorrection(input: CorrectionTriageInput): CorrectionTriage {
+  const oldV = String(input.oldValue ?? '').trim();
+  const newV = String(input.newValue ?? '').trim();
+  const reason = String(input.reason ?? '').trim();
+  const reasons: string[] = [];
+  let score = 0.5;
+
+  // No-op corrections are the strongest negative signal.
+  if (newV && newV.toLowerCase() === oldV.toLowerCase()) {
+    return { score: 0.1, verdict: 'suspect', reasons: ['New value is identical to the current value — no change'] };
+  }
+
+  // Format validity of the proposed value.
+  if (validateFieldValue(input.fieldKind, newV)) {
+    score += 0.22;
+    reasons.push(`New value is well-formed for a ${input.fieldKind === 'text' ? 'field' : input.fieldKind}`);
+  } else {
+    score -= 0.4;
+    reasons.push(`New value is not well-formed for a ${input.fieldKind === 'text' ? 'field' : input.fieldKind}`);
+  }
+
+  // A material, shape-preserving change reads as a genuine update.
+  if (newV && oldV && newV.toLowerCase() !== oldV.toLowerCase()) {
+    score += 0.12;
+    reasons.push('Materially different from the current value');
+  }
+
+  // Numeric plausibility — an absurd jump in a numeric field is suspect.
+  const oldNum = Number(oldV.replace(/[^\d.]/g, ''));
+  const newNum = Number(newV.replace(/[^\d.]/g, ''));
+  if (Number.isFinite(oldNum) && Number.isFinite(newNum) && oldNum > 0 && newNum > 0) {
+    const ratio = newNum / oldNum;
+    if (ratio > 50 || ratio < 1 / 50) {
+      score -= 0.35;
+      reasons.push('Implausible jump from the current value');
+    }
+  }
+
+  // A specific, checkable reason raises confidence; a terse one lowers it.
+  if (reason.length >= 20) {
+    score += 0.14;
+    reasons.push('Reporter gave a specific, checkable reason');
+  } else if (reason.length < 6) {
+    score -= 0.14;
+    reasons.push('Reason is too vague to verify');
+  }
+
+  // Reporter trust — a disposable domain is a spam signal.
+  const domain = (input.reportedBy ?? '').split('@')[1]?.toLowerCase() ?? '';
+  if (domain && DISPOSABLE_HINTS.some((h) => domain.includes(h))) {
+    score -= 0.25;
+    reasons.push('Reporter domain looks disposable');
+  }
+
+  score = Math.max(0, Math.min(1, score));
+  const verdict: CorrectionTriage['verdict'] = score >= 0.7 ? 'likely_valid' : score >= 0.4 ? 'needs_review' : 'suspect';
+  return { score: Math.round(score * 100) / 100, verdict, reasons };
+}
+
 // ─── Duplicate Feature-Request Detection ──────────────────────────────────────
 
 export interface SimilarItem {

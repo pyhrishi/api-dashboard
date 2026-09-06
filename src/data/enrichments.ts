@@ -150,7 +150,7 @@ export function validateInput(kind: InputKind, raw: string): boolean {
 
 // ── Generic result view-model ────────────────────────────────────────────────
 export type FieldFreshness = 'fresh' | 'aging' | 'stale';
-export interface EnrichmentField { label: string; value: string; verified?: boolean; masked?: boolean; mono?: boolean; verifiedAt?: string; freshness?: FieldFreshness; }
+export interface EnrichmentField { label: string; value: string; verified?: boolean; masked?: boolean; mono?: boolean; verifiedAt?: string; freshness?: FieldFreshness; corrected?: boolean; correctionNote?: string; }
 export interface EnrichmentProvenance { field: string; source: string; signal: string; confidence: number; }
 /** One discovered social account, structured for the rich per-platform card grid. */
 export interface SocialProfileView {
@@ -1299,6 +1299,49 @@ function withSources(vm: EnrichmentResult): EnrichmentResult {
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
   const vm = buildEnrichmentResult(data);
   return vm ? withSources(withCompleteness(withFieldFreshness(vm))) : null;
+}
+
+/** The minimal shape `applyCorrections` needs — structurally satisfied by a `Correction`. */
+export interface AppliedCorrection { field: string; oldValue: string; newValue: string; }
+
+const CORRECTION_SOURCE = 'User-reported correction';
+const normLabel = (s: string) => s.trim().toLowerCase();
+
+/**
+ * Overlay accepted user-reported corrections (F-046) onto a result: replace each
+ * matching field's value, flag it as corrected, and re-attribute the field to the
+ * "Customer Correction" provider (via provenance source). Re-runs source
+ * attribution so the Sources panel reflects the overlay. Pure — returns a new
+ * result and never mutates the input. A no-op when there are no corrections.
+ */
+export function applyCorrections(result: EnrichmentResult, accepted: AppliedCorrection[]): EnrichmentResult {
+  if (!accepted.length) return result;
+  // Latest accepted correction per field wins (caller passes newest-first).
+  const byField = new Map<string, AppliedCorrection>();
+  accepted.forEach((c) => { const k = normLabel(c.field); if (!byField.has(k)) byField.set(k, c); });
+  if (byField.size === 0) return result;
+
+  let changed = false;
+  const fields = result.fields.map((f) => {
+    const c = byField.get(normLabel(f.label));
+    if (!c || f.value === c.newValue) return f;
+    changed = true;
+    return { ...f, value: c.newValue, corrected: true, correctionNote: `Corrected from "${c.oldValue}"`, verified: true };
+  });
+  if (!changed) return result;
+
+  // Re-attribute corrected fields to the Customer Correction provider.
+  const existing = result.provenance ? [...result.provenance] : [];
+  byField.forEach((c) => {
+    const k = normLabel(c.field);
+    const idx = existing.findIndex((p) => normLabel(p.field) === k);
+    const entry: EnrichmentProvenance = { field: c.field, source: CORRECTION_SOURCE, signal: 'Customer-submitted, accepted on review', confidence: 0.96 };
+    if (idx >= 0) existing[idx] = entry; else existing.push(entry);
+  });
+
+  const next: EnrichmentResult = { ...result, fields, provenance: existing };
+  const sources = attributeSources(existing);
+  return sources ? { ...next, sources } : next;
 }
 
 function buildEnrichmentResult(data: unknown): EnrichmentResult | null {

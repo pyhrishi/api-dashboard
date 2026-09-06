@@ -1531,6 +1531,92 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=email-verify',
       },
     ],
+  },
+
+  {
+    id: 'correction-report',
+    name: 'Report a Correction',
+    description: "Report a wrong field value straight from your pipeline (F-046). POST the target identifier, the field, and the corrected value (plus the old value and a reason to speed review). The correction is triaged and lands pending in the Corrections console — a reviewer accepts it before it overlays future results, so the loop stays governed rather than a silent overwrite. Free, keyless-billed.",
+    method: 'POST',
+    path: '/v1/feedback/correction',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'target',
+        type: 'string',
+        required: true,
+        description: 'The looked-up identifier the correction is about (email, domain, etc.)',
+        example: 'jane.doe@acme.com',
+        placeholder: 'user@company.com',
+        maxLength: 200,
+      },
+      {
+        name: 'field',
+        type: 'string',
+        required: true,
+        description: 'The result field being corrected (e.g. Title, Phone, Location)',
+        example: 'Title',
+        placeholder: 'Title',
+        maxLength: 60,
+      },
+      {
+        name: 'new_value',
+        type: 'string',
+        required: true,
+        description: 'The value it should be',
+        example: 'Chief Executive Officer',
+        placeholder: 'Correct value',
+        maxLength: 300,
+      },
+      {
+        name: 'old_value',
+        type: 'string',
+        required: false,
+        description: 'The current (wrong) value, for context',
+        example: 'Chief Operating Officer',
+        placeholder: 'Current value',
+        maxLength: 300,
+      },
+      {
+        name: 'reason',
+        type: 'string',
+        required: false,
+        description: 'Why the value is wrong — a specific, checkable reason triages higher',
+        example: 'Promoted to CEO in July 2026 — confirmed on the company blog.',
+        placeholder: 'What changed and how you know',
+        maxLength: 500,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'correction-to-console',
+        title: 'Review in the console',
+        description: 'Reported corrections are triaged and accepted in the Corrections queue.',
+        category: 'sdks',
+        link: '/console/corrections',
+      },
+    ],
+  },
+
+  {
+    id: 'correction-stats',
+    name: 'Correction Feedback Stats',
+    description: 'Read the correction feedback registry: total reports, how many are pending, a breakdown by AI triage verdict (likely-valid / needs-review / suspect), and the most recent reports. Free, keyless-billed.',
+    method: 'GET',
+    path: '/v1/feedback/correction',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'correction-stats-to-report',
+        title: 'Report a correction',
+        description: 'Flag a wrong field value from your pipeline.',
+        category: 'sdks',
+        link: '/console/explorer?endpoint=correction-report',
+      },
+    ],
   }
 ];
 
