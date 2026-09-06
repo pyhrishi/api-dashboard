@@ -1924,6 +1924,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=intent',
       },
     ],
+  },
+
+  {
+    id: 'companies-merchant',
+    name: 'Ecommerce Merchant Enrichment',
+    description: "Detect whether a company is an ecommerce merchant and enrich the store (F-017): platform (Shopify / WooCommerce / Magento / …), business model, GMV and monthly-revenue bands, product-catalog size and top categories, average order value, payment providers, shipping regions, currencies, storefront tech stack, and a monthly-traffic band. Non-merchants come back with is_merchant:false and an explanation rather than fabricated store data. Personal or unrecognized domains return no profile.",
+    method: 'GET',
+    path: '/v1/companies/merchant',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'The company domain to profile as an ecommerce merchant.',
+        example: 'allbirds.com',
+        placeholder: 'store.com',
+        maxLength: 253,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'merchant-to-technographics',
+        title: 'See the full tech stack',
+        description: 'Detect the storefront and marketing technologies in use.',
+        category: 'sdks',
+        link: '/console/studio?preset=technographics',
+      },
+    ],
   }
 ];
 

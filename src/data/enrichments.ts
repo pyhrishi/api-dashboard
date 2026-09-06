@@ -86,6 +86,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'text-normalize', endpointId: 'text-normalize', param: 'text', inputKind: 'title', icon: 'Languages', category: 'identity', examples: ['JosÃ© GarcÃ­a', 'MÃ¼ller & CÃ´té', 'Пётр Ильич'], label: 'Normalize text' },
   { id: 'demographics', endpointId: 'people-demographics', param: 'email', inputKind: 'email', icon: 'IdCard', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'priya.nair@zomato.in'], label: 'Demographic append' },
   { id: 'job-signals', endpointId: 'companies-job-signals', param: 'domain', inputKind: 'domain', icon: 'BriefcaseBusiness', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Job-posting growth' },
+  { id: 'merchant', endpointId: 'companies-merchant', param: 'domain', inputKind: 'domain', icon: 'Store', category: 'company', examples: ['allbirds.com', 'chewy.com', 'peloton.com'], label: 'Ecommerce merchant' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -1021,6 +1022,52 @@ function jobSignalsToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Ecommerce merchant enrichment (F-017): store platform, GMV, categories, commerce stack. */
+function merchantToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const arr = (k: string) => (Array.isArray(d[k]) ? (d[k] as string[]) : []);
+  const company = str('company') || str('domain') || 'Company';
+  const isMerchant = d.is_merchant === true;
+  if (!isMerchant) {
+    return {
+      kind: 'company', title: company, subtitle: 'Not detected as an ecommerce merchant',
+      avatar: initialsOf(company),
+      badges: ['Not a merchant'],
+      fields: [
+        { label: 'Merchant', value: 'No storefront detected' },
+        { label: 'Industry', value: str('industry') },
+        { label: 'Confidence', value: `${Math.round((typeof d.merchant_confidence === 'number' ? (d.merchant_confidence as number) : 0) * 100)}%` },
+      ],
+      confidence: typeof d.confidence === 'number' ? (d.confidence as number) : undefined,
+      raw: d,
+    };
+  }
+  const categories = arr('categories');
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: `${str('platform')} · ${str('business_model')} · ${str('gmv_band')} GMV`,
+    avatar: initialsOf(company),
+    badges: ['Merchant', str('platform'), str('business_model'), str('gmv_band')].filter(Boolean),
+    fields: [
+      { label: 'Platform', value: str('platform') },
+      { label: 'Business model', value: str('business_model') },
+      { label: 'GMV band', value: str('gmv_band') },
+      { label: 'Monthly revenue', value: str('monthly_revenue_band') },
+      { label: 'Products', value: str('product_count_band') },
+      { label: 'Avg order value', value: `$${typeof d.avg_order_value_usd === 'number' ? d.avg_order_value_usd : 0}` },
+      { label: 'Monthly visits', value: str('monthly_visits_band') },
+      { label: 'Payments', value: arr('payment_providers').join(', ') || '—' },
+      { label: 'Ships to', value: arr('shipping_regions').join(', ') || '—' },
+      { label: 'Storefront tech', value: arr('storefront_tech').join(', ') || '—' },
+    ],
+    chips: categories.length ? { label: 'Categories', items: categories } : undefined,
+    confidence: typeof d.confidence === 'number' ? (d.confidence as number) : undefined,
+    lastVerified: typeof d.as_of === 'string' ? (d.as_of as string) : undefined,
+    raw: d,
+  };
+}
+
 /** Probabilistic fuzzy matching (F-024): ranked candidates for a messy name + company. */
 function fuzzyToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1491,6 +1538,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.seniority_tier === 'number' && Array.isArray(data.excluded_attributes)) return demographicToResult(data);
   // Job-posting growth signals (F-016): open_roles + hiring_velocity + by_department.
   if (typeof data.open_roles === 'number' && typeof data.hiring_velocity === 'string' && Array.isArray(data.by_department)) return jobSignalsToResult(data);
+  // Ecommerce merchant enrichment (F-017): is_merchant + platform + merchant_confidence.
+  if (typeof data.is_merchant === 'boolean' && typeof data.platform === 'string' && typeof data.merchant_confidence === 'number') return merchantToResult(data);
   if (typeof data.canonical_title === 'string' && typeof data.seniority === 'string') return titleToResult(data);
   // Firmographic append: naics_code + sic_code mark the shape.
   if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);

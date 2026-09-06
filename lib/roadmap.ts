@@ -1139,6 +1139,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-012', // Buyer intent signals — lib/intent-resolver.ts (composite intent score+tier, topic surges, contributing signals; reuses company/funding/news) + GET /v1/companies/intent + Studio intent panel
   'F-014', // Person demographic append — lib/demographic-resolver.ts (professional demographics on resolvePersonFromEmail+normalizeJobTitle; protected attributes excluded by design) + GET /v1/people/demographics + Studio preset
   'F-016', // Job-posting growth signals — lib/job-signal-resolver.ts (hiring velocity, dept breakdown, growth score; funding→hiring coherence boost) + GET /v1/companies/job-signals + Studio preset
+  'F-017', // Ecommerce merchant enrichment — lib/ecommerce-merchant-resolver.ts (platform, GMV/revenue bands, categories, payments, model; honest is_merchant:false for non-stores) + GET /v1/companies/merchant + Studio preset
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

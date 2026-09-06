@@ -16,6 +16,7 @@ import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { resolveCompanyHierarchy } from '@/lib/company-hierarchy';
 import { appendDemographics } from '@/lib/demographic-resolver';
 import { resolveJobGrowthSignals } from '@/lib/job-signal-resolver';
+import { enrichMerchant } from '@/lib/ecommerce-merchant-resolver';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -545,6 +546,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...jobs };
+    }
+
+    case 'companies-merchant': {
+      // Deterministic ecommerce merchant enrichment (single source of truth).
+      const merchant = enrichMerchant(String(parameters.domain || ''));
+      if (!merchant) {
+        return {
+          success: false,
+          error: { code: 'NO_PROFILE', message: 'No merchant profile could be resolved. Provide a valid company domain (personal mailbox domains have no storefront).' },
+        };
+      }
+      return { success: true, ...merchant };
     }
 
     case 'company-hierarchy': {

@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.58', date: 'September 2026', headline: 'Ecommerce merchant enrichment',
+    changes: [
+      { kind: 'feature', text: 'Ecommerce merchant enrichment — detect whether a company runs an online store and enrich it. A new GET /v1/companies/merchant (and an "Ecommerce merchant" Studio lookup) returns the platform (Shopify / WooCommerce / Magento / BigCommerce / …), business model (DTC / marketplace / subscription / …), GMV and monthly-revenue bands, product-catalog size and top categories, average order value, payment providers, shipping regions, currencies, storefront tech, and a monthly-traffic band.' },
+      { kind: 'improvement', text: 'Honest by default: a domain that isn’t a store comes back with is_merchant:false and an explanation rather than fabricated GMV and platform data — merchant likelihood is weighted by the company’s real industry. Deterministic, state-aware, unit-tested, and built on the shared company resolver so the merchant profile agrees with a direct lookup. Personal or unrecognized domains return no profile.' },
+    ],
+  },
+  {
     version: 'v4.57', date: 'September 2026', headline: 'Job-posting growth signals',
     changes: [
       { kind: 'feature', text: 'Job-posting growth signals — read a company’s hiring as a growth signal. A new GET /v1/companies/job-signals (and a "Job-posting growth" Studio lookup) returns open-role count, hiring velocity (surging → frozen), implied headcount-growth rate, a department-by-department breakdown of where they’re hiring, the specific roles, locations, seniority mix, and plain-English signals. Where a company is hiring — and how fast — is one of the earliest expansion indicators for prospecting and account scoring.' },
