@@ -170,7 +170,13 @@ export type TelemetryEventName =
   | 'preview_endpoint_tried'
   // security — scoped key permissions (F-113)
   | 'scopes_viewed'
-  | 'scope_probe_run';
+  | 'scope_probe_run'
+  // credentials — test & live key pairs (F-112)
+  | 'key_pairs_viewed'
+  | 'key_pair_created'
+  | 'key_pair_revoked'
+  // security — one-time secret reveal (F-115)
+  | 'secret_reveal_acknowledged';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

@@ -18,6 +18,20 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.78', date: 'September 2026', headline: 'One-time secret reveal',
+    changes: [
+      { kind: 'feature', text: 'One-time secret reveal — a new API key\'s full secret is now shown exactly once, at creation, and never again. When you generate a key pair, both secrets appear in a reveal dialog to copy and store; once you acknowledge it, they\'re gone. This is the Stripe model, and the safe default — a secret left revealable in a dashboard is a leak waiting to happen.' },
+      { kind: 'improvement', text: 'After the one-time reveal, a key shows only its fingerprint and last four characters (sk_live_····a1b2 · fp_8f3c92e1) — enough to identify it, never enough to expose it. The fingerprint is deterministic, so the same secret always fingerprints the same. If you lose a secret, roll the key.' },
+    ],
+  },
+  {
+    version: 'v4.77', date: 'September 2026', headline: 'Test & live key pairs',
+    changes: [
+      { kind: 'feature', text: 'Test & live key pairs — one credential, two keys: a sandbox key (sk_test_) for building and a live key (sk_live_) for production, matched by name and scopes. A new Key Pairs console generates the pair together, shows both side by side, and revokes them together — build against test, flip to live to ship.' },
+      { kind: 'improvement', text: 'A pair is a real linked object (both keys share a pairId), not a naming convention, and is mode-agnostic — both keys are created regardless of the environment toggle. Revoking a pair kills both halves at once, so a compromised credential can\'t leave a forgotten twin behind. A pair\'s keys authenticate and bill against the real gateway like any other key.' },
+    ],
+  },
+  {
     version: 'v4.76', date: 'September 2026', headline: 'Scoped key permissions — now enforced',
     changes: [
       { kind: 'feature', text: 'Scoped key permissions are now enforced at the gateway. Restrict an API key to the exact scopes it needs (Identity, Corporate, Search, Enrichment utilities, Write) and any call outside them is rejected with 403 INSUFFICIENT_SCOPE — the required scope is named in the error and the X-Required-Scope header. A key with full access is unchanged; least privilege is opt-in per key.' },

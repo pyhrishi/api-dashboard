@@ -11,6 +11,7 @@ import { getBenchmarkReport, type AccuracyBenchmarkRun } from '@/lib/accuracy-be
 import { analyzeCoverageGaps, makeExpansionRequest, type CoverageExpansionRequest } from '@/lib/coverage-gaps';
 import type { RegionId } from '@/lib/regions';
 import { previewById } from '@/lib/preview-program';
+import { buildKeyPair } from '@/lib/key-pairs';
 import { generateSeedCorrections, correctionEntityKey, inferFieldKind, makeCorrectionId, type Correction, type CorrectionInput } from '@/lib/corrections';
 import { generateSeedSnapshots, buildGoldenRecord, snapshotFromRecord, hashRecord, resolveGoldenEntity, type GoldenSnapshot } from '@/lib/golden-record';
 import { triageCorrection } from '@/lib/insight-engine';
@@ -55,6 +56,8 @@ export interface MockKey {
   environment: 'sandbox' | 'live';
   creditLimit?: number;
   creditsUsed?: number;
+  /** Links a matched test+live credential (F-112); both keys of a pair share it. */
+  pairId?: string;
 }
 
 export interface Organization {
@@ -820,6 +823,11 @@ interface AppState extends FirstCallState, TenantState {
   incrementKeyUsage: (id: string, amount: number) => void;
   updateKey: (id: string, updates: Partial<MockKey>) => void;
   expireKeys: () => void;
+  // Test & live key pairs (F-112) — matched sandbox + live credentials.
+  /** Generates a matched test+live key pair (shared name, scopes, pairId). Admin only. Returns the pairId. */
+  createKeyPair: (name: string, scopes: string[]) => string;
+  /** Revokes both keys of a pair together. Admin only. */
+  revokeKeyPair: (pairId: string) => void;
   logApiRequest: (log: ApiLog) => void;
   /** Populate a deterministic 7-day lookup history for the active env when it has little real traffic (Match-rate transparency, F-029). Idempotent. */
   seedRequestHistory: () => void;
@@ -1134,6 +1142,34 @@ export const useStore = create<AppState>()(
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');
         const log = generateAuditLog('key.created', key.name, state.user?.email || 'System', state.environment, { changes: { after: key } });
         return { activeKeys: [{ ...key, environment: state.environment }, ...state.activeKeys], auditLogs: [log, ...state.auditLogs] };
+      }),
+
+      // ─── Test & live key pairs (F-112) ──────────────────────────────────────
+      createKeyPair: (name, scopes) => {
+        const state = get();
+        if (state.user?.role !== 'admin') throw new Error('Only admins can create key pairs');
+        const trimmed = name.trim();
+        if (!trimmed) throw new Error('A key pair needs a name');
+        const { pairId, test, live } = buildKeyPair(trimmed, scopes);
+        const log = generateAuditLog('key_pair.created', trimmed, state.user?.email || 'System', state.environment, {
+          changes: { after: { pairId, scopes } },
+        });
+        // Both sides are added regardless of the current mode — a pair is mode-agnostic.
+        set((s) => ({ activeKeys: [test, live, ...s.activeKeys], auditLogs: [log, ...s.auditLogs] }));
+        return pairId;
+      },
+
+      revokeKeyPair: (pairId) => set((state) => {
+        if (state.user?.role !== 'admin') throw new Error('Only admins can revoke key pairs');
+        const members = state.activeKeys.filter((k) => k.pairId === pairId);
+        if (members.length === 0) return {};
+        const log = generateAuditLog('key_pair.revoked', members[0].name, state.user?.email || 'System', state.environment, {
+          changes: { before: { pairId, keys: members.length } },
+        });
+        return {
+          activeKeys: state.activeKeys.map((k) => (k.pairId === pairId ? { ...k, status: 'revoked' as const, rawToken: undefined } : k)),
+          auditLogs: [log, ...state.auditLogs],
+        };
       }),
       
       generateFirstKey: () => {
