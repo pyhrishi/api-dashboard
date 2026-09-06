@@ -13,6 +13,7 @@
 import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { deductCredits } from '@/lib/gateway/billing';
+import { registerDelivery, isValidCallbackUrl } from '@/lib/gateway/webhookDelivery';
 
 export type AsyncJobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 export type AsyncJobKind = 'people' | 'companies';
@@ -45,6 +46,9 @@ export interface AsyncJobView {
   results?: AsyncJobResultRow[];
   /** Set when a large job's results are truncated in the response. */
   results_truncated?: boolean;
+  /** Webhook-backed results (F-072): the result is pushed here when the job finishes. */
+  callback_url?: string;
+  delivery_id?: string;
 }
 
 interface StoredJob {
@@ -57,6 +61,9 @@ interface StoredJob {
   creditsCharged: number;
   cancelled: boolean;
   cancelledAt?: number;
+  /** Webhook-backed results (F-072): where the finished result is pushed. */
+  callbackUrl?: string;
+  deliveryId?: string;
 }
 
 // Rows processed per second — tuned so a demo-sized job visibly advances.
@@ -136,6 +143,10 @@ function viewOf(job: StoredJob, now: number): AsyncJobView {
     view.results = rows;
     view.results_truncated = total > RESULT_INLINE_CAP;
   }
+  if (job.callbackUrl) {
+    view.callback_url = job.callbackUrl;
+    view.delivery_id = job.deliveryId;
+  }
   return view;
 }
 
@@ -144,13 +155,15 @@ export interface CreateJobInput {
   endpoint: string;
   inputs: unknown;
   perRowCost?: number;
+  /** Webhook-backed results (F-072): push the finished result here instead of polling. */
+  callbackUrl?: string;
 }
 export type CreateJobResult =
   | { success: true; job: AsyncJobView }
   | { success: false; code: string; message: string };
 
 /** Create a job: validate, charge credits for the batch, and queue it. */
-export function createAsyncJob({ apiKey, endpoint, inputs, perRowCost = 1 }: CreateJobInput): CreateJobResult {
+export function createAsyncJob({ apiKey, endpoint, inputs, perRowCost = 1, callbackUrl }: CreateJobInput): CreateJobResult {
   if (!Array.isArray(inputs) || inputs.length === 0) {
     return { success: false, code: 'INVALID_PARAMETERS', message: 'Provide a non-empty "inputs" array of identifiers to enrich.' };
   }
@@ -168,19 +181,38 @@ export function createAsyncJob({ apiKey, endpoint, inputs, perRowCost = 1 }: Cre
     return { success: false, code: 'PAYMENT_REQUIRED', message: charge.error ?? 'Insufficient credits for this job.' };
   }
 
-  const id = `job_${Date.now().toString(36)}${(seq++).toString(36)}`;
+  const now = Date.now();
+  const id = `job_${now.toString(36)}${(seq++).toString(36)}`;
   const job: StoredJob = {
     id,
     keyPrefix: apiKey.slice(0, 12),
     kind: kindFor(endpoint),
     endpoint,
     inputs: clean,
-    createdAt: Date.now(),
+    createdAt: now,
     creditsCharged: cost,
     cancelled: false,
   };
+
+  // Webhook-backed results (F-072): if a valid callback_url was supplied, schedule
+  // a signed delivery of the finished result at the job's completion time.
+  const cleanCallback = typeof callbackUrl === 'string' ? callbackUrl.trim() : '';
+  if (cleanCallback && isValidCallbackUrl(cleanCallback)) {
+    const completionAt = now + Math.ceil(clean.length / ROWS_PER_SECOND) * 1000;
+    const payload = JSON.stringify({
+      event: 'job.completed',
+      job_id: id,
+      endpoint,
+      total: clean.length,
+      status: 'completed',
+    });
+    const delivery = registerDelivery({ jobId: id, callbackUrl: cleanCallback, event: 'job.completed', scheduledAt: completionAt, payload });
+    job.callbackUrl = cleanCallback;
+    job.deliveryId = delivery.id;
+  }
+
   JOBS.set(id, job);
-  return { success: true, job: viewOf(job, Date.now()) };
+  return { success: true, job: viewOf(job, now) };
 }
 
 /** Poll a single job. */

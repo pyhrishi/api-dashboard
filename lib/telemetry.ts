@@ -92,7 +92,11 @@ export type TelemetryEventName =
   | 'circuits_viewed'
   | 'circuit_forced'
   // resilience — partial-result responses (F-071)
-  | 'partial_result_received';
+  | 'partial_result_received'
+  // delivery — webhook-backed async results (F-072)
+  | 'webhook_delivery_viewed'
+  | 'async_result_dispatched'
+  | 'webhook_delivery_replayed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

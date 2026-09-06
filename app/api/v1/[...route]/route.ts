@@ -11,6 +11,7 @@ import { parseFields, projectFields, applySparseDiscount, sparseDiscountPct, pay
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
 import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gateway/upstreams';
+import { getDeliveryStats, replayDelivery } from '@/lib/gateway/webhookDelivery';
 import { planPartial, computePartial } from '@/lib/gateway/partialResult';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
 import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
@@ -180,6 +181,8 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
         endpoint: typeof body.endpoint === 'string' ? body.endpoint : 'people-search',
         inputs,
         perRowCost: typeof body.per_row_cost === 'number' ? body.per_row_cost : 1,
+        // Webhook-backed results (F-072): push the finished result to this URL.
+        callbackUrl: typeof body.callback_url === 'string' ? body.callback_url : undefined,
       });
       if (!result.success) {
         const status = result.code === 'PAYMENT_REQUIRED' ? 402 : result.code === 'JOB_TOO_LARGE' ? 413 : 400;
@@ -532,6 +535,36 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
     return NextResponse.json(
       { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/circuits (state) or POST /v1/circuits (force a drill).' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
+  // Webhook-backed async results (F-072) — the delivery registry for job results
+  // pushed to a callback_url. GET reads stats + recent; POST /{id}/replay re-drives
+  // a failed delivery. Free meta endpoint; handled before route resolution.
+  if (path === '/v1/deliveries' || path.startsWith('/v1/deliveries/')) {
+    responseHeaders['X-Credits-Cost'] = '0';
+    const seg = path.split('/'); // ['', 'v1', 'deliveries', '{id}', 'replay']
+    const deliveryId = seg[3];
+    if (path === '/v1/deliveries' && request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getDeliveryStats(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (deliveryId && seg[4] === 'replay' && request.method === 'POST') {
+      const result = replayDelivery(deliveryId);
+      if (!result.success) {
+        const status = result.code === 'NOT_FOUND' ? 404 : 409;
+        return NextResponse.json({ success: false, error: { code: result.code, message: result.message } }, { status, headers: responseHeaders });
+      }
+      return NextResponse.json(
+        { success: true, data: result.delivery, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/deliveries or POST /v1/deliveries/{id}/replay.' } },
       { status: 405, headers: responseHeaders },
     );
   }

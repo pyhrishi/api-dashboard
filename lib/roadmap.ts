@@ -1130,6 +1130,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-062', // Field selection / sparse responses — universal ?fields= param projects the (post-mask) payload (src/lib/gateway/fieldSelection.ts SSOT) + sparse billing discount + X-Fields-*/X-Sparse-* headers + /console/field-selection playground
   'F-066', // Circuit breaker per upstream — src/lib/gateway/upstreams.ts (endpoint→provider map) + per-upstream circuitBreaker.ts (trip/half-open/force drills) + route re-key + GET/POST /v1/circuits + /console/circuits
   'F-071', // Partial-result responses — src/lib/gateway/partialResult.ts (strip degraded-upstream fields + partial meta) + upstreams CONTRIBUTIONS map + route 206 + partial billing + Studio partial banner
+  'F-072', // Webhook-backed async results — src/lib/gateway/webhookDelivery.ts (signed delivery registry, retry/backoff/DLQ/replay) + async job callback_url + GET /v1/deliveries + POST /v1/deliveries/{id}/replay + /console/webhook-deliveries
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

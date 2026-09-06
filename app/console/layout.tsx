@@ -66,6 +66,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Identity Resolution', href: '/console/identity', icon: <GitMerge className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Bulk Jobs', href: '/console/jobs', icon: <ListChecks className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Async Jobs', href: '/console/async-jobs', icon: <Boxes className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Result Delivery', href: '/console/webhook-deliveries', icon: <Webhook className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Streaming', href: '/console/stream', icon: <Radio className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Idempotency', href: '/console/idempotency', icon: <Repeat2 className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Field Selection', href: '/console/field-selection', icon: <ListFilter className="w-5 h-5" />, roles: ['admin', 'developer'] },

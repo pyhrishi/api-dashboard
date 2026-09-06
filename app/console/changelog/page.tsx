@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.49', date: 'September 2026', headline: 'Webhook-backed async results',
+    changes: [
+      { kind: 'feature', text: 'Webhook-backed async results — stop polling. Submit a long-running job (POST /v1/jobs) with a callback_url and Zinbit pushes the finished result to your endpoint as a signed webhook POST when it completes. Each delivery carries an X-Zinbit-Signature (HMAC-SHA256) you verify against your endpoint secret, so you can trust the payload came from us.' },
+      { kind: 'feature', text: 'Delivery is operator-grade: a non-2xx response is retried with exponential backoff (0s · 30s · 2m · 10m), and a delivery that exhausts its retries lands in a dead-letter queue where you can replay it with one click. A new Result Delivery console (/console/webhook-deliveries) shows every delivery, its full attempt timeline, the signed payload, and a live success rate — submit a test job right from the page and watch it deliver.' },
+      { kind: 'feature', text: 'A free GET /v1/deliveries reads the registry (delivered / retrying / dead-letter counts + recent attempts) and POST /v1/deliveries/{id}/replay re-drives a failed one. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.48', date: 'September 2026', headline: 'Partial-result responses',
     changes: [
       { kind: 'feature', text: 'Partial-result responses — when one of the upstreams behind an enrichment is degraded, you now get back what resolved instead of an all-or-nothing failure. If, say, the carrier HLR that supplies direct phones has an open circuit, a person lookup still returns the name, title, company, location, and socials — just without the phone — as HTTP 206 with a `partial` metadata block naming exactly which fields were withheld and why (which upstream, X-Partial-Result / X-Partial-Missing headers).' },
