@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.33', date: 'September 2026', headline: 'Merge & unmerge controls',
+    changes: [
+      { kind: 'feature', text: 'Merge & unmerge controls — a new Identity Resolution console (/console/identity) puts a human in the loop over entity resolution. Suspected-duplicate records (the same person entered across Salesforce, HubSpot, CSV imports, and the API) surface as groups; pick the surviving record, add a reason, and merge them into one canonical entity — collapsing their Zinbit IDs into a single golden ID.' },
+      { kind: 'feature', text: 'Every merge is reversible: the full merge history shows who merged what, when, and why, and any decision can be unmerged in one click to split the records back into separate entities with their original IDs restored. Both actions are written to the audit log.' },
+      { kind: 'improvement', text: 'Deterministic and RBAC-aware — the merge center opens in the same believable state every time, and the billing role is read-only (merge and unmerge are gated). Merge decisions persist across reloads.' },
+    ],
+  },
+  {
     version: 'v4.32', date: 'September 2026', headline: 'Name canonicalization',
     changes: [
       { kind: 'feature', text: 'Name canonicalization — normalize any spelling, casing, ordering, or accenting of a personal name into one canonical form. New GET /v1/names/canonicalize returns the canonical "First Last", an ASCII-folded form, a formal form (with prefix + suffix), the parsed components (prefix / first / middle / last / suffix), and a log of exactly what changed — reordering "Last, First", expanding nicknames (Bob → Robert), fixing typos (Jhon → John), folding accents (José → Jose), and casing surnames (McDonald, O\'Brien, van der Berg). Shipped as a Studio preset with a parsed-components panel.' },

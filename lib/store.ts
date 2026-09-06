@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { TelemetryEventRecord } from '@/lib/telemetry';
 import type { EnrichmentResult } from '@/data/enrichments';
 import { generateSeedRequestHistory, SEED_LOOKUP_COUNT } from '@/lib/seed-request-history';
+import { generateMergeCandidates, type MergeableEntity, type EntityMerge } from '@/lib/merge-seed';
 
 /**
  * One enrichment run in the Enrichment Studio (any preset/endpoint), persisted per
@@ -609,6 +610,17 @@ interface AppState extends FirstCallState, TenantState {
   addEnrichment: (record: EnrichmentRecord) => void;
   removeEnrichment: (id: string) => void;
   clearEnrichments: () => void;
+  // Merge & unmerge controls (entity resolution, human-in-the-loop)
+  /** Suspected-duplicate candidate records; re-seeded deterministically (not persisted). */
+  mergeableEntities: MergeableEntity[];
+  /** Applied merges with full audit trail; persisted. */
+  entityMerges: EntityMerge[];
+  /** Idempotently seeds merge candidates on mount (like seedRequestHistory). No audit log. */
+  seedMergeCandidates: () => void;
+  /** Merges records into one canonical entity. Returns the new merge id. Billing role cannot merge. */
+  mergeEntities: (survivingEntityId: string, mergedEntityIds: string[], reason: string) => string;
+  /** Reverts (unmerges) a prior merge by id. Billing role cannot unmerge. */
+  revertMerge: (mergeId: string) => void;
   webhooks: WebhookEndpoint[];
   webhookLogs: WebhookLog[];
   webhookRetryQueue: WebhookRetryItem[];
@@ -822,6 +834,8 @@ export const useStore = create<AppState>()(
       telemetryEvents: [],
       bulkJobs: [],
       enrichments: [],
+      mergeableEntities: [],
+      entityMerges: [],
       webhooks: [],
       webhookLogs: [],
       webhookRetryQueue: [],
@@ -2501,6 +2515,47 @@ export const useStore = create<AppState>()(
         enrichments: state.enrichments.filter(r => r.id !== id),
       })),
       clearEnrichments: () => set(() => ({ enrichments: [] })),
+
+      seedMergeCandidates: () => set((state) => {
+        if (state.mergeableEntities.length > 0) return {} as Partial<AppState>;
+        return { mergeableEntities: generateMergeCandidates() };
+      }),
+
+      mergeEntities: (survivingEntityId, mergedEntityIds, reason) => {
+        const id = `mrg_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
+        set((state) => {
+          if (state.user?.role === 'billing') throw new Error('Billing users cannot merge entities');
+          const surviving = state.mergeableEntities.find(e => e.id === survivingEntityId);
+          const canonicalZid = surviving?.zid || '';
+          const merge: EntityMerge = {
+            id,
+            canonicalZid,
+            survivingEntityId,
+            mergedEntityIds,
+            reason,
+            mergedBy: state.user?.email || 'System',
+            mergedAt: Date.now(),
+            status: 'active',
+          };
+          const log = generateAuditLog('entity.merged', surviving?.name || canonicalZid, state.user?.email || 'System', state.environment, {
+            changes: { after: { canonicalZid, merged: mergedEntityIds.length } },
+          });
+          return { entityMerges: [merge, ...state.entityMerges], auditLogs: [log, ...state.auditLogs] };
+        });
+        return id;
+      },
+
+      revertMerge: (mergeId) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot unmerge entities');
+        const merge = state.entityMerges.find(m => m.id === mergeId);
+        const entityMerges = state.entityMerges.map(m => m.id === mergeId
+          ? { ...m, status: 'reverted' as const, revertedAt: Date.now(), revertedBy: state.user?.email || 'System' }
+          : m);
+        const log = generateAuditLog('entity.unmerged', merge?.canonicalZid || mergeId, state.user?.email || 'System', state.environment, {
+          changes: { before: merge ? { canonicalZid: merge.canonicalZid, merged: merge.mergedEntityIds.length } : undefined },
+        });
+        return { entityMerges, auditLogs: [log, ...state.auditLogs] };
+      }),
     }),
     {
       name: 'zinbit-storage',
@@ -2558,6 +2613,8 @@ export const useStore = create<AppState>()(
         telemetryEvents: state.telemetryEvents,
         bulkJobs: state.bulkJobs,
         enrichments: state.enrichments,
+        // Merge audit trail (candidates are re-seeded, so only the merges persist)
+        entityMerges: state.entityMerges,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
         isFirstCallMade: state.isFirstCallMade,
