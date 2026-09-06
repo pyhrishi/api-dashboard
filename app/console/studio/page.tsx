@@ -15,7 +15,7 @@ import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
-  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView,
+  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
@@ -24,7 +24,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -753,6 +753,72 @@ function OfficeGeoPanel({ g }: { g: OfficeGeographyView }) {
   );
 }
 
+const EVENT_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  funding: Banknote, leadership: Users, expansion: MapPin, product: Sparkles,
+  acquisition: Building2, partnership: Share2, award: Award, hiring: Gauge,
+};
+const SENTIMENT_DOT: Record<CompanyEventView['sentiment'], string> = {
+  positive: 'bg-semantic-success', neutral: 'bg-fg-subtle', negative: 'bg-semantic-error',
+};
+
+function NewsFeedPanel({ n }: { n: NewsFeedView }) {
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const shown = typeFilter ? n.events.filter((e) => e.type === typeFilter) : n.events;
+  return (
+    <div className="mt-5">
+      {/* Type filter chips */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-3">
+        <button
+          onClick={() => setTypeFilter(null)}
+          className={`text-[11px] font-bold px-2 py-1 rounded-md border transition-colors ${typeFilter === null ? 'bg-teal/10 border-teal/30 text-teal' : 'bg-glass border-border-subtle text-fg-muted hover:text-fg'}`}
+        >All {n.eventCount}</button>
+        {n.byType.map((bt) => (
+          <button
+            key={bt.type}
+            onClick={() => setTypeFilter(typeFilter === bt.type ? null : bt.type)}
+            className={`text-[11px] font-bold px-2 py-1 rounded-md border capitalize transition-colors ${typeFilter === bt.type ? 'bg-teal/10 border-teal/30 text-teal' : 'bg-glass border-border-subtle text-fg-muted hover:text-fg'}`}
+          >{bt.type} {bt.count}</button>
+        ))}
+      </div>
+
+      {/* Event timeline */}
+      <ol className="relative border-l border-border-subtle ml-2">
+        {shown.map((e, i) => {
+          const Icon = EVENT_ICON[e.type] ?? Sparkles;
+          return (
+            <motion.li key={e.id} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.03 * i }} className="ml-5 pb-4 last:pb-0">
+              <span className={`absolute -left-[5px] w-2.5 h-2.5 rounded-full ${SENTIMENT_DOT[e.sentiment]}`} aria-hidden />
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-surface-2 border border-border-subtle flex items-center justify-center shrink-0 text-fg-muted">
+                  <Icon className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-fg">{e.headline}</span>
+                    <span className="text-[11px] text-fg-subtle whitespace-nowrap">{e.date}</span>
+                  </div>
+                  <p className="text-[12px] text-fg-muted leading-snug mt-0.5">{e.summary}</p>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] text-fg-subtle">
+                    <span className="capitalize font-semibold">{e.type}</span>
+                    <span>·</span>
+                    <span>{e.source}</span>
+                    <span className="ml-auto flex items-center gap-1">
+                      <span className="w-8 h-1 rounded-full bg-glass overflow-hidden inline-block" aria-hidden>
+                        <span className="block h-full rounded-full bg-teal" style={{ width: `${e.importance}%` }} />
+                      </span>
+                      <span className="font-mono tabular-nums">{e.importance}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -833,6 +899,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.officeGeo && (
           <OfficeGeoPanel g={result.officeGeo} />
+        )}
+
+        {result.news && (
+          <NewsFeedPanel n={result.news} />
         )}
 
         {result.chips && result.chips.items.length > 0 && (

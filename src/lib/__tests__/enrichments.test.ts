@@ -3,6 +3,7 @@ import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
+import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 
@@ -97,6 +98,20 @@ describe('enrichment registry', () => {
     const boot = toEnrichmentResult({ ...resolveFundingForDomain('gmail.com')! })!;
     expect(boot.funding?.hasFunding).toBe(false);
     expect(boot.funding?.rounds).toHaveLength(0);
+  });
+
+  it('maps a company-news response to the structured feed view-model (F-015)', () => {
+    const news = resolveCompanyNews('stripe.com')!;
+    const vm = toEnrichmentResult({ ...news })!;
+    expect(vm.kind).toBe('company');
+    expect(vm.news).toBeDefined();
+    expect(vm.news?.eventCount).toBe(news.event_count);
+    expect(vm.news?.events.length).toBe(news.events.length);
+    expect(vm.fields).toHaveLength(0); // rendered via the timeline panel
+    // by-type tally is present and sums to the event count.
+    const tallied = (vm.news?.byType ?? []).reduce((a, b) => a + b.count, 0);
+    expect(tallied).toBe(vm.news?.eventCount);
+    expect(vm.badges.some((b) => /event/.test(b))).toBe(true);
   });
 
   it('flattens a generic flat response into fields', () => {

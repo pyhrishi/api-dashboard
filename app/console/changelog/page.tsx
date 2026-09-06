@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.25', date: 'September 2026', headline: 'Company news & event feed',
+    changes: [
+      { kind: 'feature', text: 'Company news & event feed — turn a domain into a chronological feed of the company\'s trigger events: funding rounds, leadership changes, office expansions, product launches, M&A, partnerships, and hiring surges. Each event carries a type, date, headline, summary, source, sentiment, and a 0-100 importance score, so a rep can open a call knowing exactly what just happened. New GET /v1/companies/news endpoint (2 credits), shipped as a Studio preset with an event timeline and type filters.' },
+      { kind: 'improvement', text: 'The feed is reconciled with the rest of the company graph — funding events come straight from the funding resolver, so a Series C in the news feed matches the same round in Funding Signals exactly. Deterministic per domain; personal-email domains return no company feed.' },
+    ],
+  },
+  {
     version: 'v4.24', date: 'September 2026', headline: 'HQ & office geo-resolution',
     changes: [
       { kind: 'feature', text: 'HQ & office geo-resolution — GET /v1/companies/offices turns a domain into its headquarters (a full geocoded address: street, region, postal code, ISO country, latitude/longitude, IANA timezone, UTC offset) and its wider office footprint — every location by function (engineering, sales, support, remote hub) with headcount and coordinates.' },

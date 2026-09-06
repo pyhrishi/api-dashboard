@@ -63,6 +63,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'technographics', endpointId: 'technographic-detect', param: 'domain', inputKind: 'domain', icon: 'Cpu', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Technographic detection' },
   { id: 'funding', endpointId: 'funding-signals', param: 'domain', inputKind: 'domain', icon: 'Banknote', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Funding signals' },
   { id: 'offices', endpointId: 'company-offices', param: 'domain', inputKind: 'domain', icon: 'MapPin', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'HQ & office geo' },
+  { id: 'news', endpointId: 'company-news', param: 'domain', inputKind: 'domain', icon: 'Newspaper', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Company news' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -255,6 +256,23 @@ export interface OfficeGeographyView {
   followTheSun: boolean;
   outreachWindowUtc: string;
 }
+/** One company event, for the news feed timeline (F-015). */
+export interface CompanyEventView {
+  id: string;
+  type: string;
+  date: string;
+  headline: string;
+  summary: string;
+  source: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  importance: number;
+}
+/** Structured company news feed — rendered as an event timeline with type filters. */
+export interface NewsFeedView {
+  events: CompanyEventView[];
+  eventCount: number;
+  byType: { type: string; count: number }[];
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -275,6 +293,8 @@ export interface EnrichmentResult {
   funding?: FundingView;
   /** Structured HQ & office geography (F-013) — rendered as a geo footprint. */
   officeGeo?: OfficeGeographyView;
+  /** Structured company news feed (F-015) — rendered as an event timeline. */
+  news?: NewsFeedView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
   completeness?: CompletenessScore;
   confidence?: number;
@@ -712,6 +732,48 @@ function officeGeoToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Company news & event feed (F-015): a chronological trigger-event timeline. */
+function newsToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const company = str('company') || str('domain') || 'Company';
+
+  const rawEvents = Array.isArray(d.events) ? (d.events as Record<string, unknown>[]) : [];
+  const events: CompanyEventView[] = rawEvents.map((e) => {
+    const sentiment = typeof e.sentiment === 'string' ? e.sentiment : 'neutral';
+    return {
+      id: typeof e.id === 'string' ? e.id : '',
+      type: typeof e.type === 'string' ? e.type : 'event',
+      date: typeof e.date === 'string' ? e.date : '',
+      headline: typeof e.headline === 'string' ? e.headline : '',
+      summary: typeof e.summary === 'string' ? e.summary : '',
+      source: typeof e.source === 'string' ? e.source : '',
+      sentiment: (['positive', 'neutral', 'negative'].includes(sentiment) ? sentiment : 'neutral') as CompanyEventView['sentiment'],
+      importance: typeof e.importance === 'number' ? e.importance : 0,
+    };
+  });
+  const byTypeRaw = isRecord(d.by_type) ? (d.by_type as Record<string, unknown>) : {};
+  const byType = Object.entries(byTypeRaw)
+    .map(([type, count]) => ({ type, count: typeof count === 'number' ? count : 0 }))
+    .sort((a, b) => b.count - a.count);
+  const eventCount = num('event_count') ?? events.length;
+
+  const latest = events[0];
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: latest ? `Latest: ${latest.headline}` : str('domain') || undefined,
+    avatar: initialsOf(company),
+    badges: [`${eventCount} event${eventCount === 1 ? '' : 's'}`, ...(latest ? [latest.type] : [])],
+    fields: [],
+    news: { events, eventCount, byType },
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 /** Email deliverability scoring: a 0-100 reachability score + a decomposed signal breakdown. */
 function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -935,6 +997,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.rounds) && typeof data.funding_stage === 'string') return fundingToResult(data);
   // HQ & office geo-resolution: an `offices` array + an `hq` object mark the shape.
   if (Array.isArray(data.offices) && isRecord(data.hq)) return officeGeoToResult(data);
+  // Company news & event feed: an `events` array + a numeric `event_count` mark the shape.
+  if (Array.isArray(data.events) && typeof data.event_count === 'number') return newsToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.

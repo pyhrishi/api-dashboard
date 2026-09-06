@@ -909,6 +909,43 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'company-news',
+    name: 'Company News & Event Feed',
+    description: "Turn a domain into a chronological feed of the company's trigger events — funding rounds, leadership changes, expansions, product launches, M&A, partnerships, and hiring surges — each with a type, date, headline, source, sentiment, and a 0-100 importance score. Funding events are reconciled with the funding graph, so the feed never contradicts the funding or firmographic data. Personal-email domains return no company.",
+    method: 'GET',
+    path: '/v1/companies/news',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'Company domain to pull recent news and events for',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 100,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'news-to-funding',
+        title: 'Funding detail',
+        description: 'Drill into the full round history behind a funding event.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+      {
+        id: 'news-to-webhooks',
+        title: 'Watch for new events',
+        description: 'Get a webhook when a target company posts a new event.',
+        category: 'webhooks',
+        link: '/console/webhooks',
+      },
+    ],
+  },
+
+  {
     id: 'email-verify',
     name: 'Verify Email Deliverability',
     description: 'Score any email for inbox reachability before you send. Returns a 0-100 deliverability score and a decisive verdict, decomposed into every check behind it — syntax, MX, SMTP mailbox handshake, catch-all, disposable, role-based, and free-provider — each with its own result and provenance. Catches typos with a did-you-mean suggestion.',

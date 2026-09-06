@@ -16,6 +16,7 @@ import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
+import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -542,6 +543,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...geo };
+    }
+
+    case 'company-news': {
+      // Deterministic company news & event feed (single source of truth).
+      const news = resolveCompanyNews(String(parameters.domain || ''));
+      if (!news) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No company could be resolved for that domain (personal-email domains have no company feed).' },
+        };
+      }
+      return { success: true, ...news };
     }
 
     case 'email-verify': {
