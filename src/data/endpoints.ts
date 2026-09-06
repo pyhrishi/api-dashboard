@@ -1266,6 +1266,43 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/async-jobs',
       },
     ],
+  },
+
+  {
+    id: 'hashed-email',
+    name: 'Hashed-Email Lookup',
+    description: 'Privacy-preserving identity resolution: enrich against a SHA-256 hash of an email address instead of the raw PII. Pass the hex digest of the lowercased, trimmed email and — if it matches an opted-in record — get back the full person (name, title, company, contact) without ever transmitting the plaintext. Ideal for GDPR-conscious and adtech match workflows.',
+    method: 'GET',
+    path: '/v1/identity/hashed',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email_sha256',
+        type: 'string',
+        required: true,
+        description: 'SHA-256 hex digest of the lowercased, trimmed email (64 hex chars). An optional "sha256:" prefix is accepted.',
+        example: 'a3f5b1c9e2d47680b1122a9f3e5c7d81904a6b2c3d4e5f60718293a4b5c6d7e8',
+        placeholder: 'sha256 hex digest',
+        maxLength: 71,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'hashed-to-studio',
+        title: 'Hash an email in the Studio',
+        description: 'The Studio hashes an email in your browser and looks it up — plaintext never leaves the page.',
+        category: 'sdks',
+        link: '/console/studio?preset=hashed-email',
+      },
+      {
+        id: 'hashed-to-privacy',
+        title: 'Privacy & compliance',
+        description: 'See how hashed identifiers keep raw PII out of your enrichment pipeline.',
+        category: 'errorHandling',
+        link: '/console/legal',
+      },
+    ],
   }
 ];
 

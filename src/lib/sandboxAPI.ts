@@ -17,6 +17,7 @@ import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
 import { resolveCompanyNews } from '@/lib/company-news-resolver';
+import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -555,6 +556,24 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...news };
+    }
+
+    case 'hashed-email': {
+      // Privacy-preserving SHA-256 email lookup (single source of truth).
+      const hashed = resolveByEmailHash(String(parameters.email_sha256 || ''));
+      if (!hashed) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a valid SHA-256 hex digest (64 hex characters).' },
+        };
+      }
+      if (!hashed.matched) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: hashed.reason || 'No identity matches that hash.' },
+        };
+      }
+      return { success: true, ...hashed };
     }
 
     case 'email-verify': {

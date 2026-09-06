@@ -1109,6 +1109,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-015', // Company news & event feed — GET /v1/companies/news (lib/company-news-resolver.ts) + Studio event timeline
   'F-018', // Multi-region coverage — /console/regions dashboard (lib/region-coverage.ts) — EMEA/APAC/LATAM/NAMER × data type
   'F-020', // Streaming inline enrichment — POST /v1/enrich/stream NDJSON (src/lib/gateway/streamEnrich.ts) + /console/stream
+  'F-021', // Hashed-email (SHA-256) lookups — GET /v1/identity/hashed (lib/hashed-email-resolver.ts, lib/sha256.ts) + Studio hash-on-send preset
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

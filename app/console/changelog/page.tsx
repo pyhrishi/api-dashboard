@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.28', date: 'September 2026', headline: 'Hashed-email (SHA-256) lookups',
+    changes: [
+      { kind: 'feature', text: 'Hashed-email (SHA-256) lookups — enrich against a SHA-256 hash of an email instead of the raw address, so raw PII never leaves your system. New GET /v1/identity/hashed takes the hex digest of the lowercased, trimmed email and, if it matches an opted-in record, returns the full resolved person — name, title, company, and contact — without ever receiving the plaintext. Built for GDPR-conscious and adtech match workflows.' },
+      { kind: 'feature', text: 'The Enrichment Studio ships a “Hashed-email lookup” preset that proves the model end to end: you type an email, your browser hashes it locally with SHA-256, and only the digest is put on the wire and into the request log — the result card shows the hash it matched and confirms the plaintext was never sent.' },
+      { kind: 'improvement', text: 'Matches resolve through the same identity graph as every other lookup, so a hashed match equals the plaintext result exactly; a hash outside the opted-in dataset returns an honest 404 and an invalid digest a clean 400. Deterministic — the client and server hash with the same implementation, so they always agree.' },
+    ],
+  },
+  {
     version: 'v4.27', date: 'September 2026', headline: 'Streaming inline enrichment',
     changes: [
       { kind: 'feature', text: 'Streaming inline enrichment — enrich a list over a single low-latency connection that streams each row back the moment it resolves, instead of waiting for the whole batch. New POST /v1/enrich/stream returns NDJSON: a start frame, one JSON line per input (status matched / missed / error, with the result and per-row latency), then an end summary. Process the first row while the last is still enriching — ideal for real-time pipelines.' },

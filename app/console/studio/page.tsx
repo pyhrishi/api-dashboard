@@ -8,7 +8,7 @@ import {
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
-  MapPin, Globe, Sun,
+  MapPin, Globe, Sun, Hash,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
@@ -19,12 +19,13 @@ import {
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
+import { sha256Hex } from '@/lib/sha256';
 import { track } from '@/lib/telemetry';
 import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -91,7 +92,10 @@ function StudioInner() {
     setPreset(p); setValue(raw); setPhase('running'); setResult(null); setMeta({});
 
     const startedAt = performance.now();
-    const url = consoleApiUrl(p.path, { [p.param]: raw });
+    // A transform preset hashes the input client-side, so only the digest — never
+    // the plaintext — is put on the wire or into the request log.
+    const sent = p.transform === 'sha256' ? sha256Hex(raw.trim().toLowerCase()) : raw;
+    const url = consoleApiUrl(p.path, { [p.param]: sent });
     try {
       const res = await fetch(url, { method: p.endpoint.method, headers: { Authorization: authHeaderValue(apiKey), 'Content-Type': 'application/json' } });
       const durationMs = Math.round(performance.now() - startedAt);
@@ -102,7 +106,7 @@ function StudioInner() {
       useStore.getState().logApiRequest({
         id: requestId || `req_${Date.now().toString(36)}`, environment, timestamp: new Date().toISOString(),
         method: p.endpoint.method, path: p.path, status: res.status, duration: durationMs, ip: '::1',
-        request: { headers: { Authorization: authHeaderValue(apiKey) }, parameters: { [p.param]: raw } }, response: body,
+        request: { headers: { Authorization: authHeaderValue(apiKey) }, parameters: { [p.param]: sent } }, response: body,
       });
 
       const data = body && typeof body === 'object' && 'data' in body ? (body as { data: unknown }).data : body;

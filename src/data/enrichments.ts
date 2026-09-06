@@ -26,6 +26,8 @@ interface PresetConfig {
   examples: string[];
   /** Optional short label override; defaults to the endpoint name. */
   label?: string;
+  /** Client-side transform applied to the input before it's sent (e.g. hash it). */
+  transform?: 'sha256';
 }
 
 export interface EnrichmentPreset {
@@ -42,6 +44,8 @@ export interface EnrichmentPreset {
   path: string;
   creditCost: number;
   placeholder: string;
+  /** Client-side transform applied to the input before it's sent (e.g. hash it). */
+  transform?: 'sha256';
 }
 
 const PRESET_CONFIG: PresetConfig[] = [
@@ -64,6 +68,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'funding', endpointId: 'funding-signals', param: 'domain', inputKind: 'domain', icon: 'Banknote', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Funding signals' },
   { id: 'offices', endpointId: 'company-offices', param: 'domain', inputKind: 'domain', icon: 'MapPin', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'HQ & office geo' },
   { id: 'news', endpointId: 'company-news', param: 'domain', inputKind: 'domain', icon: 'Newspaper', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Company news' },
+  { id: 'hashed-email', endpointId: 'hashed-email', param: 'email_sha256', inputKind: 'email', icon: 'Hash', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'sarah.chen@notion.so'], label: 'Hashed-email lookup', transform: 'sha256' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -84,7 +89,9 @@ export function getEnrichmentPresets(): EnrichmentPreset[] {
       description: endpoint.description,
       path: endpoint.path,
       creditCost: endpoint.creditCost,
-      placeholder: paramDef?.placeholder ?? paramDef?.example ?? 'Enter a value',
+      // A transform preset takes a friendly input (e.g. an email) that's hashed
+      // before it's sent, so its placeholder tracks the input, not the wire param.
+      placeholder: c.transform ? (c.examples[0] ?? 'Enter a value') : (paramDef?.placeholder ?? paramDef?.example ?? 'Enter a value'),
     });
   }
   return presets;
@@ -321,6 +328,24 @@ function personToResult(p: ResolvedPerson): EnrichmentResult {
     confidence: p.confidence, provenance: p.provenance, lastVerified: p.last_verified,
     links: [{ label: 'LinkedIn', href: p.linkedin_url }, ...(p.github_url ? [{ label: 'GitHub', href: p.github_url }] : []), ...(p.twitter_url ? [{ label: 'X', href: p.twitter_url }] : [])],
     raw: p,
+  };
+}
+
+/** Hashed-email (SHA-256) match: decorate the resolved person with the privacy provenance. */
+function hashedEmailToResult(d: Record<string, unknown>): EnrichmentResult {
+  const base = personToResult(d.person as unknown as ResolvedPerson);
+  const hash = typeof d.email_sha256 === 'string' ? d.email_sha256 : '';
+  const shortHash = hash ? `${hash.slice(0, 12)}…${hash.slice(-8)}` : '—';
+  return {
+    ...base,
+    badges: ['SHA-256 match', ...base.badges],
+    fields: [
+      { label: 'Matched via', value: 'SHA-256 hashed identifier', verified: true },
+      { label: 'Hash', value: shortHash, mono: true },
+      { label: 'Plaintext sent', value: 'Never — resolved from the hash alone' },
+      ...base.fields,
+    ],
+    raw: d,
   };
 }
 
@@ -978,6 +1003,8 @@ export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
 
 function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
+  // Hashed-email match: a `person` + a `email_sha256` marker — decorate before the plain person branch.
+  if (data.matched === true && isRecord(data.person) && typeof data.email_sha256 === 'string') return hashedEmailToResult(data);
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
   if (isRecord(data.company)) return companyToResult(data.company as unknown as EnrichedCompany);
   // Phone append & verification: line_type + verification_status mark the shape.
