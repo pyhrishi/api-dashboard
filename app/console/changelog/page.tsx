@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.14', date: 'September 2026', headline: 'Field-level freshness timestamps',
+    changes: [
+      { kind: 'feature', text: 'Field-level freshness timestamps — every enrichment result now stamps each attribute with its own last-verified date and a fresh / aging / stale tier, not just one date for the whole record. The Studio result card shows a color-coded freshness chip on every field (e.g. "verified 12d ago"), so you know exactly which attributes to trust and which to re-verify before you act on them. Applies across every lookup — person, company, phone, socials, title, firmographics, deliverability, and domain auth.' },
+      { kind: 'improvement', text: 'Freshness is deterministic per field — the same result always shows the same per-field dates across the Studio, Explorer, and CLI (a stable seed, never a wall-clock read).' },
+    ],
+  },
+  {
     version: 'v4.13', date: 'September 2026', headline: 'Email domain authentication (SPF/DKIM/DMARC)',
     changes: [
       { kind: 'feature', text: "Email domain authentication — inspect any domain's SPF record and policy, DKIM selectors, and DMARC policy and coverage, then score how well it is protected against spoofing (0-100 with a Strong/Partial/Weak/None grade and a plain spoofable verdict). The domain-level complement to mailbox deliverability: F-011 answers \"can I reach this inbox,\" this answers \"is this domain authenticated to send, and can it be spoofed.\" New GET /v1/email/domain-auth endpoint (1 credit), shipped as a Studio preset." },

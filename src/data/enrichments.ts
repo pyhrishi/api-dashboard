@@ -128,7 +128,8 @@ export function validateInput(kind: InputKind, raw: string): boolean {
 }
 
 // ── Generic result view-model ────────────────────────────────────────────────
-export interface EnrichmentField { label: string; value: string; verified?: boolean; masked?: boolean; mono?: boolean; }
+export type FieldFreshness = 'fresh' | 'aging' | 'stale';
+export interface EnrichmentField { label: string; value: string; verified?: boolean; masked?: boolean; mono?: boolean; verifiedAt?: string; freshness?: FieldFreshness; }
 export interface EnrichmentProvenance { field: string; source: string; signal: string; confidence: number; }
 /** One discovered social account, structured for the rich per-platform card grid. */
 export interface SocialProfileView {
@@ -527,7 +528,44 @@ function domainAuthToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+// ── Field-level freshness (F-040) ────────────────────────────────────────────
+/** Fixed demo "today" for deterministic freshness — never Date.now (it would drift on re-render). */
+const FRESHNESS_NOW = Date.UTC(2026, 8, 6);
+function fnvHash(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+/** Deterministic per-field last-verified date + tier from a stable seed. */
+function fieldFreshness(seed: string): { verifiedAt: string; freshness: FieldFreshness } {
+  const daysAgo = fnvHash(seed) % 160; // 0..159 days
+  const verifiedAt = new Date(FRESHNESS_NOW - daysAgo * 86400000).toISOString().slice(0, 10);
+  const freshness: FieldFreshness = daysAgo <= 30 ? 'fresh' : daysAgo <= 90 ? 'aging' : 'stale';
+  return { verifiedAt, freshness };
+}
+
+/** Human "12d ago" / "3mo ago" for a per-field verified date, relative to the fixed demo clock. */
+export function freshnessAgeLabel(verifiedAt: string): string {
+  const days = Math.max(0, Math.round((FRESHNESS_NOW - Date.parse(`${verifiedAt}T00:00:00Z`)) / 86400000));
+  if (days === 0) return 'today';
+  if (days < 30) return `${days}d ago`;
+  if (days < 365) return `${Math.round(days / 30)}mo ago`;
+  return `${Math.round(days / 365)}y ago`;
+}
+
+/** Stamp every result field with a deterministic per-field last-verified date + tier (F-040). */
+function withFieldFreshness(vm: EnrichmentResult): EnrichmentResult {
+  const base = vm.title || 'result';
+  return {
+    ...vm,
+    fields: vm.fields.map((f) => (f.verifiedAt ? f : { ...f, ...fieldFreshness(`${base}|${f.label}|${f.value}`) })),
+  };
+}
+
+/** Normalize any endpoint response into one view-model, then stamp per-field freshness. */
 export function toEnrichmentResult(data: unknown): EnrichmentResult | null {
+  const vm = buildEnrichmentResult(data);
+  return vm ? withFieldFreshness(vm) : null;
+}
+
+function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (!isRecord(data)) return null;
   if (isRecord(data.person)) return personToResult(data.person as unknown as ResolvedPerson);
   if (isRecord(data.company)) return companyToResult(data.company as unknown as EnrichedCompany);

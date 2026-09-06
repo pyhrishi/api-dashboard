@@ -11,8 +11,8 @@ import {
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
-  getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult,
-  type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView,
+  getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
+  type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness,
 } from '@/data/enrichments';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { track } from '@/lib/telemetry';
@@ -30,6 +30,11 @@ function confidenceTone(c: number): BadgeTone {
 function confidenceLabel(c: number): string {
   if (c >= 0.85) return 'High confidence'; if (c >= 0.7) return 'Good confidence'; if (c >= 0.55) return 'Moderate'; return 'Low confidence';
 }
+const FRESHNESS_STYLE: Record<FieldFreshness, { text: string; dot: string }> = {
+  fresh: { text: 'text-semantic-success', dot: 'bg-semantic-success' },
+  aging: { text: 'text-semantic-warning', dot: 'bg-semantic-warning' },
+  stale: { text: 'text-fg-subtle', dot: 'bg-fg-subtle' },
+};
 
 function StudioInner() {
   const search = useSearchParams();
@@ -465,10 +470,18 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border rounded-xl overflow-hidden border border-border mt-5">
             {result.fields.map((f, i) => (
               <motion.div key={f.label + i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }} className="bg-surface-2 p-3.5">
-                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">
-                  {f.label}
-                  {f.verified && <ShieldCheck className="w-3 h-3 text-semantic-success" aria-label="Verified" />}
-                  {f.masked && isLive && <Lock className="w-3 h-3 text-fg-subtle" aria-label="Masked in live" />}
+                <div className="flex items-center justify-between gap-1.5 text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="truncate">{f.label}</span>
+                    {f.verified && <ShieldCheck className="w-3 h-3 text-semantic-success shrink-0" aria-label="Verified" />}
+                    {f.masked && isLive && <Lock className="w-3 h-3 text-fg-subtle shrink-0" aria-label="Masked in live" />}
+                  </span>
+                  {f.freshness && f.verifiedAt && (
+                    <span title={`Last verified ${f.verifiedAt}`} className={`flex items-center gap-1 shrink-0 normal-case tracking-normal font-semibold ${FRESHNESS_STYLE[f.freshness].text}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${FRESHNESS_STYLE[f.freshness].dot}`} aria-hidden />
+                      {freshnessAgeLabel(f.verifiedAt)}
+                    </span>
+                  )}
                 </div>
                 <div className={`text-sm font-semibold text-fg ${f.mono ? 'font-mono break-all' : ''}`}>{f.masked ? maskVal(f.value) : f.value}</div>
               </motion.div>
