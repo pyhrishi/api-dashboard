@@ -208,11 +208,11 @@ export default function BillingPage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-start">
+
         {/* RATE LIMITS SECTION */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="glass-inner rounded-2xl border border-border shadow-xl p-8 relative overflow-hidden group h-full flex flex-col">
+          <div className="glass-inner rounded-2xl border border-border shadow-xl p-8 relative overflow-hidden group flex flex-col">
             <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
               <Zap className="w-48 h-48 text-teal transform rotate-12" />
             </div>
@@ -264,17 +264,19 @@ export default function BillingPage() {
               {/* Quota Gauge */}
               <div className="bg-surface border border-border-subtle rounded-xl p-4 shadow-inner">
                 <h3 className="text-[10px] font-black text-fg-muted uppercase tracking-widest text-center mb-[-20px]">Monthly Quota Headroom</h3>
-                <div className={cn("relative w-48 h-48", (isCriticalQuota && !isOverageSoft) && "animate-pulse")}>
+                <div className={cn("relative h-32 flex items-center justify-center", (isCriticalQuota && !isOverageSoft) && "animate-pulse")}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={quotaGaugeData}
-                        cx="50%" cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
+                        cx="50%" cy="100%"
+                        innerRadius={50}
+                        outerRadius={70}
                         startAngle={180} endAngle={0}
+                        paddingAngle={2}
                         dataKey="value"
                         stroke="none"
+                        cornerRadius={4}
                       >
                         {quotaGaugeData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={isOverageSoft ? OVERAGE_COLORS[index % 2] : (isCriticalQuota ? WARNING_COLORS : COLORS)[index % 2]} />
@@ -282,11 +284,11 @@ export default function BillingPage() {
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
-                    <span className={cn("text-3xl font-black", isOverageSoft ? "text-[#F5A623]" : isCriticalQuota ? "text-semantic-error" : "text-fg")}>
+                  <div className="absolute bottom-1 text-center w-full">
+                    <div className={cn("text-2xl font-extrabold tracking-tighter", isOverageSoft ? "text-[#F5A623]" : isCriticalQuota ? "text-semantic-error" : "text-fg")}>
                       {quotaPercentage.toFixed(1)}%
-                    </span>
-                    <span className="text-[10px] uppercase font-bold text-fg-muted tracking-wider">Used</span>
+                    </div>
+                    <div className="text-[10px] uppercase font-bold text-fg-muted tracking-wider">Used</div>
                   </div>
                 </div>
                 <div className="flex justify-between items-center text-xs font-mono mt-2">
@@ -304,52 +306,11 @@ export default function BillingPage() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-
-          {/* AI FORECAST MODULE */}
-          <div className="glass-inner rounded-2xl border border-border shadow-[0_0_15px_rgba(255,255,255,0.02)] p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl -z-10 rounded-full group-hover:bg-purple-500/20 transition-colors" />
-            
-            <h2 className="text-sm font-bold text-fg mb-1 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-purple-400" />
-              AI Quota Forecast
-            </h2>
-            <p className="text-[10px] text-fg-muted mb-4 uppercase tracking-widest font-black">Predictive Burn Rate</p>
-
-            <div className="flex items-center gap-3 mb-6 bg-overlay p-3 rounded-xl border border-border-subtle">
-              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20 shrink-0">
-                <Calendar className="w-5 h-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-xs text-fg-muted font-medium">Estimated Exhaustion</p>
-                <p className="text-sm font-black text-fg">
-                  {exhaustionDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </p>
-              </div>
-            </div>
-
-            <div className="h-28 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={forecastData}>
-                  <defs>
-                    <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#A855F7" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#A855F7" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '8px' }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                  <Area type="monotone" dataKey="volume" stroke="#A855F7" strokeWidth={2} fillOpacity={1} fill="url(#colorVol)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
         </div>
 
         {/* LEDGER SECTION */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass-inner rounded-2xl border border-border shadow-[0_0_15px_rgba(255,255,255,0.02)] p-8 h-full flex flex-col">
+          <div className="glass-inner rounded-2xl border border-border shadow-[0_0_15px_rgba(255,255,255,0.02)] p-8 flex flex-col">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
               <h2 className="text-lg font-bold text-fg flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-teal/10 flex items-center justify-center">
@@ -399,6 +360,47 @@ export default function BillingPage() {
               <Link href="/console/logs" className="text-sm font-bold text-teal hover:text-teal-ice flex items-center gap-1 transition-colors">
                 View Full History <ArrowRight className="w-4 h-4" />
               </Link>
+            </div>
+          </div>
+
+          {/* AI FORECAST MODULE */}
+          <div className="glass-inner rounded-2xl border border-border shadow-[0_0_15px_rgba(255,255,255,0.02)] p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl -z-10 rounded-full group-hover:bg-purple-500/20 transition-colors" />
+
+            <h2 className="text-sm font-bold text-fg mb-1 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-purple-400" />
+              AI Quota Forecast
+            </h2>
+            <p className="text-[10px] text-fg-muted mb-4 uppercase tracking-widest font-black">Predictive Burn Rate</p>
+
+            <div className="flex items-center gap-3 mb-6 bg-overlay p-3 rounded-xl border border-border-subtle">
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20 shrink-0">
+                <Calendar className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-xs text-fg-muted font-medium">Estimated Exhaustion</p>
+                <p className="text-sm font-black text-fg">
+                  {exhaustionDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+
+            <div className="h-28 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={forecastData}>
+                  <defs>
+                    <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#A855F7" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#A855F7" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#000', borderColor: '#333', borderRadius: '8px' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                  <Area type="monotone" dataKey="volume" stroke="#A855F7" strokeWidth={2} fillOpacity={1} fill="url(#colorVol)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>

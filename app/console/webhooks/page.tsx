@@ -395,7 +395,7 @@ export default function WebhooksPage() {
               <AnimatePresence>
                 {filteredWebhooks.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-16 text-center text-fg-muted">
+                    <td colSpan={5} className="px-6 py-16 text-center text-fg-muted">
                       <div className="flex flex-col items-center justify-center space-y-4">
                         <div className="w-16 h-16 rounded-full bg-glass flex items-center justify-center border border-border">
                           <Webhook className="w-8 h-8 text-fg-subtle" />
