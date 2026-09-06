@@ -1037,6 +1037,70 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-048', // Completeness scoring — per-result "record completeness" meter (populated ÷ expected fields) in the Studio
   'F-050', // Role-account flagging — delivered by F-011: ROLE_PREFIXES → is_role_based, the "Role-based" deliverability check + flag chip
   'F-051', // Disposable email detection — Studio "Detect disposable" (GET /v1/email/disposable); lib/disposable-detector.ts SSOT, also powering F-011
+  'F-059', // Batch endpoint — POST /v1/batch/enrich, per-item status + summary (lib/batch-runner.ts), runnable in Explorer
+  // ── Coherence audit (2026-09-06): infra/console features that shipped in the base prototype but were never marked ──
+  // API gateway (verified in middleware.ts, app/api/v1/[...route]/route.ts, src/lib/gateway/*)
+  'F-058', // RESTful resource endpoints — the whole /v1 resource catalog (people, companies, email, records, …)
+  'F-063', // Response envelope standard — consistent { success, data | error{code,message} } across the gateway
+  'F-064', // Cursor-based pagination — company-employees (next_cursor / has_more) in sandboxAPI
+  'F-067', // Response caching layer — src/lib/gateway/cache.ts (checkCache/setCache) in the route pipeline
+  'F-069', // API versioning & deprecation — endpoints carry version / isDeprecated / sunsetDate / replacementEndpointId
+  'F-075', // Sandbox vs. live routing — sk_test vs sk_live environments, live masking; app-wide
+  'F-079', // Strict payload validation — validateRequestParameters (strict unknown-param + typed checks)
+  'F-129', // Token-bucket rate limiting — src/lib/gateway/rateLimiter.ts (tokens/lastRefillTime/capacity/refill)
+  'F-130', // Standard rate-limit headers — X-RateLimit-Limit / Remaining / Reset on every response (middleware.ts)
+  'F-134', // Graceful 429 with retry-after — 429 RATE_LIMITED with X-RateLimit-Reset
+  'F-199', // Trace ID on every request — X-Request-Id set + returned on every request
+  'F-303', // Web application firewall — src/lib/gateway/waf.ts (inspectPayload) blocks malicious payloads
+  // API keys (verified in app/console/keys/page.tsx + store)
+  'F-112', // Test & live key pairs — per-environment sk_test/sk_live keys
+  'F-113', // Scoped key permissions — AVAILABLE_SCOPES + per-key selected scopes
+  'F-115', // One-time secret reveal — raw token shown once then cleared (clearRawToken)
+  'F-118', // Last-used & usage per key — per-key usage/activity from apiLogs
+  'F-119', // Compromised-key kill switch — revokeKey + simulateKeyLeak
+  'F-124', // Key labels & ownership — named keys
+  // Billing & metering (verified in src/lib/gateway/billing.ts, store, console)
+  'F-145', // Usage-based metering — billing.ts meters credits per call
+  'F-146', // Prepaid credit balance — credit balance draw-down
+  'F-147', // Auto-recharge — components/RechargeModal.tsx
+  'F-148', // Live cost preview — per-endpoint creditCost shown before running
+  'F-149', // Real-time balance & burn rate — CreditHealthBar
+  'F-150', // Per-endpoint pricing — each endpoint carries its own creditCost
+  // Observability & console (verified pages under app/console/*)
+  'F-186', // Live request log stream — /console/logs
+  'F-187', // Usage dashboard — /console/analytics
+  'F-209', // Global command palette — Omnibar (⌘K)
+  'F-210', // Endpoint explorer — /console/explorer
+  'F-088', // Interactive API explorer — Explorer runs live calls against your key
+  'F-436', // Public status page — /status
+  'F-468', // In-app support widget — /console/support
+  // Developer experience & docs (verified files)
+  'F-089', // Code sample generator — lib codeSampleGenerator (per-endpoint snippets)
+  'F-090', // Postman collection — app/api/docs/postman/route.ts
+  'F-091', // OpenAPI spec — app/api/docs/route.ts
+  'F-092', // CLI tool — cli/index.mjs
+  'F-109', // Visual request builder — components/RequestBuilder.tsx
+  'F-398', // Versioned API reference — /docs
+  'F-405', // Changelog & release notes — /console/changelog
+  'F-417', // Copy-to-clipboard code blocks — components/CodeBlock.tsx
+  // RBAC / org / onboarding (verified)
+  'F-351', // Role-based access control — RoleGuard, admin/developer/billing roles
+  'F-353', // Member invitations — app/console/settings/team
+  'F-368', // Multiple organizations per user — tenant model + switcher
+  'F-369', // Org context switcher — sidebar org switcher, state re-scopes
+  'F-383', // First-call wizard — components/FirstCallWizard.tsx
+  // Privacy, exports, design system (verified)
+  'F-313', // Field-level PII masking — src/lib/gateway/privacy.ts masks on live keys
+  'F-454', // CSV & Excel export — Bulk Jobs result export
+  'F-455', // JSON / NDJSON export — Bulk Jobs result export
+  'F-464', // Enriched-file download — Bulk Jobs enriched output
+  'F-420', // Semantic design tokens — app/globals.css + tailwind tokens (light + dark)
+  'F-421', // Full dark mode — ThemeToggle + token themes
+  'F-422', // Skeleton loading states — components/ui/Skeleton.tsx
+  'F-423', // Empty-state design — components/ui/EmptyState.tsx
+  'F-424', // Error-state design — EmptyState tone="error" + designed error screens
+  'F-429', // Reusable UI primitives — components/ui/*
+  'F-432', // Toast & notification system — components/Toast.tsx
 ]);
 
 export function isFeatureBuilt(id: string): boolean {
