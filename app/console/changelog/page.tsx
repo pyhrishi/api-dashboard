@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.30', date: 'September 2026', headline: 'Entity de-duplication',
+    changes: [
+      { kind: 'feature', text: 'Entity de-duplication — collapse a messy list of records into golden records. New GET /v1/records/dedupe takes a ";"-separated list of "Name, Company" rows (typos, nicknames, and company-vs-domain variants welcome) and clusters near-duplicates into one golden record each — returning the merged members, every member\'s similarity to the golden, and a per-cluster merge confidence, plus a dedup summary (input, golden, duplicates, rate). Dedupe an import before you enrich, so you pay once per real entity.' },
+      { kind: 'improvement', text: 'De-duplication reuses the exact same Jaro-Winkler similarity engine as Probabilistic Fuzzy Matching, so the two features can never disagree about whether two records are the same entity. Shipped as a Studio preset with a golden-records panel — each cluster shows the merged variants and its confidence. Deterministic; a single record (nothing to dedupe) returns a clean 400.' },
+    ],
+  },
+  {
     version: 'v4.29', date: 'September 2026', headline: 'Probabilistic fuzzy matching',
     changes: [
       { kind: 'feature', text: 'Probabilistic fuzzy matching — resolve a messy name + company (typos, nicknames, spelling variants) to the people it most likely refers to. New GET /v1/match/fuzzy takes a "Name, Company" query and returns ranked candidates, each with a match probability and the per-field name and company similarity behind it (real Jaro-Winkler), a canonical interpretation of your query, and a decisive verdict (strong / likely / weak / no match). Shipped as a Studio preset with a ranked-candidate panel.' },

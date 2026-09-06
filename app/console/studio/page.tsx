@@ -15,7 +15,7 @@ import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
-  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView,
+  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView, type NewsFeedView, type CompanyEventView, type FuzzyMatchView, type DedupView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
@@ -25,7 +25,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -875,6 +875,60 @@ function FuzzyMatchPanel({ f }: { f: FuzzyMatchView }) {
   );
 }
 
+function DedupPanel({ d }: { d: DedupView }) {
+  const summary: { label: string; value: string }[] = [
+    { label: 'Input', value: String(d.inputCount) },
+    { label: 'Golden', value: String(d.uniqueCount) },
+    { label: 'Duplicates', value: String(d.duplicateCount) },
+    { label: 'Dedup rate', value: `${Math.round(d.dedupRate * 100)}%` },
+  ];
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden border border-border">
+        {summary.map((s) => (
+          <div key={s.label} className="bg-surface-2 p-3">
+            <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">{s.label}</div>
+            <div className="text-sm font-black text-fg tabular-nums">{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {d.clusters.map((c, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }}
+            className={`rounded-xl border p-4 ${c.size > 1 ? 'border-teal/30 bg-teal/5' : 'border-border bg-surface-2'}`}
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <Layers className="w-4 h-4 text-teal shrink-0" />
+              <span className="text-sm font-bold text-fg">{c.golden.name}</span>
+              {c.golden.company && c.golden.company !== '—' && <span className="text-[12px] text-fg-muted">· {c.golden.company}</span>}
+              <span className="ml-auto flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-fg-subtle">{c.size} record{c.size === 1 ? '' : 's'}</span>
+                {c.size > 1 && <StatusBadge tone={c.confidence >= 0.9 ? 'success' : c.confidence >= 0.78 ? 'teal' : 'warning'}>{Math.round(c.confidence * 100)}% conf</StatusBadge>}
+              </span>
+            </div>
+            {c.size > 1 && (
+              <ul className="mt-3 space-y-1.5">
+                {c.members.map((m, j) => (
+                  <li key={j} className="flex items-center gap-2 text-[12px]">
+                    {m.isGolden
+                      ? <StatusBadge tone="teal">golden</StatusBadge>
+                      : <span className="w-12 text-right font-mono tabular-nums text-fg-subtle shrink-0">{Math.round(m.similarity * 100)}%</span>}
+                    <span className={m.isGolden ? 'font-bold text-fg' : 'text-fg-muted'}>{m.name}</span>
+                    {m.company && m.company !== '—' && <span className="text-fg-subtle truncate">· {m.company}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -963,6 +1017,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.fuzzy && (
           <FuzzyMatchPanel f={result.fuzzy} />
+        )}
+
+        {result.dedupe && (
+          <DedupPanel d={result.dedupe} />
         )}
 
         {result.chips && result.chips.items.length > 0 && (

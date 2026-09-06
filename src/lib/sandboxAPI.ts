@@ -19,6 +19,7 @@ import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
 import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
+import { deduplicateRecords } from '@/lib/entity-dedup';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -593,6 +594,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...match };
+    }
+
+    case 'records-dedupe': {
+      // Entity de-duplication (single source of truth). Clusters a "Name, Company" list.
+      const dedup = deduplicateRecords(String(parameters.records || ''));
+      if (!dedup) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide at least two ";"-separated "Name, Company" records to de-duplicate.' },
+        };
+      }
+      return { success: true, ...dedup };
     }
 
     case 'email-verify': {

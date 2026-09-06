@@ -1333,6 +1333,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'records-dedupe',
+    name: 'Entity De-duplication',
+    description: "Collapse a messy list of records into golden records. Pass a \";\"-separated list of \"Name, Company\" rows (typos, nicknames, and company-vs-domain variants welcome) and get back clustered golden records — each with the merged members, every member's similarity to the golden, and a merge confidence — plus a dedup summary. Uses the same Jaro-Winkler engine as Fuzzy Matching.",
+    method: 'GET',
+    path: '/v1/records/dedupe',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'records',
+        type: 'string',
+        required: true,
+        description: 'A ";"-separated list of "Name, Company" records (min 2, max 50)',
+        example: 'John Smith, Stripe; Jhon Smith, Stipe; Jane Doe, Acme',
+        placeholder: 'Name, Company; Name, Company; …',
+        maxLength: 2000,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'dedupe-to-fuzzy',
+        title: 'Score a single match',
+        description: 'Use Fuzzy Matching to resolve one messy "Name, Company" to real people.',
+        category: 'sdks',
+        link: '/console/studio?preset=fuzzy',
+      },
+    ],
   }
 ];
 

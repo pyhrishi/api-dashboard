@@ -70,6 +70,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'news', endpointId: 'company-news', param: 'domain', inputKind: 'domain', icon: 'Newspaper', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Company news' },
   { id: 'hashed-email', endpointId: 'hashed-email', param: 'email_sha256', inputKind: 'email', icon: 'Hash', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'sarah.chen@notion.so'], label: 'Hashed-email lookup', transform: 'sha256' },
   { id: 'fuzzy', endpointId: 'fuzzy-match', param: 'query', inputKind: 'auto', icon: 'GitCompareArrows', category: 'identity', examples: ['Jhon Smith, Stipe', 'Bob Johnson, Datadog', 'Micheal Chen, notion'], label: 'Fuzzy match' },
+  { id: 'dedupe', endpointId: 'records-dedupe', param: 'records', inputKind: 'auto', icon: 'Layers', category: 'identity', examples: ['John Smith, Stripe; Jhon Smith, Stipe; Jane Doe, Acme', 'Bob Johnson, Datadog; Robert Johnson, datadoghq.com; Bob Johnson, Datadog Inc'], label: 'De-duplicate records' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -298,6 +299,28 @@ export interface FuzzyMatchView {
   interpreted: { name: string; company: string };
   candidates: FuzzyCandidateView[];
 }
+/** One member of a de-duplication cluster. */
+export interface DedupMemberView {
+  name: string;
+  company: string;
+  isGolden: boolean;
+  similarity: number;
+}
+/** One de-duplication cluster: a golden record + its merged members. */
+export interface DedupClusterView {
+  golden: { name: string; company: string };
+  size: number;
+  confidence: number;
+  members: DedupMemberView[];
+}
+/** Structured entity de-duplication result (F-026) — rendered as clustered golden records. */
+export interface DedupView {
+  inputCount: number;
+  uniqueCount: number;
+  duplicateCount: number;
+  dedupRate: number;
+  clusters: DedupClusterView[];
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -322,6 +345,8 @@ export interface EnrichmentResult {
   news?: NewsFeedView;
   /** Structured fuzzy-match result (F-024) — rendered as a ranked candidate list. */
   fuzzy?: FuzzyMatchView;
+  /** Structured entity de-duplication result (F-026) — rendered as clustered golden records. */
+  dedupe?: DedupView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
   completeness?: CompletenessScore;
   confidence?: number;
@@ -862,6 +887,54 @@ function fuzzyToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Entity de-duplication (F-026): a messy record list collapsed into golden records. */
+function dedupToResult(d: Record<string, unknown>): EnrichmentResult {
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : 0);
+
+  const rawClusters = Array.isArray(d.clusters) ? (d.clusters as Record<string, unknown>[]) : [];
+  const clusters: DedupClusterView[] = rawClusters.map((c) => {
+    const golden = isRecord(c.golden) ? (c.golden as Record<string, unknown>) : {};
+    const rawMembers = Array.isArray(c.members) ? (c.members as Record<string, unknown>[]) : [];
+    return {
+      golden: {
+        name: typeof golden.name === 'string' ? golden.name : '',
+        company: typeof golden.company === 'string' ? golden.company : '',
+      },
+      size: typeof c.size === 'number' ? c.size : rawMembers.length,
+      confidence: typeof c.confidence === 'number' ? c.confidence : 0,
+      members: rawMembers.map((m) => ({
+        name: typeof m.name === 'string' ? m.name : '',
+        company: typeof m.company === 'string' ? m.company : '',
+        isGolden: m.is_golden === true,
+        similarity: typeof m.similarity === 'number' ? m.similarity : 0,
+      })),
+    };
+  });
+
+  const inputCount = num('input_count');
+  const uniqueCount = num('unique_count');
+  const duplicateCount = num('duplicate_count');
+  const dedupRate = num('dedup_rate');
+
+  const fields: EnrichmentField[] = [
+    { label: 'Input records', value: String(inputCount) },
+    { label: 'Golden records', value: String(uniqueCount) },
+    { label: 'Duplicates removed', value: String(duplicateCount) },
+    { label: 'Dedup rate', value: `${Math.round(dedupRate * 100)}%` },
+  ];
+
+  return {
+    kind: 'generic',
+    title: 'De-duplication result',
+    subtitle: `${inputCount} records → ${uniqueCount} golden${duplicateCount > 0 ? ` · ${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} merged` : ''}`,
+    avatar: 'DD',
+    badges: [`${uniqueCount} golden`, duplicateCount > 0 ? `${duplicateCount} merged` : 'No duplicates'],
+    fields,
+    dedupe: { inputCount, uniqueCount, duplicateCount, dedupRate, clusters },
+    raw: d,
+  };
+}
+
 /** Email deliverability scoring: a 0-100 reachability score + a decomposed signal breakdown. */
 function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1091,6 +1164,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.events) && typeof data.event_count === 'number') return newsToResult(data);
   // Probabilistic fuzzy matching: a `candidates` array + a `verdict` mark the shape.
   if (Array.isArray(data.candidates) && typeof data.verdict === 'string' && isRecord(data.interpreted)) return fuzzyToResult(data);
+  // Entity de-duplication: a `clusters` array + numeric `dedup_rate` mark the shape.
+  if (Array.isArray(data.clusters) && typeof data.dedup_rate === 'number') return dedupToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.
