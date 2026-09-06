@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -62,6 +62,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Overview', href: '/console/overview', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'API Keys', href: '/console/keys', icon: <Key className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Endpoint Explorer', href: '/console/explorer', icon: <Compass className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'GraphQL', href: '/console/graphql', icon: <Braces className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Enrichment Studio', href: '/console/studio', icon: <Sparkles className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Identity Resolution', href: '/console/identity', icon: <GitMerge className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Identity History', href: '/console/identity-history', icon: <Route className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },

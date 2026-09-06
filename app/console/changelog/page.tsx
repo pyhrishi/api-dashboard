@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.70', date: 'September 2026', headline: 'GraphQL gateway',
+    changes: [
+      { kind: 'feature', text: 'GraphQL gateway — query exactly the enrichment graph you need in one call. A new POST /api/graphql (and a GraphQL console at /console/graphql) exposes a typed schema over the same enrichment resolvers: resolve a person, walk to their employer, and select only the fields you want — one round-trip, no over-fetching. GET /api/graphql returns the SDL.' },
+      { kind: 'feature', text: 'It\'s a real executor, not a proxy: the query is tokenized, parsed, validated (unknown field, missing argument, selection errors — with the field path), and projected like GraphQL, dispatching to the exact same resolvers as REST so the two never disagree. Every response reports its precise credit cost, and it honors the same key auth, lazy billing, and live-key PII masking as the REST gateway — the GraphQL surface is governed, not a side door.' },
+      { kind: 'improvement', text: 'The in-console Explorer has a schema browser (click a query to load a runnable template), a query editor seeded with an example, and a response viewer with errors, credit cost, and a masked-on-live badge. Runs flow into Logs and Analytics like the REST Explorer. Deterministic and unit-tested (17 tests).' },
+    ],
+  },
+  {
     version: 'v4.69', date: 'September 2026', headline: 'Currency normalization',
     changes: [
       { kind: 'feature', text: 'Currency normalization — turn any messy money value into one canonical amount. A new GET /v1/currency/normalize (and a "Normalize currency" Studio lookup) parses currency symbols ($, €, £, ¥, ₹…), ISO codes, scale words (K, M, B, and Indian lakh/crore), and every locale\'s grouping and decimal style — "$1.2M", "€1.200.000,50", "₹12,00,000", "1\'200\'000 CHF" — then returns the ISO 4217 currency, the parsed amount, and the amount converted to a target reporting currency (USD by default) at a frozen reference rate.' },
