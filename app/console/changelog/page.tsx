@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.72', date: 'September 2026', headline: 'Regional API endpoints',
+    changes: [
+      { kind: 'feature', text: 'Regional API endpoints — pin your API traffic to a region for latency and data residency. Alongside the global host (which smart-routes to the nearest edge), you can now call region-pinned endpoints — us.api.zinbit.zintlr.com, eu.api.zinbit.zintlr.com, in.api.zinbit.zintlr.com — so every request, and the data it touches, stays in one region under that region\'s compliance regime (CCPA, GDPR, or DPDP). A new API Regions console shows each edge, its endpoint, its compliance frameworks, and a live latency test.' },
+      { kind: 'feature', text: 'Set a data-residency policy for your organization: admins can pin the org to a region, and cross-region calls are then refused (451) for keys provisioned there. The console shows which edge your keys resolve to (deterministic per key, matching the gateway) and flags any endpoint outside your residency policy.' },
+      { kind: 'improvement', text: 'The latency test is real — it sends x-force-region to the gateway and reads back the X-Region / X-Served-By it was served from, measuring the actual round-trip. Regional hosts come from the one API-config source of truth, so docs, snippets, and the console never disagree. Residency pin is per-organization and admin-gated.' },
+    ],
+  },
+  {
     version: 'v4.71', date: 'September 2026', headline: 'Request coalescing',
     changes: [
       { kind: 'feature', text: 'Request coalescing (single-flight) — when identical GET requests are in flight at the same instant (a cache stampede, a fan-out from many workers, a retry storm), only the first does the work; the rest coalesce onto it and share the one result — not re-computed, not re-billed. A new Request Coalescing console and GET /v1/coalescing show waves collapsed, upstream calls saved, and credits saved, with any in-flight waves live.' },

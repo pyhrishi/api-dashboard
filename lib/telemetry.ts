@@ -153,7 +153,11 @@ export type TelemetryEventName =
   | 'graphql_query_failed'
   // reliability — request coalescing (F-068)
   | 'coalescing_viewed'
-  | 'coalescing_drill_run';
+  | 'coalescing_drill_run'
+  // compliance — regional API endpoints (F-070)
+  | 'api_regions_viewed'
+  | 'region_latency_tested'
+  | 'data_residency_pinned';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

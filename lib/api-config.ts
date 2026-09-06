@@ -14,6 +14,18 @@
 export const API_HOST = 'api.zinbit.zintlr.com';
 export const API_SANDBOX_HOST = 'sandbox.zinbit.zintlr.com';
 
+/**
+ * Regional API hosts (F-070). The global `API_HOST` smart-routes to the nearest
+ * edge; these region-pinned hosts guarantee the request is served — and data
+ * processed — in one region, for latency and data-residency compliance. The
+ * region id matches the gateway's internal region (see `lib/regions.ts`).
+ */
+export const REGIONAL_API_HOSTS: Record<'us-east-1' | 'eu-west-1' | 'ap-south-1', string> = {
+  'us-east-1': 'us.api.zinbit.zintlr.com',
+  'eu-west-1': 'eu.api.zinbit.zintlr.com',
+  'ap-south-1': 'in.api.zinbit.zintlr.com',
+};
+
 /** Live/production API base URL (no version segment — paths carry `/v1`). */
 export const API_BASE_URL = `https://${API_HOST}`;
 /** Sandbox API base URL. */

@@ -1154,6 +1154,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-056', // Currency normalization — lib/currency-normalizer.ts (parse symbols/ISO codes/scale words incl. lakh+crore + US/EU/FR/Indian/Swiss locale grouping → ISO 4217 + canonical amount + frozen-FX conversion to target, ambiguity notes) + GET /v1/currency/normalize + Studio preset
   'F-065', // GraphQL gateway — lib/graphql/* (dependency-free tokenizer→parser→validator→executor with recursive selection projection, aliases, variables; schema.ts SSOT + resolvers.ts mapping to the same person/company/ip resolvers, person→employer graph join) + real POST /api/graphql (own auth/billing/live-masking) + GET SDL + /console/graphql explorer
   'F-068', // Request coalescing — src/lib/gateway/coalescing.ts (real single-flight: leader registers in-flight promise synchronously, identical concurrent GETs coalesce onto it, followers share result unbilled) + GET/POST /v1/coalescing (stats + concurrent drill) + /console/coalescing
+  'F-070', // Regional API endpoints — lib/regions.ts SSOT (us./eu./in. regional hosts extending api-config, key-hash home-region resolver matching the gateway, residency→region map, cross-border check) + tenant-scoped dataResidencyRegion store slice (admin-only pin, audit) + /console/api-regions (live x-force-region latency probe reading X-Region, residency pin, compliance)
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

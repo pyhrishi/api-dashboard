@@ -9,6 +9,7 @@ import { generateReverifiableRecords, reverifyRecords, computeDueRecords, DEFAUL
 import type { DecaySeverity, DecayAlertState } from '@/lib/data-decay';
 import { getBenchmarkReport, type AccuracyBenchmarkRun } from '@/lib/accuracy-benchmark';
 import { analyzeCoverageGaps, makeExpansionRequest, type CoverageExpansionRequest } from '@/lib/coverage-gaps';
+import type { RegionId } from '@/lib/regions';
 import { generateSeedCorrections, correctionEntityKey, inferFieldKind, makeCorrectionId, type Correction, type CorrectionInput } from '@/lib/corrections';
 import { generateSeedSnapshots, buildGoldenRecord, snapshotFromRecord, hashRecord, resolveGoldenEntity, type GoldenSnapshot } from '@/lib/golden-record';
 import { triageCorrection } from '@/lib/insight-engine';
@@ -509,6 +510,8 @@ export interface TenantState {
   goldenSnapshots: GoldenSnapshot[];
   /** Coverage-expansion requests (F-053) — per-tenant, submitted against thin-coverage segments. */
   coverageExpansionRequests: CoverageExpansionRequest[];
+  /** Data-residency region pinned for this org (F-070); null = auto / global routing. */
+  dataResidencyRegion: RegionId | null;
 }
 
 export const extractTenantState = (state: AppState): TenantState => ({
@@ -554,6 +557,7 @@ export const extractTenantState = (state: AppState): TenantState => ({
   corrections: state.corrections,
   goldenSnapshots: state.goldenSnapshots,
   coverageExpansionRequests: state.coverageExpansionRequests,
+  dataResidencyRegion: state.dataResidencyRegion,
 });
 
 export const defaultTenantState = (): TenantState => ({
@@ -599,6 +603,7 @@ export const defaultTenantState = (): TenantState => ({
   corrections: [],
   goldenSnapshots: [],
   coverageExpansionRequests: [],
+  dataResidencyRegion: null,
 });
 
 interface AppState extends FirstCallState, TenantState {
@@ -677,6 +682,9 @@ interface AppState extends FirstCallState, TenantState {
   // Coverage gap reporting (F-053) — the data field (coverageExpansionRequests) is tenant-scoped in TenantState.
   /** Requests a coverage expansion for a gap segment. Returns the new id. Billing role cannot. */
   requestCoverageExpansion: (segmentId: string, note: string) => string;
+  // Regional API endpoints (F-070) — per-org data-residency pin.
+  /** Pins the org's data-residency region (null = auto/global). Admin only. */
+  setDataResidencyRegion: (region: RegionId | null) => void;
   // User-reported corrections — governed field-correction feedback loop (F-046).
   /** Idempotently seeds demo corrections on mount (like seedMergeCandidates). No audit log. */
   seedCorrections: () => void;
@@ -920,6 +928,7 @@ export const useStore = create<AppState>()(
       decayAlertStates: {},
       accuracyBenchmarkRuns: [],
       coverageExpansionRequests: [],
+      dataResidencyRegion: null,
       matchThresholds: { ...DEFAULT_THRESHOLDS },
       webhooks: [],
       webhookLogs: [],
@@ -2751,6 +2760,15 @@ export const useStore = create<AppState>()(
         return req.id;
       },
 
+      // ─── Regional API endpoints (F-070) ─────────────────────────────────────
+      setDataResidencyRegion: (region) => set((state) => {
+        if (state.user?.role !== 'admin') throw new Error('Only admins can change the data-residency region');
+        const log = generateAuditLog('residency.region_pinned', region ?? 'auto', state.user?.email || 'System', state.environment, {
+          changes: { before: { region: state.dataResidencyRegion ?? 'auto' }, after: { region: region ?? 'auto' } },
+        });
+        return { dataResidencyRegion: region, auditLogs: [log, ...state.auditLogs] };
+      }),
+
       // ─── User-reported corrections (F-046) ──────────────────────────────────
       seedCorrections: () => set((state) => {
         if (state.corrections.length > 0) return {};
@@ -2968,6 +2986,7 @@ export const useStore = create<AppState>()(
         decayAlertStates: state.decayAlertStates,
         accuracyBenchmarkRuns: state.accuracyBenchmarkRuns,
         coverageExpansionRequests: state.coverageExpansionRequests,
+        dataResidencyRegion: state.dataResidencyRegion,
         matchThresholds: state.matchThresholds,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
