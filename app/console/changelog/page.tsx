@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.19', date: 'September 2026', headline: 'Batch endpoint',
+    changes: [
+      { kind: 'feature', text: 'Batch endpoint — run one enrichment operation over many inputs in a single request instead of N calls. POST /v1/batch/enrich takes an operation (people, company, phone, or email-verify) and a comma- or newline-separated list (up to 50), and returns a per-item status (matched / missed) with the full result for each, plus a summary (total, matched, missed, match rate, credits). Only matched items are billed. Runnable from the Endpoint Explorer; for thousands of rows, Bulk Jobs remains the async path.' },
+      { kind: 'improvement', text: 'Batch results are deterministic and reuse the single-lookup resolvers, so a batched item returns exactly what the equivalent single call would — and the input list is de-duplicated and capped at 50 per request.' },
+    ],
+  },
+  {
     version: 'v4.18', date: 'September 2026', headline: 'Disposable email detection',
     changes: [
       { kind: 'feature', text: 'Disposable email detection — a new "Detect disposable" lookup flags throwaway, temporary, and anonymizing mailboxes before they reach signup. It returns a decisive verdict (disposable / suspected / trusted), the provider category, a confidence, and a plain-English reason — catching both known providers and unlisted domains that look disposable by pattern (e.g. a "tempmail" in the domain). A lightweight single-purpose check at 1 credit when you don\'t need full deliverability. New GET /v1/email/disposable endpoint, shipped as a Studio preset with a tone-coded verdict panel.' },

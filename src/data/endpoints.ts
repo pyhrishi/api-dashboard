@@ -936,6 +936,44 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'batch-enrich',
+    name: 'Batch Enrich',
+    description: 'Run one enrichment operation over many inputs in a single request and get a per-item status (matched / missed) plus a summary. Only matched items are billed. Up to 50 inputs per call — for larger lists use Bulk Jobs.',
+    method: 'POST',
+    path: '/v1/batch/enrich',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'operation',
+        type: 'string',
+        required: true,
+        description: 'Which lookup to run on each input: people, company, phone, or email-verify',
+        example: 'people',
+        placeholder: 'people | company | phone | email-verify',
+      },
+      {
+        name: 'inputs',
+        type: 'string',
+        required: true,
+        description: 'Comma- or newline-separated inputs (emails for people/phone/email-verify, domains for company). Max 50.',
+        example: 'jane.doe@acme.com, marcus@stripe.com, ceo@zomato.in',
+        placeholder: 'a@acme.com, b@stripe.com, …',
+        maxLength: 4000,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'batch-to-bulk',
+        title: 'Bulk Enrichment Jobs',
+        description: 'For thousands of rows or CSV uploads, run an async Bulk Job instead.',
+        category: 'sdks',
+        link: '/console/jobs',
+      },
+    ],
   }
 ];
 

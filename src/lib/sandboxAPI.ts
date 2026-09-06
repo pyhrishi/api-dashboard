@@ -15,6 +15,7 @@ import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
+import { runBatch } from '@/lib/batch-runner';
 import { checkDomainAuth } from '@/lib/email-domain-auth';
 import { validateRecord } from '@/lib/record-validator';
 
@@ -528,6 +529,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...disposable };
+    }
+
+    case 'batch-enrich': {
+      // Deterministic batch fan-out over one operation (single source of truth).
+      const batch = runBatch(String(parameters.operation || ''), String(parameters.inputs || ''));
+      if (!batch) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a valid operation (people | company | phone | email-verify) and at least one input.' },
+        };
+      }
+      return { success: true, ...batch };
     }
 
     case 'email-domain-auth': {
