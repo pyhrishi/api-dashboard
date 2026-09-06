@@ -160,7 +160,10 @@ export type TelemetryEventName =
   | 'data_residency_pinned'
   // data portability — bulk export endpoint (F-076)
   | 'bulk_export_previewed'
-  | 'bulk_export_downloaded';
+  | 'bulk_export_downloaded'
+  // developer experience — gRPC high-throughput channel (F-077)
+  | 'grpc_channel_viewed'
+  | 'grpc_benchmark_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

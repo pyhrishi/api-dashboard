@@ -31,6 +31,14 @@ export const API_BASE_URL = `https://${API_HOST}`;
 /** Sandbox API base URL. */
 export const API_SANDBOX_BASE_URL = `https://${API_SANDBOX_HOST}`;
 
+/**
+ * The gRPC high-throughput channel host (F-077). A dedicated HTTP/2 endpoint for
+ * the binary protobuf service (`EnrichmentService`); browsers reach it via gRPC-JSON
+ * transcoding at same-origin `/api/grpc`. Default port 443 (TLS).
+ */
+export const GRPC_HOST = 'grpc.zinbit.zintlr.com';
+export const GRPC_PORT = 443;
+
 /** The console/dashboard host (used in billing/upgrade copy, emails, etc.). */
 export const CONSOLE_HOST = 'console.zinbit.zintlr.com';
 

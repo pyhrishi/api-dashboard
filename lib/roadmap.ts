@@ -1156,6 +1156,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-068', // Request coalescing — src/lib/gateway/coalescing.ts (real single-flight: leader registers in-flight promise synchronously, identical concurrent GETs coalesce onto it, followers share result unbilled) + GET/POST /v1/coalescing (stats + concurrent drill) + /console/coalescing
   'F-070', // Regional API endpoints — lib/regions.ts SSOT (us./eu./in. regional hosts extending api-config, key-hash home-region resolver matching the gateway, residency→region map, cross-border check) + tenant-scoped dataResidencyRegion store slice (admin-only pin, audit) + /console/api-regions (live x-force-region latency probe reading X-Region, residency pin, compliance)
   'F-076', // Bulk export endpoint — src/lib/gateway/bulkExport.ts (deterministic companies/people dataset from shared resolvers → F-078 filter/sort + F-062 field projection → NDJSON stream / CSV / JSON, per-50-row billing, free preview) + GET /v1/export (+preview=1) + /console/export builder
+  'F-077', // gRPC high-throughput channel — lib/grpc/{schema,transcoder}.ts (proto3 EnrichmentService: unary + bidi streaming over shared resolvers, gRPC-JSON transcoding, deterministic throughput benchmark w/ p50/p95/p99 + multiplexing) + real POST /api/grpc (own auth/billing/live-masking) + GET .proto + /console/grpc explorer w/ client snippets
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.74', date: 'September 2026', headline: 'gRPC high-throughput channel',
+    changes: [
+      { kind: 'feature', text: 'gRPC high-throughput channel — a binary protobuf service over HTTP/2 for enterprise-scale ingestion. A new EnrichmentService (POST /api/grpc, GET /api/grpc for the .proto) exposes unary calls plus bidirectional streaming methods that push thousands of records over one multiplexed connection, backed by the same resolvers, auth, billing, and live-key masking as REST + GraphQL — one data model, three protocols. A new gRPC Channel console shows the .proto, generated clients (grpcurl, Go, Python, Node), and a live throughput benchmark.' },
+      { kind: 'improvement', text: 'Prove the throughput: run a benchmark of up to 5,000 records and watch real req/s, p50/p95/p99 latency, multiplexed stream count, and channel-vs-serial speedup. Browsers reach the channel via gRPC-JSON transcoding — exactly how Envoy/Connect expose gRPC in production — so the endpoint is real, not a mock. Deterministic transcoder, unit-tested against the REST resolver shapes.' },
+    ],
+  },
+  {
     version: 'v4.73', date: 'September 2026', headline: 'Bulk export endpoint',
     changes: [
       { kind: 'feature', text: 'Bulk export — pull a filtered slice of your enriched data in one call. A new GET /v1/export (and a Bulk Export console) streams companies or people as NDJSON (row-by-row, memory-flat at any size), CSV, or JSON, narrowed with the same filter/sort grammar as the Query endpoint and projected to just the columns you choose. Add &preview=1 for a free summary — matched rows, credit cost, and a sample — before you pull the full dataset.' },
