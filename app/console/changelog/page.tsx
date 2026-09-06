@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.42', date: 'September 2026', headline: 'Suppression list honoring',
+    changes: [
+      { kind: 'feature', text: 'Suppression list honoring — a customer do-not-contact list is now enforced at the gateway. Add an email or domain to your suppression list (POST /v1/suppression) and any enrichment lookup on that address — or any mailbox on a suppressed domain — returns “suppressed, details withheld” instead of the contact, at zero credits. The check runs before billing, so you can’t accidentally resolve, or be charged for, a contact you’re obligated not to reach: unsubscribes, GDPR erasures, competitor blocks, complaints.' },
+      { kind: 'feature', text: 'Manage the registry programmatically: POST /v1/suppression adds an identifier (with a reason — unsubscribed / do_not_contact / gdpr_erasure / competitor / complaint / manual), a free GET /v1/suppression reads it (totals, a breakdown by kind and reason, recent additions), and DELETE /v1/suppression removes one so lookups resolve normally again. Suppressing a domain suppresses every mailbox on it; an exact-address match wins over a domain match. All keyless-billed (zero credits).' },
+      { kind: 'improvement', text: 'A suppressed response carries an X-Suppressed header and X-Credits-Cost: 0, so a downstream pipeline can distinguish “withheld for compliance” from “not found”. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.41', date: 'September 2026', headline: 'User-reported corrections',
     changes: [
       { kind: 'feature', text: 'User-reported corrections — spot a wrong value on any enrichment result and flag it right there in the Studio: hover a field, hit the flag, and tell us what it should be. Corrections are governed, not silent — each one gets an AI triage verdict (likely-valid / needs-review / suspect, scored on format validity, how material the change is, how specific the reason is, and reporter trust) and lands pending in a new Corrections review queue.' },

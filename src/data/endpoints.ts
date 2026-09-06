@@ -7,7 +7,7 @@
  */
 
 export type ParameterType = 'string' | 'email' | 'phone' | 'number' | 'array';
-export type HTTPMethod = 'GET' | 'POST';
+export type HTTPMethod = 'GET' | 'POST' | 'DELETE';
 export type NextStepCategory = 'sdks' | 'logging' | 'webhooks' | 'errorHandling';
 
 export interface EndpointParameter {
@@ -1615,6 +1615,95 @@ export const ENDPOINTS: Endpoint[] = [
         description: 'Flag a wrong field value from your pipeline.',
         category: 'sdks',
         link: '/console/explorer?endpoint=correction-report',
+      },
+    ],
+  },
+
+  {
+    id: 'suppression-add',
+    name: 'Add to Suppression List',
+    description: "Add an email or domain to your do-not-contact / suppression list (F-052). Once suppressed, any enrichment lookup on that address — or any mailbox on a suppressed domain — returns 'suppressed, details withheld' at zero credits, so you can't accidentally resolve a contact you're obligated not to reach (unsubscribes, GDPR erasures, competitor blocks). Free, keyless-billed.",
+    method: 'POST',
+    path: '/v1/suppression',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'identifier',
+        type: 'string',
+        required: true,
+        description: 'The email or domain to suppress. A domain suppresses every mailbox on it.',
+        example: 'unsubscribed@acme.com',
+        placeholder: 'user@company.com or company.com',
+        maxLength: 200,
+      },
+      {
+        name: 'reason',
+        type: 'string',
+        required: false,
+        description: 'Why it is suppressed: unsubscribed | do_not_contact | gdpr_erasure | competitor | complaint | manual',
+        example: 'unsubscribed',
+        placeholder: 'unsubscribed',
+        maxLength: 40,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'suppression-add-to-list',
+        title: 'View the suppression list',
+        description: 'See everything currently suppressed and why.',
+        category: 'sdks',
+        link: '/console/explorer?endpoint=suppression-list',
+      },
+    ],
+  },
+
+  {
+    id: 'suppression-list',
+    name: 'Suppression List Stats',
+    description: 'Read the suppression registry: total entries, a breakdown by kind (email / domain) and reason, and the most recent additions. Free, keyless-billed.',
+    method: 'GET',
+    path: '/v1/suppression',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'suppression-list-to-add',
+        title: 'Suppress a contact',
+        description: 'Add an email or domain to the do-not-contact list.',
+        category: 'sdks',
+        link: '/console/explorer?endpoint=suppression-add',
+      },
+    ],
+  },
+
+  {
+    id: 'suppression-remove',
+    name: 'Remove from Suppression List',
+    description: 'Remove an email or domain from the suppression list so future lookups resolve normally again. Free, keyless-billed.',
+    method: 'DELETE',
+    path: '/v1/suppression',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'identifier',
+        type: 'string',
+        required: true,
+        description: 'The email or domain to remove from suppression.',
+        example: 'unsubscribed@acme.com',
+        placeholder: 'user@company.com or company.com',
+        maxLength: 200,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'suppression-remove-to-list',
+        title: 'View the suppression list',
+        description: 'Confirm the current state of the registry.',
+        category: 'sdks',
+        link: '/console/explorer?endpoint=suppression-list',
       },
     ],
   }

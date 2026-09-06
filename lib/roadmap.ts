@@ -1123,6 +1123,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-045', // Bounce feedback loop — src/lib/gateway/bounceFeedback.ts + POST/GET /v1/feedback/bounce — report a bounce → email-verify suppresses the address
   'F-049', // Catch-all domain detection — lib/catch-all-detector.ts (SSOT, shared with email-verify) + GET /v1/email/catch-all + Studio panel
   'F-046', // User-reported corrections — lib/corrections.ts SSOT + insight-engine triage + /console/corrections review queue + Studio inline flag/overlay + POST/GET /v1/feedback/correction
+  'F-052', // Suppression list honoring — src/lib/gateway/suppressionList.ts do-not-contact registry + GET/POST/DELETE /v1/suppression + pre-billing enforcement gate (email/domain lookups return "suppressed, details withheld" at 0 credits)
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

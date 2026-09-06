@@ -5,6 +5,7 @@ import { checkCache, setCache, generateCacheKey, checkIdempotency, setIdempotenc
 import { checkNegativeCache, recordNegativeMiss, registerNegativeHit, getNegativeCacheStats } from '@/lib/gateway/negativeCache';
 import { getBounceStats, recordBounce, isSuppressed, type BounceType } from '@/lib/gateway/bounceFeedback';
 import { getCorrectionStats, recordCorrection } from '@/lib/gateway/corrections';
+import { addSuppression, removeSuppression, checkSuppression, getSuppressionStats, type SuppressionReason } from '@/lib/gateway/suppressionList';
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure } from '@/lib/gateway/circuitBreaker';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
@@ -428,6 +429,50 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     );
   }
 
+  // Suppression list (F-052) — manage the customer do-not-contact registry:
+  // add (POST), snapshot (GET), remove (DELETE). Free meta endpoint; the
+  // enforcement gate below consults the same registry on every enrichment GET.
+  if (path === '/v1/suppression') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getSuppressionStats(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'POST' || request.method === 'DELETE') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const body = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const qs = new URL(request.url).searchParams;
+      const identifier = (typeof body.identifier === 'string' ? body.identifier : qs.get('identifier') || '').trim();
+      if (!identifier) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_PARAMETERS', message: 'Provide an "identifier" (email or domain) to suppress.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      if (request.method === 'DELETE') {
+        const removed = removeSuppression(identifier);
+        return NextResponse.json(
+          { success: true, data: { identifier, removed }, metadata: { requestId, timestamp: Date.now() } },
+          { status: 200, headers: responseHeaders },
+        );
+      }
+      const reason = (typeof body.reason === 'string' ? body.reason : 'manual') as SuppressionReason;
+      const addedBy = typeof body.added_by === 'string' ? body.added_by : 'api';
+      const entry = addSuppression(identifier, reason, addedBy);
+      return NextResponse.json(
+        { success: true, data: { suppressed: entry }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET, POST, or DELETE /v1/suppression.' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
   // 1. Route resolution
   const endpoint = resolveEndpoint(path);
 
@@ -600,6 +645,35 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       responseHeaders['X-Credits-Cost'] = '0';
       const bal = (keyRecord as { creditBalance?: number } | null)?.creditBalance;
       if (typeof bal === 'number') responseHeaders['X-Credits-Remaining'] = String(bal);
+    }
+  }
+
+  // Suppression enforcement (F-052): if this lookup targets an email or domain
+  // on the customer's do-not-contact list, return "suppressed, details withheld"
+  // BEFORE billing — a compliance stop, at zero credits, never the contact.
+  if (!result && request.method === 'GET' && endpoint) {
+    const identifier = typeof parameters.email === 'string' ? parameters.email
+      : typeof parameters.domain === 'string' ? parameters.domain : '';
+    if (identifier) {
+      const hit = checkSuppression(identifier);
+      if (hit) {
+        responseHeaders['X-Suppressed'] = 'true';
+        responseHeaders['X-Credits-Cost'] = '0';
+        const bal = (keyRecord as { creditBalance?: number } | null)?.creditBalance;
+        if (typeof bal === 'number') responseHeaders['X-Credits-Remaining'] = String(bal);
+        result = {
+          status: 200,
+          data: {
+            suppressed: true,
+            identifier: hit.identifier,
+            kind: hit.kind,
+            reason: hit.reason,
+            message: 'This contact is on the suppression list; details withheld. No credits charged.',
+          },
+          duration: Date.now() - startTime,
+          timestamp: Date.now(),
+        } as APIResponse;
+      }
     }
   }
 
