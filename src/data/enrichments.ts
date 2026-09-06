@@ -13,6 +13,7 @@ import type { EnrichedCompany } from '@/lib/company-resolver';
 import { scoreCompleteness, type CompletenessScore } from '@/lib/completeness-scorer';
 import { attributeSources, type SourceAttribution } from '@/lib/source-catalog';
 import type { NormalizedText } from '@/lib/text-normalizer';
+import type { NormalizedCurrency } from '@/lib/currency-normalizer';
 import type { BuyerIntentProfile } from '@/lib/intent-resolver';
 import type { CompanyTimeseries } from '@/lib/company-timeseries-resolver';
 import type { CompanyAliasResolution } from '@/lib/company-alias-resolver';
@@ -90,6 +91,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'email-disposable', endpointId: 'email-disposable', param: 'email', inputKind: 'email', icon: 'Trash2', category: 'person', examples: ['user@mailinator.com', 'signup@sneaky-tempmail.io', 'jane.doe@acme.com'], label: 'Detect disposable' },
   { id: 'catch-all', endpointId: 'catch-all-detect', param: 'domain', inputKind: 'domain', icon: 'MailQuestion', category: 'company', examples: ['stripe.com', 'acme.com', 'datadoghq.com'], label: 'Catch-all detection' },
   { id: 'text-normalize', endpointId: 'text-normalize', param: 'text', inputKind: 'title', icon: 'Languages', category: 'identity', examples: ['JosÃ© GarcÃ­a', 'MÃ¼ller & CÃ´té', 'Пётр Ильич'], label: 'Normalize text' },
+  { id: 'currency-normalize', endpointId: 'currency-normalize', param: 'value', inputKind: 'title', icon: 'Coins', category: 'company', examples: ['$1.2M', '₹1,200 crore', '€1.200.000,50'], label: 'Normalize currency' },
   { id: 'demographics', endpointId: 'people-demographics', param: 'email', inputKind: 'email', icon: 'IdCard', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'priya.nair@zomato.in'], label: 'Demographic append' },
   { id: 'job-signals', endpointId: 'companies-job-signals', param: 'domain', inputKind: 'domain', icon: 'BriefcaseBusiness', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Job-posting growth' },
   { id: 'merchant', endpointId: 'companies-merchant', param: 'domain', inputKind: 'domain', icon: 'Store', category: 'company', examples: ['allbirds.com', 'chewy.com', 'peloton.com'], label: 'Ecommerce merchant' },
@@ -394,6 +396,8 @@ export interface EnrichmentResult {
   catchAll?: CatchAllView;
   /** Encoding & language normalization result (F-057) — rendered as a before/after panel. */
   normalize?: NormalizedText;
+  /** Currency normalization result (F-056) — rendered as a canonical-amount + conversion panel. */
+  currency?: NormalizedCurrency;
   /** Structured technographic profile (F-006) — rendered as a category-grouped stack. */
   technographic?: TechnographicView;
   /** Structured funding profile (F-009) — rendered as a round timeline + investor roster. */
@@ -1466,6 +1470,36 @@ function normalizeToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Currency normalization (F-056): a messy money value mapped to a canonical amount + conversion. */
+function currencyToResult(d: Record<string, unknown>): EnrichmentResult {
+  const c = d as unknown as NormalizedCurrency;
+  const hasAmount = typeof c.amount === 'number' && isFinite(c.amount);
+  const badges = [
+    String(c.currency),
+    ...(c.scaleApplied ? [c.scaleApplied] : []),
+    ...(c.ambiguous ? ['ambiguous'] : []),
+  ].filter(Boolean);
+  return {
+    kind: 'generic',
+    title: hasAmount ? c.formatted : '(unparsed)',
+    subtitle: hasAmount && c.targetAmount !== null
+      ? `${c.formatted} → ${c.formattedTarget} (${c.target}) · currency normalization`
+      : 'currency normalization',
+    avatar: c.symbol && c.symbol.length <= 2 ? c.symbol : '¤',
+    badges,
+    fields: [
+      { label: 'Currency', value: `${c.currency}${c.symbol ? ` (${c.symbol})` : ''}` },
+      { label: 'Amount', value: hasAmount ? c.formatted : '—', mono: true },
+      { label: `In ${c.target}`, value: c.formattedTarget, mono: true, verified: true },
+      ...(c.rate !== null ? [{ label: 'FX rate', value: `1 ${c.currency} = ${c.rate} ${c.target} (${c.rateDate})` }] : []),
+    ],
+    chips: c.notes.length ? { label: 'Assumptions', items: c.notes } : undefined,
+    currency: c,
+    confidence: typeof c.confidence === 'number' ? c.confidence : undefined,
+    raw: d,
+  };
+}
+
 /** Email domain authentication: SPF/DKIM/DMARC posture as a scored company card. */
 function domainAuthToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1694,6 +1728,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   // Catch-all detection: `is_catch_all` + a `probe` object + an `evidence` array mark the shape.
   if (typeof data.is_catch_all === 'boolean' && isRecord(data.probe) && Array.isArray(data.evidence)) return catchAllToResult(data);
   if (typeof data.normalized === 'string' && Array.isArray(data.transformations) && isRecord(data.flags) && typeof data.primaryScript === 'string') return normalizeToResult(data);
+  // Currency normalization (F-056): currency + target + formattedTarget + rateDate mark the shape.
+  if (typeof data.currency === 'string' && typeof data.target === 'string' && typeof data.formattedTarget === 'string' && typeof data.rateDate === 'string') return currencyToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.69', date: 'September 2026', headline: 'Currency normalization',
+    changes: [
+      { kind: 'feature', text: 'Currency normalization — turn any messy money value into one canonical amount. A new GET /v1/currency/normalize (and a "Normalize currency" Studio lookup) parses currency symbols ($, €, £, ¥, ₹…), ISO codes, scale words (K, M, B, and Indian lakh/crore), and every locale\'s grouping and decimal style — "$1.2M", "€1.200.000,50", "₹12,00,000", "1\'200\'000 CHF" — then returns the ISO 4217 currency, the parsed amount, and the amount converted to a target reporting currency (USD by default) at a frozen reference rate.' },
+      { kind: 'improvement', text: 'Honest about ambiguity: it tells you when a symbol was ambiguous ("$" could be USD/CAD/AUD…, "¥" USD/CNY), when it guessed thousands-grouping over a decimal, and which scale it applied — every assumption is surfaced, and passing an explicit ISO code removes the guesswork. Deterministic parser and frozen FX table (no wall-clock, no network), unit-tested across locales.' },
+    ],
+  },
+  {
     version: 'v4.68', date: 'September 2026', headline: 'Golden-record snapshots',
     changes: [
       { kind: 'feature', text: 'Golden-record snapshots — version the canonical record for every account and contact. A new Golden Records console (and GET /v1/records/snapshot) captures an immutable, content-hashed snapshot of an entity\'s reconciled golden record, so you can answer "what did we know about this account on the day we signed?" Diff any two versions field-by-field — what changed, which source drove it, and how confidence moved — and pin the version that is your official record of truth.' },

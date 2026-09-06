@@ -2280,6 +2280,45 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/reconciliation',
       },
     ],
+  },
+
+  {
+    id: 'currency-normalize',
+    name: 'Currency normalization',
+    description: "Turn any messy monetary value into one canonical amount (F-056). Parses symbols ($, €, £, ¥, ₹…), ISO codes (USD, EUR, INR…), scale words (K, M, B, lakh, crore), and every locale's grouping/decimal style ('1,200,000.50', '1.200.000,50', '₹12,00,000', \"1'200'000\"), then returns the ISO 4217 currency, the parsed amount, and the amount converted to a target reporting currency (USD by default) at a frozen reference FX rate — plus every assumption it had to make (ambiguous symbol, guessed grouping). Normalize revenue, funding, and deal sizes across sources to one currency.",
+    method: 'GET',
+    path: '/v1/currency/normalize',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'value',
+        type: 'string',
+        required: true,
+        description: 'A monetary value in any format, symbol, code, scale, or locale',
+        example: '₹1,200 crore',
+        placeholder: 'e.g. $1.2M · €1.200.000,50 · ₹50 lakh',
+        maxLength: 80,
+      },
+      {
+        name: 'to',
+        type: 'string',
+        required: false,
+        description: 'Target ISO 4217 currency to convert into (default USD)',
+        example: 'USD',
+        placeholder: 'USD',
+        maxLength: 3,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'currency-to-firmographics',
+        title: 'Enrich the company behind the number',
+        description: 'Resolve a domain to its firmographics — revenue, funding, and headcount.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

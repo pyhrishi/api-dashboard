@@ -9,7 +9,7 @@ import {
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
   MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine, Languages, ArrowDown, Unplug,
-  Crosshair, Flame, TrendingUp, TrendingDown, IdCard, BriefcaseBusiness, Store, LineChart, Waypoints,
+  Crosshair, Flame, TrendingUp, TrendingDown, IdCard, BriefcaseBusiness, Store, LineChart, Waypoints, Coins, ArrowRightLeft,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
@@ -21,6 +21,7 @@ import {
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
 import type { NormalizedText } from '@/lib/text-normalizer';
+import type { NormalizedCurrency } from '@/lib/currency-normalizer';
 import type { BuyerIntentProfile, IntentTopic, IntentSignal, IntentTier, IntentTrend } from '@/lib/intent-resolver';
 import type { CompanyTimeseries, AttributeSeries } from '@/lib/company-timeseries-resolver';
 import type { CompanyAliasResolution } from '@/lib/company-alias-resolver';
@@ -34,7 +35,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction, Modal, Field, Textarea, Sparkline } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages, Crosshair, IdCard, BriefcaseBusiness, Store, LineChart, Waypoints };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages, Crosshair, IdCard, BriefcaseBusiness, Store, LineChart, Waypoints, Coins };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -158,6 +159,7 @@ function StudioInner() {
         if (vm.timeseries) track('timeseries_resolved', { domain: raw, months: vm.timeseries.months, momentum: vm.timeseries.momentum, environment });
         if (vm.companyAlias) track('company_alias_resolved', { query: raw, matchType: vm.companyAlias.matchType, aliasType: vm.companyAlias.aliasType, confidence: vm.companyAlias.confidence, environment });
         if (vm.xref) track('cross_reference_resolved', { query: raw, input_system: vm.xref.input_system, entity_type: vm.xref.entity_type, reference_count: vm.xref.references.length, resolution_path: vm.xref.resolution_path, confidence: vm.xref.confidence, environment });
+        if (vm.currency) track('currency_normalized', { input: raw, currency: String(vm.currency.currency), target: vm.currency.target, ambiguous: vm.currency.ambiguous, scale: vm.currency.scaleApplied, confidence: vm.currency.confidence, environment });
         if (vm.partial?.partial) track('partial_result_received', { preset: p.id, endpoint: p.endpointId, completeness: vm.partial.completeness, degraded: vm.partial.degraded_upstreams.join(','), environment });
         if (vm.deliverability) {
           track('email_deliverability_checked', { verdict: vm.deliverability.verdict, score: vm.deliverability.score, environment });
@@ -709,6 +711,71 @@ function NormalizePanel({ n }: { n: NormalizedText }) {
         <div className="rounded-xl border border-semantic-success/25 bg-surface-2 p-4 flex items-center gap-2 text-sm text-fg-muted">
           <BadgeCheck className="w-4 h-4 text-semantic-success shrink-0" /> Input was already valid, composed UTF-8.
         </div>
+      )}
+    </div>
+  );
+}
+
+function CurrencyPanel({ c }: { c: NormalizedCurrency }) {
+  const parsed = typeof c.amount === 'number' && isFinite(c.amount);
+  const converted = c.targetAmount !== null && c.currency !== c.target;
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="rounded-xl border border-teal/30 p-5 flex items-start gap-4">
+        <div className="w-11 h-11 rounded-xl bg-surface-2 border border-border flex items-center justify-center shrink-0 text-teal"><Coins className="w-5 h-5" /></div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Currency</span>
+            <StatusBadge tone="info">{String(c.currency)}</StatusBadge>
+            {c.scaleApplied && <StatusBadge tone="teal">{c.scaleApplied}</StatusBadge>}
+            {c.ambiguous && <StatusBadge tone="warning">ambiguous</StatusBadge>}
+          </div>
+          <p className="text-sm text-fg mt-1.5 leading-snug">
+            {parsed ? `Parsed as ${c.formatted} (${c.currency}).` : 'No numeric amount could be parsed.'}
+          </p>
+        </div>
+      </div>
+
+      {parsed && (
+        <div className="rounded-xl border border-border bg-surface-2 p-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">Canonical</div>
+              <div className="text-2xl font-black text-fg tabular-nums">{c.formatted}</div>
+            </div>
+            {converted && (
+              <>
+                <ArrowRightLeft className="w-5 h-5 text-fg-subtle shrink-0" />
+                <div className="text-right">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-teal mb-1">In {c.target}</div>
+                  <div className="text-2xl font-black text-teal tabular-nums">{c.formattedTarget}</div>
+                </div>
+              </>
+            )}
+          </div>
+          {c.rate !== null && converted && (
+            <div className="mt-3 pt-2 border-t border-border-subtle text-[11px] text-fg-subtle">
+              1 {c.currency} = {c.rate} {c.target} · reference {c.rateDate}
+            </div>
+          )}
+        </div>
+      )}
+
+      {c.notes.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface-2 p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">Assumptions</div>
+          <ul className="space-y-2">
+            {c.notes.map((note, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-[12px] text-fg-muted">
+                <Info className="w-3.5 h-3.5 text-fg-subtle mt-0.5 shrink-0" />
+                <span>{note}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {c.ambiguous && c.alternatives.length > 0 && (
+        <p className="text-[11px] text-fg-subtle flex items-center gap-1"><Info className="w-3 h-3" /> Could also be {c.alternatives.join(', ')} — pass an explicit ISO code to disambiguate.</p>
       )}
     </div>
   );
@@ -1552,6 +1619,9 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorr
 
         {result.normalize && (
           <NormalizePanel n={result.normalize} />
+        )}
+        {result.currency && (
+          <CurrencyPanel c={result.currency} />
         )}
 
         {result.technographic && (

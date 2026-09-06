@@ -144,7 +144,13 @@ export type TelemetryEventName =
   | 'golden_records_viewed'
   | 'golden_record_captured'
   | 'golden_record_pinned'
-  | 'golden_record_deleted';
+  | 'golden_record_deleted'
+  // enrichment — currency normalization (F-056)
+  | 'currency_normalized'
+  // developer experience — GraphQL gateway (F-065)
+  | 'graphql_explorer_viewed'
+  | 'graphql_query_run'
+  | 'graphql_query_failed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

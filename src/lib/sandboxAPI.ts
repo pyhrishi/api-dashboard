@@ -42,6 +42,7 @@ import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { getBounce, isSuppressed } from '@/lib/gateway/bounceFeedback';
 import { detectCatchAll } from '@/lib/catch-all-detector';
 import { normalizeText } from '@/lib/text-normalizer';
+import { normalizeCurrency, type CurrencyCode } from '@/lib/currency-normalizer';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
 import { parseQuery, applyQuery } from '@/lib/gateway/queryEngine';
@@ -924,6 +925,26 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...normalizeText(text) };
+    }
+
+    case 'currency-normalize': {
+      // Deterministic currency parsing + FX normalization (shared SSOT, F-056).
+      const value = String(parameters.value || '');
+      if (!value.trim()) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a "value" to normalize (e.g. "$1.2M" or "₹50 lakh").' },
+        };
+      }
+      const to = String(parameters.to || 'USD').toUpperCase() as CurrencyCode;
+      const result = normalizeCurrency(value, to);
+      if (!result) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Could not parse a monetary value from the input.' },
+        };
+      }
+      return { success: true, ...result };
     }
 
     case 'email-disposable': {
