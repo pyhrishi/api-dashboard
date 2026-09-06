@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.16', date: 'September 2026', headline: 'Match-rate transparency',
+    changes: [
+      { kind: 'feature', text: 'Match-rate transparency — a new Match Rate dashboard answers the question every enrichment buyer asks: what is your real match rate? It reads your own request history and shows an honest match rate (matched ÷ matched-plus-missed), broken down by endpoint and by identifier type (email, domain, phone, LinkedIn, IP, CIN), plus a miss-reason breakdown and a recent-lookups list explaining why each request matched or missed. Find it at Match Rate in the console nav.' },
+      { kind: 'feature', text: 'Every lookup in Developer Logs now carries a "why it matched or missed" explanation — matched on which identifier, or outside coverage with a recovery suggestion (try Reverse Enrichment, resolve by domain, and so on).' },
+      { kind: 'improvement', text: 'The match rate is honest by construction: deterministic transforms (email verification, title normalization, domain auth) never inflate it, and invalid input, auth failures, and rate limits are errors, not coverage misses, so they are excluded from the denominator. The methodology is stated on the page and the number is fully deterministic — the same traffic always yields the same rate.' },
+    ],
+  },
+  {
     version: 'v4.15', date: 'September 2026', headline: 'Cross-field validation',
     changes: [
       { kind: 'feature', text: 'Cross-field validation — a new "Validate a record" lookup runs consistency rules across a record\'s fields and catches impossible or improbable combinations that single-field checks miss: email vs company domain, title vs seniority (the classic "VP" title on a "Junior" record), phone vs HQ geography, and name vs email local-part. Returns a 0-100 integrity score, a decisive consistent / minor-issues / inconsistent verdict, and a per-rule breakdown with the reason for each. New GET /v1/records/validate endpoint (1 credit), shipped as a Studio preset.' },

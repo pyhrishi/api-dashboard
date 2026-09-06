@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { TelemetryEventRecord } from '@/lib/telemetry';
 import type { EnrichmentResult } from '@/data/enrichments';
+import { generateSeedRequestHistory, SEED_LOOKUP_COUNT } from '@/lib/seed-request-history';
 
 /**
  * One enrichment run in the Enrichment Studio (any preset/endpoint), persisted per
@@ -714,6 +715,8 @@ interface AppState extends FirstCallState, TenantState {
   updateKey: (id: string, updates: Partial<MockKey>) => void;
   expireKeys: () => void;
   logApiRequest: (log: ApiLog) => void;
+  /** Populate a deterministic 7-day lookup history for the active env when it has little real traffic (Match-rate transparency, F-029). Idempotent. */
+  seedRequestHistory: () => void;
   initializeAnalyticsIfNeeded: () => void;
   resetPrototypeState: () => void;
   addAuditLog: (action: string, resource: string) => void;
@@ -1454,6 +1457,19 @@ export const useStore = create<AppState>()(
           invoices: newInvoices,
           activeKeys: newActiveKeys
         };
+      }),
+
+      seedRequestHistory: () => set((state) => {
+        const env = state.environment;
+        // If the active environment already has real traffic, leave it alone.
+        const realCount = state.apiLogs.filter(l => l.environment === env && !l.id.startsWith('seed_')).length;
+        if (realCount >= SEED_LOOKUP_COUNT) return {} as Partial<AppState>;
+        // Replace any prior seed batch for this env (idempotent) and merge, newest-first.
+        const withoutOldSeed = state.apiLogs.filter(l => !l.id.startsWith(`seed_${env}_`));
+        const merged = [...generateSeedRequestHistory(env), ...withoutOldSeed]
+          .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
+          .slice(0, 200);
+        return { apiLogs: merged } as Partial<AppState>;
       }),
 
       initializeAnalyticsIfNeeded: () => set((state) => {

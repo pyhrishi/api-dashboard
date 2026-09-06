@@ -1033,6 +1033,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-025', // Confidence score on every field — per-field confidence + provenance on every result
   'F-040', // Field-level freshness timestamps — per-field last-verified date + fresh/aging/stale tier on every result
   'F-047', // Cross-field validation — Studio "Validate a record" (GET /v1/records/validate)
+  'F-029', // Match-rate transparency — /console/coverage dashboard + per-request match explanation in Logs
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

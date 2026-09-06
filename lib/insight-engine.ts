@@ -278,3 +278,238 @@ export function summarizeBulkJob(rows: BulkSummaryRow[]): BulkJobSummary {
     matchRate,
   };
 }
+
+// ─── Match-rate transparency (F-029) ──────────────────────────────────────────
+//
+// Explains, per request, *why* a lookup matched or missed, and aggregates an
+// honest match rate over real request logs. "Honest" means the denominator is
+// only genuine coverage attempts (matched + missed) — malformed input, auth,
+// rate-limit, and server errors are excluded, and pure transforms (title
+// normalization, email verification, domain auth) don't count as coverage
+// lookups at all. Deterministic: same logs → same numbers.
+
+/** The subset of a request-log record this engine needs (structurally satisfied by ApiLog). */
+export interface MatchLog {
+  path: string;
+  method?: string;
+  status: number;
+  response?: unknown;
+  request?: { parameters?: Record<string, unknown> };
+  timestamp?: string;
+  environment?: string;
+}
+
+export type MatchVerdict = 'matched' | 'missed' | 'error' | 'excluded';
+export type IdentifierKind =
+  | 'email' | 'domain' | 'phone' | 'linkedin' | 'ip' | 'cin' | 'title' | 'query' | 'other';
+export type EndpointKind = 'lookup' | 'transform' | 'other';
+
+export interface MatchExplanation {
+  verdict: MatchVerdict;
+  /** Short label, e.g. "Matched on email" / "Outside coverage". */
+  label: string;
+  /** One-sentence plain-English reason. */
+  detail: string;
+  identifier: IdentifierKind;
+  endpointKind: EndpointKind;
+  /** Deterministic recovery suggestion for a coverage miss, else null. */
+  recovery: string | null;
+  /** Whether this request counts toward the match-rate denominator. */
+  counts: boolean;
+}
+
+const IDENTIFIER_LABEL: Record<IdentifierKind, string> = {
+  email: 'Email', domain: 'Domain', phone: 'Phone', linkedin: 'LinkedIn URL',
+  ip: 'IP address', cin: 'CIN', title: 'Job title', query: 'Free-form query', other: 'Identifier',
+};
+
+/** Classify a request path into an endpoint kind + the identifier it keys on. */
+export function classifyLookup(path: string, params?: Record<string, unknown>): {
+  kind: EndpointKind; identifier: IdentifierKind; endpointLabel: string;
+} {
+  const p = path.toLowerCase();
+  // Pure transforms — deterministic computation that always returns; not coverage.
+  if (p.includes('/titles/normalize')) return { kind: 'transform', identifier: 'title', endpointLabel: 'Title normalize' };
+  if (p.includes('/email/verify')) return { kind: 'transform', identifier: 'email', endpointLabel: 'Email verify' };
+  if (p.includes('/email/domain-auth')) return { kind: 'transform', identifier: 'domain', endpointLabel: 'Domain auth' };
+
+  // Coverage lookups — can match or miss.
+  const paramKeys = params ? Object.keys(params) : [];
+  const has = (k: string) => paramKeys.includes(k);
+  let identifier: IdentifierKind = 'other';
+  if (has('email')) identifier = 'email';
+  else if (has('phone')) identifier = 'phone';
+  else if (has('linkedin_url')) identifier = 'linkedin';
+  else if (has('ip')) identifier = 'ip';
+  else if (has('cin')) identifier = 'cin';
+  else if (has('title')) identifier = 'title';
+  else if (has('domain')) identifier = 'domain';
+  else if (has('query')) identifier = 'query';
+  // Fall back to the path when params are absent (e.g. replayed logs).
+  else if (p.includes('/people/social')) identifier = 'email';
+  else if (p.includes('/people/phone')) identifier = 'email';
+  else if (p.includes('/people')) identifier = 'email';
+  else if (p.includes('/companies') || p.includes('/domain-to') || p.includes('/firmographics')) identifier = 'domain';
+  else if (p.includes('/enrichment/ip') || p.includes('/ip-to')) identifier = 'ip';
+  else if (p.includes('/linkedin')) identifier = 'linkedin';
+  else if (p.includes('/cin')) identifier = 'cin';
+
+  const isLookup =
+    p.includes('/people') || p.includes('/companies') || p.includes('/enrichment') ||
+    p.includes('/domain-to') || p.includes('/ip-to') || p.includes('/linkedin') ||
+    p.includes('/cin') || p.includes('/identity') || p.includes('/reverse') || p.includes('/firmographics');
+
+  if (!isLookup) return { kind: 'other', identifier: 'other', endpointLabel: prettyPath(path) };
+  return { kind: 'lookup', identifier, endpointLabel: prettyPath(path) };
+}
+
+/** "/v1/people/social" → "People · social". */
+function prettyPath(path: string): string {
+  const seg = path.replace(/^\/?v1\//, '').replace(/^\//, '').split('/').filter(Boolean);
+  if (seg.length === 0) return path;
+  const head = seg[0].charAt(0).toUpperCase() + seg[0].slice(1);
+  return seg.length > 1 ? `${head} · ${seg.slice(1).join(' ')}` : head;
+}
+
+/** True when a 200 body actually carries a resolved entity (vs an empty/no-match 200). */
+function hasResolvedData(response: unknown): boolean {
+  if (!response || typeof response !== 'object') return false;
+  const r = response as Record<string, unknown>;
+  if (r.success === false) return false;
+  if ('error' in r && r.error) return false;
+  // Explicit no-match markers some endpoints use.
+  if (r.matched === false || r.found === false) return false;
+  const data = 'data' in r ? r.data : r;
+  if (data === null || data === undefined) return false;
+  if (typeof data !== 'object') return true;
+  const payload = data as Record<string, unknown>;
+  // Strip envelope-only keys, then require at least one real field.
+  const meaningful = Object.keys(payload).filter((k) => !['success', 'matched', 'found'].includes(k));
+  return meaningful.length > 0;
+}
+
+const recoveryFor = (id: IdentifierKind): string => {
+  switch (id) {
+    case 'email': return 'Try Reverse Enrichment or resolve the domain to reach the company instead.';
+    case 'phone': return 'Run Identity Resolve on the number, or fall back to an email lookup.';
+    case 'domain': return 'Check the domain for typos, or use Reverse IP to identify the visitor.';
+    case 'linkedin': return 'Resolve the profile by work email instead of the LinkedIn URL.';
+    case 'ip': return 'IP maps to a non-corporate network — try an email or domain lookup.';
+    case 'cin': return 'Confirm the CIN against the MCA registry, or resolve by domain.';
+    default: return 'Try Auto-detect (Identity Resolve) with any other identifier you have.';
+  }
+};
+
+/** Explain a single request: why it matched, missed, errored, or was excluded. */
+export function explainMatch(log: MatchLog): MatchExplanation {
+  const { kind, identifier } = classifyLookup(log.path, log.request?.parameters);
+  const idLabel = IDENTIFIER_LABEL[identifier];
+
+  if (kind === 'other') {
+    return { verdict: 'excluded', label: 'Not a lookup', detail: 'This request is not a coverage lookup, so it does not affect match rate.', identifier, endpointKind: kind, recovery: null, counts: false };
+  }
+  if (kind === 'transform') {
+    return { verdict: 'excluded', label: 'Computed result', detail: 'A deterministic transform that always returns — not a dataset coverage lookup, so it is excluded from match rate.', identifier, endpointKind: kind, recovery: null, counts: false };
+  }
+
+  const s = log.status;
+  if (s === 400 || s === 422) {
+    return { verdict: 'error', label: 'Invalid input', detail: `The ${idLabel.toLowerCase()} failed validation, so no lookup ran. Excluded from match rate.`, identifier, endpointKind: kind, recovery: 'Fix the input format and retry.', counts: false };
+  }
+  if (s === 401 || s === 403) {
+    return { verdict: 'error', label: 'Auth / scope', detail: 'The request was rejected before any lookup (key or scope), so it is excluded from match rate.', identifier, endpointKind: kind, recovery: 'Check the key and its scopes in API Keys.', counts: false };
+  }
+  if (s === 429) {
+    return { verdict: 'error', label: 'Rate limited', detail: 'Throttled before the lookup ran — excluded from match rate.', identifier, endpointKind: kind, recovery: 'Add backoff or raise the rate limit in Billing.', counts: false };
+  }
+  if (s >= 500) {
+    return { verdict: 'error', label: 'Server error', detail: 'An upstream error prevented the lookup — excluded from match rate.', identifier, endpointKind: kind, recovery: 'Retry; upstream errors are usually transient.', counts: false };
+  }
+  if (s === 404) {
+    return { verdict: 'missed', label: 'Outside coverage', detail: `No record for that ${idLabel.toLowerCase()} in the current dataset.`, identifier, endpointKind: kind, recovery: recoveryFor(identifier), counts: true };
+  }
+  if (s >= 200 && s < 300) {
+    if (hasResolvedData(log.response)) {
+      return { verdict: 'matched', label: `Matched on ${idLabel.toLowerCase()}`, detail: `Resolved a record from the ${idLabel.toLowerCase()} with corroborating signals.`, identifier, endpointKind: kind, recovery: null, counts: true };
+    }
+    return { verdict: 'missed', label: 'No match', detail: `The lookup ran but returned no record for that ${idLabel.toLowerCase()}.`, identifier, endpointKind: kind, recovery: recoveryFor(identifier), counts: true };
+  }
+  return { verdict: 'error', label: `HTTP ${s}`, detail: 'Unexpected status — excluded from match rate.', identifier, endpointKind: kind, recovery: null, counts: false };
+}
+
+export interface MatchRateBucket {
+  key: string;
+  label: string;
+  attempted: number;
+  matched: number;
+  missed: number;
+  matchRate: number; // 0..1
+}
+export interface MissReason {
+  key: string;
+  label: string;
+  count: number;
+  share: number; // 0..1 of all misses
+  recovery: string | null;
+}
+export interface MatchRateSummary {
+  total: number;      // all logs considered
+  attempted: number;  // matched + missed (the honest denominator)
+  matched: number;
+  missed: number;
+  errors: number;
+  excluded: number;
+  matchRate: number;  // matched / attempted
+  byEndpoint: MatchRateBucket[];
+  byIdentifier: MatchRateBucket[];
+  missReasons: MissReason[];
+}
+
+const rate = (matched: number, attempted: number) => (attempted > 0 ? Math.round((matched / attempted) * 1000) / 1000 : 0);
+
+/** Aggregate an honest match-rate summary over a set of request logs. */
+export function aggregateMatchRate(logs: MatchLog[]): MatchRateSummary {
+  let matched = 0, missed = 0, errors = 0, excluded = 0;
+  const endpoint = new Map<string, MatchRateBucket>();
+  const identifier = new Map<string, MatchRateBucket>();
+  const missBy = new Map<string, number>();
+
+  for (const log of logs) {
+    const ex = explainMatch(log);
+    if (ex.verdict === 'excluded') { excluded++; continue; }
+    if (ex.verdict === 'error') { errors++; continue; }
+
+    const { endpointLabel } = classifyLookup(log.path, log.request?.parameters);
+    const epKey = endpointLabel;
+    const idKey = ex.identifier;
+    const ep = endpoint.get(epKey) ?? { key: epKey, label: endpointLabel, attempted: 0, matched: 0, missed: 0, matchRate: 0 };
+    const id = identifier.get(idKey) ?? { key: idKey, label: IDENTIFIER_LABEL[ex.identifier], attempted: 0, matched: 0, missed: 0, matchRate: 0 };
+
+    ep.attempted++; id.attempted++;
+    if (ex.verdict === 'matched') { matched++; ep.matched++; id.matched++; }
+    else { missed++; ep.missed++; id.missed++; missBy.set(ex.label, (missBy.get(ex.label) ?? 0) + 1); }
+
+    endpoint.set(epKey, ep); identifier.set(idKey, id);
+  }
+
+  const attempted = matched + missed;
+  const finalize = (m: Map<string, MatchRateBucket>) =>
+    Array.from(m.values()).map((b) => ({ ...b, matchRate: rate(b.matched, b.attempted) }))
+      .sort((a, b) => b.attempted - a.attempted);
+
+  const missReasons: MissReason[] = Array.from(missBy.entries())
+    .map(([label, count]) => ({
+      key: label, label, count,
+      share: missed > 0 ? Math.round((count / missed) * 1000) / 1000 : 0,
+      recovery: label === 'Outside coverage' ? recoveryFor('email') : null,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    total: logs.length, attempted, matched, missed, errors, excluded,
+    matchRate: rate(matched, attempted),
+    byEndpoint: finalize(endpoint),
+    byIdentifier: finalize(identifier),
+    missReasons,
+  };
+}

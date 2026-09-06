@@ -11,6 +11,8 @@ import { EndpointFilter } from '@/components/EndpointFilter';
 import { PrivacySettingsDrawer } from './PrivacySettingsDrawer';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore, ApiLog, getLogError } from '@/lib/store';
+import { explainMatch } from '@/lib/insight-engine';
+import Link from 'next/link';
 import { sanitizeLogData } from '@/lib/redaction-engine';
 import { ENDPOINTS as FULL_ENDPOINTS } from '@/src/data/endpoints';
 
@@ -522,8 +524,39 @@ export default function LogsPage() {
                                   transition={{ duration: 0.3, ease: 'easeInOut' }}
                                   className="overflow-hidden"
                                 >
+                                  {(() => {
+                                    const mx = explainMatch(log);
+                                    if (mx.endpointKind !== 'lookup') return null;
+                                    const tone = mx.verdict === 'matched'
+                                      ? 'text-semantic-success bg-semantic-success/10 border-semantic-success/20'
+                                      : mx.verdict === 'missed'
+                                        ? 'text-semantic-warning bg-semantic-warning/10 border-semantic-warning/20'
+                                        : 'text-semantic-error bg-semantic-error/10 border-semantic-error/20';
+                                    return (
+                                      <div className="px-8 pt-6 ml-2">
+                                        <div className={`rounded-xl border p-4 flex items-start gap-3 ${tone}`}>
+                                          {mx.verdict === 'matched'
+                                            ? <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                            : <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />}
+                                          <div className="min-w-0">
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-[9px] font-black uppercase tracking-widest opacity-70">Match</span>
+                                              <span className="text-sm font-bold">{mx.label}</span>
+                                            </div>
+                                            <p className="text-[13px] text-fg-muted mt-0.5">{mx.detail}</p>
+                                            {mx.recovery && (
+                                              <Link href="/console/coverage" className="text-[11px] font-bold text-teal hover:text-fg transition-colors inline-flex items-center gap-1 mt-1">
+                                                {mx.recovery} <ChevronRight className="w-3 h-3" />
+                                              </Link>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+
                                   <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 ml-2">
-                                    
+
                                     {/* Request Details */}
                                     <div>
                                       <div className="flex items-center justify-between mb-4">
