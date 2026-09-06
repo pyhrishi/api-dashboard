@@ -1222,6 +1222,50 @@ export const ENDPOINTS: Endpoint[] = [
       },
     ],
     nextStepRecommendations: [],
+  },
+
+  {
+    id: 'enrich-stream',
+    name: 'Streaming Inline Enrichment',
+    description: "Enrich a list of identifiers over a single low-latency connection that streams each row's result as NDJSON the moment it resolves — so you process the first row while the last is still enriching, instead of waiting for the whole batch. Each line is a JSON object (a start frame, one row per input with status matched/missed/error, then an end summary). Ideal for real-time pipelines.",
+    method: 'POST',
+    path: '/v1/enrich/stream',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'endpoint',
+        type: 'string',
+        required: true,
+        description: 'The lookup to run per input (people-search for emails, company-enrich for domains)',
+        example: 'people-search',
+        placeholder: 'people-search',
+      },
+      {
+        name: 'inputs',
+        type: 'array',
+        required: true,
+        description: 'Identifiers to enrich — emails for people, domains for companies (max 500)',
+        example: '["marcus@stripe.com","priya.nair@zomato.in"]',
+        placeholder: '["user@company.com", ...]',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'stream-console',
+        title: 'Watch it stream live',
+        description: 'Open the Streaming console to see rows arrive one by one.',
+        category: 'sdks',
+        link: '/console/stream',
+      },
+      {
+        id: 'stream-to-async',
+        title: 'Very large batches',
+        description: 'For huge volumes, kick off an async job and poll it instead.',
+        category: 'sdks',
+        link: '/console/async-jobs',
+      },
+    ],
   }
 ];
 

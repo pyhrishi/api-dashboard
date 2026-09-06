@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.27', date: 'September 2026', headline: 'Streaming inline enrichment',
+    changes: [
+      { kind: 'feature', text: 'Streaming inline enrichment — enrich a list over a single low-latency connection that streams each row back the moment it resolves, instead of waiting for the whole batch. New POST /v1/enrich/stream returns NDJSON: a start frame, one JSON line per input (status matched / missed / error, with the result and per-row latency), then an end summary. Process the first row while the last is still enriching — ideal for real-time pipelines.' },
+      { kind: 'feature', text: 'A new Streaming console page runs the same endpoint live: paste a list, hit Start, and watch enriched rows materialize one by one with a running match count and throughput, plus a Stop button that aborts the stream. It sits alongside Async Jobs (very large batches) and the synchronous Batch endpoint.' },
+      { kind: 'improvement', text: 'Streamed rows reuse the same resolvers as every other surface, so a streamed row equals its single-call result, and invalid rows come back as a per-row error without breaking the stream. Deterministic and billed one credit per input.' },
+    ],
+  },
+  {
     version: 'v4.26', date: 'September 2026', headline: 'Multi-region coverage',
     changes: [
       { kind: 'feature', text: 'Multi-region coverage — a new Regional Coverage dashboard (/console/regions) shows where the Zinbit dataset is deep and where it is thin: coverage and match rate across North America, EMEA, APAC, and LATAM, broken down by data type (email, direct phone, firmographics, technographics, social) and by top country, with dataset size and median record freshness.' },

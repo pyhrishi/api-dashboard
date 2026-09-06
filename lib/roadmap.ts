@@ -1108,6 +1108,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-013', // HQ & office geo-resolution — GET /v1/companies/offices (lib/hq-geo-resolver.ts) + Studio geo footprint panel
   'F-015', // Company news & event feed — GET /v1/companies/news (lib/company-news-resolver.ts) + Studio event timeline
   'F-018', // Multi-region coverage — /console/regions dashboard (lib/region-coverage.ts) — EMEA/APAC/LATAM/NAMER × data type
+  'F-020', // Streaming inline enrichment — POST /v1/enrich/stream NDJSON (src/lib/gateway/streamEnrich.ts) + /console/stream
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

@@ -47,6 +47,8 @@ export type TelemetryEventName =
   | 'offices_resolved'
   | 'region_coverage_viewed'
   | 'region_selected'
+  | 'stream_started'
+  | 'stream_completed'
   | 'coverage_viewed'
   | 'coverage_timeframe_changed'
   | 'match_recovery_clicked'

@@ -11,6 +11,7 @@ import { inspectPayload } from '@/lib/gateway/waf';
 import { Logger } from '@/lib/gateway/logger';
 import { provisionDataShare, listDataShares, revokeDataShare, type DataShareDataset } from '@/lib/gateway/dataSharing';
 import { createAsyncJob, getAsyncJob, listAsyncJobs, cancelAsyncJob } from '@/lib/gateway/asyncJobs';
+import { resolveStreamRow, normalizeStreamInputs, kindForEndpoint, MAX_STREAM_INPUTS, STREAM_ROW_DELAY_MS } from '@/lib/gateway/streamEnrich';
 import { getAllPartners, getPartnerDashboard, lookupPartner, attributeReferral, recordRevenueEvent, processMonthEndPayouts } from '@/lib/gateway/partnerRevenue';
 import { generateForecastReport, forecastCapacity, getCurrentUsageSnapshot, type ForecastHorizon, type RegionId, type ResourceType } from '@/lib/gateway/capacityForecast';
 import { API_BASE_URL } from '@/lib/api-config';
@@ -205,6 +206,53 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
 
     return NextResponse.json({ success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Unsupported method or path for /v1/jobs.' } }, { status: 405, headers: responseHeaders });
+  }
+
+  // ── Streaming Inline Enrichment ─────────────────────────────────────────────
+  // POST /v1/enrich/stream — flush each row's result as NDJSON the moment it
+  // resolves, instead of waiting for the whole batch. Low-latency inline path.
+  if (routeSegments[0] === 'enrich' && routeSegments[1] === 'stream') {
+    if (request.method !== 'POST') {
+      return NextResponse.json({ success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST /v1/enrich/stream.' } }, { status: 405, headers: responseHeaders });
+    }
+    let body: Record<string, unknown> = {};
+    try { body = await request.json(); } catch {}
+    const inputs = normalizeStreamInputs(body.inputs);
+    const kind = kindForEndpoint(typeof body.endpoint === 'string' ? body.endpoint : 'people-search');
+
+    if (inputs.length === 0) {
+      return NextResponse.json({ success: false, error: { code: 'INVALID_PARAMETERS', message: 'Provide a non-empty "inputs" array or delimited string.' } }, { status: 400, headers: responseHeaders });
+    }
+    if (inputs.length > MAX_STREAM_INPUTS) {
+      return NextResponse.json({ success: false, error: { code: 'STREAM_TOO_LARGE', message: `A stream accepts at most ${MAX_STREAM_INPUTS} inputs.` } }, { status: 413, headers: responseHeaders });
+    }
+    const charge = deductCredits(apiKey, inputs.length);
+    if (!charge.success) {
+      return NextResponse.json({ success: false, error: { code: 'PAYMENT_REQUIRED', message: charge.error ?? 'Insufficient credits for this stream.' } }, { status: 402, headers: responseHeaders });
+    }
+
+    const encoder = new TextEncoder();
+    const line = (obj: unknown) => encoder.encode(JSON.stringify(obj) + '\n');
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        let matched = 0, missed = 0;
+        controller.enqueue(line({ type: 'start', total: inputs.length, credits_charged: inputs.length, kind }));
+        for (let i = 0; i < inputs.length; i++) {
+          const row = resolveStreamRow(kind, inputs[i], i);
+          if (row.status === 'matched') matched++; else if (row.status === 'missed') missed++;
+          controller.enqueue(line(row));
+          // Pace the stream so rows arrive progressively (visible, low-latency feel).
+          await new Promise((r) => setTimeout(r, STREAM_ROW_DELAY_MS));
+        }
+        controller.enqueue(line({ type: 'end', total: inputs.length, matched, missed }));
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: { ...responseHeaders, 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' },
+    });
   }
 
   // ── Partner & Affiliate API Routes ──────────────────────────────────────
