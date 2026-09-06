@@ -10,6 +10,7 @@ import type { DecaySeverity, DecayAlertState } from '@/lib/data-decay';
 import { getBenchmarkReport, type AccuracyBenchmarkRun } from '@/lib/accuracy-benchmark';
 import { analyzeCoverageGaps, makeExpansionRequest, type CoverageExpansionRequest } from '@/lib/coverage-gaps';
 import type { RegionId } from '@/lib/regions';
+import { previewById } from '@/lib/preview-program';
 import { generateSeedCorrections, correctionEntityKey, inferFieldKind, makeCorrectionId, type Correction, type CorrectionInput } from '@/lib/corrections';
 import { generateSeedSnapshots, buildGoldenRecord, snapshotFromRecord, hashRecord, resolveGoldenEntity, type GoldenSnapshot } from '@/lib/golden-record';
 import { triageCorrection } from '@/lib/insight-engine';
@@ -512,6 +513,8 @@ export interface TenantState {
   coverageExpansionRequests: CoverageExpansionRequest[];
   /** Data-residency region pinned for this org (F-070); null = auto / global routing. */
   dataResidencyRegion: RegionId | null;
+  /** Preview endpoints (F-081) this org has opted into (dark-launch enrollment). */
+  previewOptIns: string[];
 }
 
 export const extractTenantState = (state: AppState): TenantState => ({
@@ -558,6 +561,7 @@ export const extractTenantState = (state: AppState): TenantState => ({
   goldenSnapshots: state.goldenSnapshots,
   coverageExpansionRequests: state.coverageExpansionRequests,
   dataResidencyRegion: state.dataResidencyRegion,
+  previewOptIns: state.previewOptIns,
 });
 
 export const defaultTenantState = (): TenantState => ({
@@ -604,6 +608,7 @@ export const defaultTenantState = (): TenantState => ({
   goldenSnapshots: [],
   coverageExpansionRequests: [],
   dataResidencyRegion: null,
+  previewOptIns: [],
 });
 
 interface AppState extends FirstCallState, TenantState {
@@ -685,6 +690,11 @@ interface AppState extends FirstCallState, TenantState {
   // Regional API endpoints (F-070) — per-org data-residency pin.
   /** Pins the org's data-residency region (null = auto/global). Admin only. */
   setDataResidencyRegion: (region: RegionId | null) => void;
+  // Dark-launch preview endpoints (F-081) — per-org preview enrollment.
+  /** Opts the org into a preview endpoint. Admin/developer only. */
+  enrollPreview: (id: string) => void;
+  /** Leaves a preview endpoint. Admin/developer only. */
+  leavePreview: (id: string) => void;
   // User-reported corrections — governed field-correction feedback loop (F-046).
   /** Idempotently seeds demo corrections on mount (like seedMergeCandidates). No audit log. */
   seedCorrections: () => void;
@@ -929,6 +939,7 @@ export const useStore = create<AppState>()(
       accuracyBenchmarkRuns: [],
       coverageExpansionRequests: [],
       dataResidencyRegion: null,
+      previewOptIns: [],
       matchThresholds: { ...DEFAULT_THRESHOLDS },
       webhooks: [],
       webhookLogs: [],
@@ -2769,6 +2780,26 @@ export const useStore = create<AppState>()(
         return { dataResidencyRegion: region, auditLogs: [log, ...state.auditLogs] };
       }),
 
+      // ─── Dark-launch preview endpoints (F-081) ──────────────────────────────
+      enrollPreview: (id) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot manage preview enrollment');
+        if (!previewById(id)) throw new Error('Unknown preview endpoint');
+        if (state.previewOptIns.includes(id)) return {};
+        const log = generateAuditLog('preview.enrolled', id, state.user?.email || 'System', state.environment, {
+          changes: { after: { preview: id } },
+        });
+        return { previewOptIns: [...state.previewOptIns, id], auditLogs: [log, ...state.auditLogs] };
+      }),
+
+      leavePreview: (id) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot manage preview enrollment');
+        if (!state.previewOptIns.includes(id)) return {};
+        const log = generateAuditLog('preview.left', id, state.user?.email || 'System', state.environment, {
+          changes: { before: { preview: id } },
+        });
+        return { previewOptIns: state.previewOptIns.filter((p) => p !== id), auditLogs: [log, ...state.auditLogs] };
+      }),
+
       // ─── User-reported corrections (F-046) ──────────────────────────────────
       seedCorrections: () => set((state) => {
         if (state.corrections.length > 0) return {};
@@ -2987,6 +3018,7 @@ export const useStore = create<AppState>()(
         accuracyBenchmarkRuns: state.accuracyBenchmarkRuns,
         coverageExpansionRequests: state.coverageExpansionRequests,
         dataResidencyRegion: state.dataResidencyRegion,
+        previewOptIns: state.previewOptIns,
         matchThresholds: state.matchThresholds,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,

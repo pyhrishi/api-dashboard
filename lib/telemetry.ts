@@ -163,7 +163,11 @@ export type TelemetryEventName =
   | 'bulk_export_downloaded'
   // developer experience — gRPC high-throughput channel (F-077)
   | 'grpc_channel_viewed'
-  | 'grpc_benchmark_run';
+  | 'grpc_benchmark_run'
+  // developer experience — dark-launch preview endpoints (F-081)
+  | 'preview_program_viewed'
+  | 'preview_endpoint_enrolled'
+  | 'preview_endpoint_tried';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

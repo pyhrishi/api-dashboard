@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.75', date: 'September 2026', headline: 'Dark-launch preview endpoints',
+    changes: [
+      { kind: 'feature', text: 'Preview Program — try upcoming API capabilities while they\'re in dark launch, before they hit GA. A new Preview console (and GET /api/preview) lists what\'s in preview with a stability stage (alpha / beta / preview), what\'s new, and a target GA. Opt into a preview and call it immediately: People Search v2 and Company Graph v2 (beta) return richer shapes in one call, and Buying Signals (alpha) is a brand-new intent index. Preview endpoints are free until they ship.' },
+      { kind: 'feature', text: 'The gate is real, not a flag on a mock: a preview call requires you to have opted in (per-organization enrollment). A caller who hasn\'t opted in gets a clear 403 PREVIEW_ACCESS_REQUIRED that names the exact header to send — not a silent 404 — and the console\'s "Try it" demonstrates the gate live (403 when you\'re out, 200 the moment you enroll).' },
+      { kind: 'improvement', text: 'Preview endpoints map to the same deterministic resolvers as the GA surfaces where an equivalent exists, so a preview never disagrees with production. Enrollment is per-organization (swaps when you switch orgs), admin/developer-gated, and audited. Runs flow into Logs like every other call.' },
+    ],
+  },
+  {
     version: 'v4.74', date: 'September 2026', headline: 'gRPC high-throughput channel',
     changes: [
       { kind: 'feature', text: 'gRPC high-throughput channel — a binary protobuf service over HTTP/2 for enterprise-scale ingestion. A new EnrichmentService (POST /api/grpc, GET /api/grpc for the .proto) exposes unary calls plus bidirectional streaming methods that push thousands of records over one multiplexed connection, backed by the same resolvers, auth, billing, and live-key masking as REST + GraphQL — one data model, three protocols. A new gRPC Channel console shows the .proto, generated clients (grpcurl, Go, Python, Node), and a live throughput benchmark.' },
