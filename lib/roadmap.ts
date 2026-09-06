@@ -1117,6 +1117,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-033', // Merge & unmerge controls — /console/identity merge center (lib/merge-seed.ts + store slice) — confirm/split entity resolution, audited & reversible
   'F-034', // Match threshold tuning — /console/thresholds (lib/threshold-tuning.ts, live precision/recall over the fuzzy engine) + persisted per-use-case floors
   'F-036', // Negative-match caching — src/lib/gateway/negativeCache.ts wired into the live pipeline (serve repeat misses free) + GET /v1/cache/negative stats
+  'F-038', // Match audit trail — /console/match-audit tamper-evident ledger (lib/match-audit.ts, SHA-256 hash chain) derived from apiLogs + entityMerges
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

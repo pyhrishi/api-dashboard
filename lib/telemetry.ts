@@ -50,6 +50,8 @@ export type TelemetryEventName =
   | 'merge_center_viewed'
   | 'entities_merged'
   | 'merge_reverted'
+  | 'match_audit_viewed'
+  | 'match_audit_exported'
   | 'stream_started'
   | 'stream_completed'
   | 'coverage_viewed'

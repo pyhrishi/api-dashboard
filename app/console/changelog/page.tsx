@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.36', date: 'September 2026', headline: 'Match audit trail',
+    changes: [
+      { kind: 'feature', text: 'Match audit trail — a new Match Audit Trail console (/console/match-audit) is a tamper-evident ledger of every match decision: each entry records the subject, the verdict (matched / missed / merged / reverted), the confidence, the rules applied (which engine, keyed on which identifier), the data sources consulted, and the actor. It is assembled from real decision records — coverage lookups and manual merge/unmerge decisions — with filters by verdict and timeframe and an expandable evidence view.' },
+      { kind: 'feature', text: 'Every entry chains the previous entry’s SHA-256 hash, so any edit, insertion, or deletion breaks the chain and is flagged — the console verifies the whole ledger end to end and shows a Chain integrity status, with a one-click export of the trail as JSON. Answers “why is this record resolved this way, and can I prove the log wasn’t altered?” for compliance and debugging.' },
+      { kind: 'improvement', text: 'The trail derives from existing state (no duplicated store) and reuses the same SHA-256 primitive as Hashed-email lookups and the Zinbit ID. Deterministic — the same decisions always produce the same verifiable chain.' },
+    ],
+  },
+  {
     version: 'v4.35', date: 'September 2026', headline: 'Negative-match caching',
     changes: [
       { kind: 'feature', text: 'Negative-match caching — the gateway now remembers coverage misses (a lookup that resolved to no match) and serves an identical repeat from cache at zero credits. The positive edge cache speeds up repeat hits, but billing runs before it, so a repeated miss used to cost a credit every time; negative-match caching consults a short-TTL miss cache before billing, so re-querying an identifier you already know isn\'t in the dataset is free. Responses carry an X-Negative-Cache header (HIT / STORE / MISS) and a cached hit reports X-Credits-Cost: 0.' },
