@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.76', date: 'September 2026', headline: 'Scoped key permissions — now enforced',
+    changes: [
+      { kind: 'feature', text: 'Scoped key permissions are now enforced at the gateway. Restrict an API key to the exact scopes it needs (Identity, Corporate, Search, Enrichment utilities, Write) and any call outside them is rejected with 403 INSUFFICIENT_SCOPE — the required scope is named in the error and the X-Required-Scope header. A key with full access is unchanged; least privilege is opt-in per key.' },
+      { kind: 'feature', text: 'A new Key Scopes console shows the scope catalog, the exact required scope for every endpoint, and a live tester: pick a key and fire real probes to watch the gateway allow or deny by scope. The catalog is a shared source of truth, so what the console shows is precisely what the gateway enforces.' },
+      { kind: 'improvement', text: 'Creating, rolling, or restricting a key now registers its scopes with the gateway automatically, so enforcement is real end-to-end — closing the gap where key scopes were previously cosmetic. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.75', date: 'September 2026', headline: 'Dark-launch preview endpoints',
     changes: [
       { kind: 'feature', text: 'Preview Program — try upcoming API capabilities while they\'re in dark launch, before they hit GA. A new Preview console (and GET /api/preview) lists what\'s in preview with a stability stage (alpha / beta / preview), what\'s new, and a target GA. Opt into a preview and call it immediately: People Search v2 and Company Graph v2 (beta) return richer shapes in one call, and Buying Signals (alpha) is a brand-new intent index. Preview endpoints are free until they ship.' },

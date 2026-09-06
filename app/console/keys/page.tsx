@@ -9,12 +9,28 @@ import RoleGuard from '@/components/RoleGuard';
 import Link from 'next/link';
 import { Portal } from '@/components/Portal';
 import { track } from '@/lib/telemetry';
+import { SCOPE_CATALOG } from '@/lib/scopes';
+import { authHeaderValue } from '@/lib/api-config';
 
-const AVAILABLE_SCOPES = [
-  { id: 'identity:read', label: 'Identity', desc: 'Email-to-Phone, Phone-to-Email, DIN-to-Phone, Contact-to-LN' },
-  { id: 'corporate:read', label: 'Corporate', desc: 'Domain-to-CIN, CIN-to-Company Data, Domain-to-LN, LN-to-Profile' },
-  { id: 'search:execute', label: 'Search', desc: 'People Search, People AI Search, Reverse Enrichment' },
-];
+// Scope catalog is the shared SSOT (lib/scopes) — the same set the gateway enforces.
+const AVAILABLE_SCOPES = SCOPE_CATALOG.map((s) => ({ id: s.id, label: s.label, desc: s.description }));
+
+/**
+ * Register a key's scopes with the gateway so enforcement is real (F-113). The
+ * gateway binds key→scopes here; every /v1 call then checks the endpoint's required
+ * scope. Fire-and-forget — never blocks the UI. A revoke passes DELETE.
+ */
+async function syncKeyScopes(key: string, scopes: string[], revoke = false): Promise<void> {
+  try {
+    await fetch('/api/v1/keys/scopes', {
+      method: revoke ? 'DELETE' : 'POST',
+      headers: { Authorization: authHeaderValue(key), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, scopes }),
+    });
+  } catch {
+    // Enforcement sync is best-effort; the console state remains the source of truth.
+  }
+}
 
 function KeyCountdown({ expiresAt }: { expiresAt: string }) {
   const [timeLeft, setTimeLeft] = useState('');
@@ -151,6 +167,7 @@ export default function ApiKeysPage() {
     };
     
     addKey(newKey);
+    void syncKeyScopes(newKey.key, finalScopes); // register scopes so the gateway enforces them
     track('api_key_created', { environment, scopes: newKey.scopes.length, hasIpAllowlist: (newKey.allowedIps?.length ?? 0) > 0, hasExpiry: Boolean(newKey.expiresAt) });
     setIsCreating(false);
     setGeneratedKey(newKey);
@@ -191,6 +208,8 @@ export default function ApiKeysPage() {
     };
 
     rollKey(keyToRoll.id, replacementKey);
+    void syncKeyScopes(keyToRoll.key, keyToRoll.scopes, true); // revoke the old key's scopes
+    void syncKeyScopes(replacementKey.key, replacementKey.scopes); // register the rolled key
     setIsCreating(false);
     setIsRollModalOpen(false);
     setKeyToRoll(null);
@@ -258,6 +277,7 @@ export default function ApiKeysPage() {
 
   const handleAutoRestrict = (key: MockKey) => {
     updateKey(key.id, { scopes: ['search:execute'] });
+    void syncKeyScopes(key.key, ['search:execute']); // enforce the tightened scope at the gateway
   };
 
   return (

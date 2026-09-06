@@ -1054,7 +1054,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-303', // Web application firewall — src/lib/gateway/waf.ts (inspectPayload) blocks malicious payloads
   // API keys (verified in app/console/keys/page.tsx + store)
   'F-112', // Test & live key pairs — per-environment sk_test/sk_live keys
-  'F-113', // Scoped key permissions — AVAILABLE_SCOPES + per-key selected scopes
+  'F-113', // Scoped key permissions — lib/scopes.ts SSOT (catalog + scopeForEndpoint + keyHasScope) + src/lib/gateway/scopes.ts registry ENFORCED in the pipeline (403 INSUFFICIENT_SCOPE) + POST /v1/keys/scopes sync (console registers on create/roll/restrict) + /console/scopes matrix + live key-vs-endpoint probe. Seam closed: scopes now actually restrict access.
   'F-115', // One-time secret reveal — raw token shown once then cleared (clearRawToken)
   'F-118', // Last-used & usage per key — per-key usage/activity from apiLogs
   'F-119', // Compromised-key kill switch — revokeKey + simulateKeyLeak

@@ -167,7 +167,10 @@ export type TelemetryEventName =
   // developer experience — dark-launch preview endpoints (F-081)
   | 'preview_program_viewed'
   | 'preview_endpoint_enrolled'
-  | 'preview_endpoint_tried';
+  | 'preview_endpoint_tried'
+  // security — scoped key permissions (F-113)
+  | 'scopes_viewed'
+  | 'scope_probe_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

@@ -12,6 +12,7 @@ import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/l
 import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
 import { getCoalescingStats, runCoalescingDrill } from '@/lib/gateway/coalescing';
 import { planExport, serializeExport } from '@/lib/gateway/bulkExport';
+import { checkEndpointScope, registerKeyScopes, unregisterKeyScopes, getScopeRegistrySnapshot } from '@/lib/gateway/scopes';
 import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gateway/upstreams';
 import { getDeliveryStats, replayDelivery } from '@/lib/gateway/webhookDelivery';
 import { buildDebugEcho } from '@/lib/gateway/debugEcho';
@@ -653,6 +654,42 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     });
   }
 
+  // Scoped key permissions (F-113) — the key→scopes registry the gateway enforces.
+  // GET reads the registry (masked); POST registers a key's scopes (the console
+  // syncs on create/roll/edit); DELETE revokes. Free meta endpoint, before billing.
+  if (path === '/v1/keys/scopes') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getScopeRegistrySnapshot(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'POST' || request.method === 'DELETE') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const bodyObj = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const targetKey = typeof bodyObj.key === 'string' ? bodyObj.key : '';
+      if (!targetKey) {
+        return NextResponse.json(
+          { success: false, error: { code: 'INVALID_PARAMETERS', message: 'Provide a "key" to register or revoke scopes for.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      if (request.method === 'DELETE') {
+        unregisterKeyScopes(targetKey);
+        return NextResponse.json({ success: true, data: { key: targetKey, revoked: true }, metadata: { requestId, timestamp: Date.now() } }, { status: 200, headers: responseHeaders });
+      }
+      const scopes = Array.isArray(bodyObj.scopes) ? (bodyObj.scopes as unknown[]).map((s) => String(s)) : [];
+      registerKeyScopes(targetKey, scopes);
+      return NextResponse.json({ success: true, data: { key: targetKey, scopes }, metadata: { requestId, timestamp: Date.now() } }, { status: 200, headers: responseHeaders });
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/keys/scopes (registry), POST (register {key,scopes}), or DELETE (revoke {key}).' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
   // Webhook-backed async results (F-072) — the delivery registry for job results
   // pushed to a callback_url. GET reads stats + recent; POST /{id}/replay re-drives
   // a failed delivery. Free meta endpoint; handled before route resolution.
@@ -761,6 +798,30 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
         },
       },
       { status: 404, headers: responseHeaders }
+    );
+  }
+
+  // 1b. Scoped key permissions (F-113) — enforce least privilege. An unregistered
+  //     key is unrestricted (lazy provisioning preserved); a key registered with a
+  //     restricted scope set that doesn't cover this endpoint is rejected before
+  //     billing. Free/meta endpoints require no scope.
+  const scopeCheck = checkEndpointScope(apiKey, endpoint);
+  if (!scopeCheck.allowed) {
+    const duration = Date.now() - startTime;
+    logRequest(requestId, request.method, path, 403, duration);
+    responseHeaders['X-Required-Scope'] = scopeCheck.requiredScope ?? '';
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_SCOPE',
+          message: `This key is not scoped for ${request.method} ${path}. Required scope: "${scopeCheck.requiredScope}". Grant it on the key in the console (API Keys → Scopes).`,
+          required_scope: scopeCheck.requiredScope,
+          key_scopes: scopeCheck.keyScopes,
+        },
+        metadata: { requestId, timestamp: Date.now() },
+      },
+      { status: 403, headers: responseHeaders },
     );
   }
 
