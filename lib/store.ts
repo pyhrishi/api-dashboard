@@ -5,6 +5,7 @@ import type { EnrichmentResult } from '@/data/enrichments';
 import { generateSeedRequestHistory, SEED_LOOKUP_COUNT } from '@/lib/seed-request-history';
 import { generateMergeCandidates, type MergeableEntity, type EntityMerge } from '@/lib/merge-seed';
 import { DEFAULT_THRESHOLDS, type MatchUseCase } from '@/lib/threshold-tuning';
+import { generateReverifiableRecords, reverifyRecords, computeDueRecords, DEFAULT_CADENCE, CADENCE_BOUNDS, type ReverificationCadence, type ReVerificationRun } from '@/lib/reverification';
 
 /**
  * One enrichment run in the Enrichment Studio (any preset/endpoint), persisted per
@@ -628,6 +629,15 @@ interface AppState extends FirstCallState, TenantState {
   mergeEntities: (survivingEntityId: string, mergedEntityIds: string[], reason: string) => string;
   /** Reverts (unmerges) a prior merge by id. Billing role cannot unmerge. */
   revertMerge: (mergeId: string) => void;
+  // Automated re-verification — rolling re-check of decaying high-value fields.
+  /** Per-field-type cadence (days) that drives which records are due; persisted. */
+  reverificationCadence: ReverificationCadence;
+  /** History of re-verification runs (newest first, capped at 20); persisted. */
+  reverificationRuns: ReVerificationRun[];
+  /** Runs a re-verification cycle over due records. Returns the run. Billing role cannot. */
+  runReVerification: () => ReVerificationRun;
+  /** Sets one field-type's cadence (clamped to CADENCE_BOUNDS). Billing role cannot. */
+  setReverificationCadence: (field: keyof ReverificationCadence, days: number) => void;
   webhooks: WebhookEndpoint[];
   webhookLogs: WebhookLog[];
   webhookRetryQueue: WebhookRetryItem[];
@@ -843,6 +853,8 @@ export const useStore = create<AppState>()(
       enrichments: [],
       mergeableEntities: [],
       entityMerges: [],
+      reverificationCadence: DEFAULT_CADENCE,
+      reverificationRuns: [],
       matchThresholds: { ...DEFAULT_THRESHOLDS },
       webhooks: [],
       webhookLogs: [],
@@ -2565,6 +2577,35 @@ export const useStore = create<AppState>()(
         return { entityMerges, auditLogs: [log, ...state.auditLogs] };
       }),
 
+      // ─── Automated re-verification ──────────────────────────────────────────
+      runReVerification: () => {
+        const state = get();
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot run re-verification');
+        const records = generateReverifiableRecords();
+        const due = computeDueRecords(records, state.reverificationCadence);
+        const cycle = state.reverificationRuns.length;
+        const roll = reverifyRecords(due, cycle);
+        const run: ReVerificationRun = {
+          id: `rvr_${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`,
+          timestamp: Date.now(),
+          ...roll,
+        };
+        const log = generateAuditLog('data.reverified', `${run.checked} fields`, state.user?.email || 'System', state.environment, {
+          changes: { after: { checked: run.checked, updated: run.updated, decayed: run.decayed } },
+        });
+        set((s) => ({
+          reverificationRuns: [run, ...s.reverificationRuns].slice(0, 20),
+          auditLogs: [log, ...s.auditLogs],
+        }));
+        return run;
+      },
+
+      setReverificationCadence: (field, days) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot change the schedule');
+        const clamped = Math.max(CADENCE_BOUNDS.min, Math.min(CADENCE_BOUNDS.max, Math.round(days)));
+        return { reverificationCadence: { ...state.reverificationCadence, [field]: clamped } };
+      }),
+
       setMatchThreshold: (useCase, value) => set((state) => {
         if (state.user?.role === 'billing') throw new Error('Billing users cannot change match thresholds');
         const clamped = Math.max(0.5, Math.min(0.99, Math.round(value * 100) / 100));
@@ -2634,6 +2675,8 @@ export const useStore = create<AppState>()(
         enrichments: state.enrichments,
         // Merge audit trail (candidates are re-seeded, so only the merges persist)
         entityMerges: state.entityMerges,
+        reverificationCadence: state.reverificationCadence,
+        reverificationRuns: state.reverificationRuns,
         matchThresholds: state.matchThresholds,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
