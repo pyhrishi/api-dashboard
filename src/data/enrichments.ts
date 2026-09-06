@@ -12,6 +12,7 @@ import type { ResolvedPerson } from '@/lib/person-resolver';
 import type { EnrichedCompany } from '@/lib/company-resolver';
 import { scoreCompleteness, type CompletenessScore } from '@/lib/completeness-scorer';
 import { attributeSources, type SourceAttribution } from '@/lib/source-catalog';
+import type { NormalizedText } from '@/lib/text-normalizer';
 import { zidForPerson, zidForCompany } from '@/lib/zinbit-id';
 
 export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
@@ -80,6 +81,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
   { id: 'email-disposable', endpointId: 'email-disposable', param: 'email', inputKind: 'email', icon: 'Trash2', category: 'person', examples: ['user@mailinator.com', 'signup@sneaky-tempmail.io', 'jane.doe@acme.com'], label: 'Detect disposable' },
   { id: 'catch-all', endpointId: 'catch-all-detect', param: 'domain', inputKind: 'domain', icon: 'MailQuestion', category: 'company', examples: ['stripe.com', 'acme.com', 'datadoghq.com'], label: 'Catch-all detection' },
+  { id: 'text-normalize', endpointId: 'text-normalize', param: 'text', inputKind: 'title', icon: 'Languages', category: 'identity', examples: ['JosÃ© GarcÃ­a', 'MÃ¼ller & CÃ´té', 'Пётр Ильич'], label: 'Normalize text' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -370,6 +372,8 @@ export interface EnrichmentResult {
   disposable?: DisposableView;
   /** Structured catch-all detection (F-049) — rendered as a status panel. */
   catchAll?: CatchAllView;
+  /** Encoding & language normalization result (F-057) — rendered as a before/after panel. */
+  normalize?: NormalizedText;
   /** Structured technographic profile (F-006) — rendered as a category-grouped stack. */
   technographic?: TechnographicView;
   /** Structured funding profile (F-009) — rendered as a round timeline + investor roster. */
@@ -1176,6 +1180,30 @@ function catchAllToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Encoding & language normalization (F-057): the canonical/ASCII forms + what changed. */
+function normalizeToResult(d: Record<string, unknown>): EnrichmentResult {
+  const n = d as unknown as NormalizedText;
+  const normalized = typeof n.normalized === 'string' ? n.normalized : '';
+  const primaryScript = typeof n.primaryScript === 'string' ? n.primaryScript : 'Common';
+  const changed = !!(n.flags && n.flags.changed);
+  const badges = [
+    primaryScript,
+    ...(n.flags?.wasMojibake ? ['Mojibake repaired'] : []),
+    ...(n.flags?.mixedScript ? ['Mixed script'] : []),
+    ...(changed ? [] : ['Already clean']),
+  ].filter(Boolean);
+  return {
+    kind: 'generic',
+    title: normalized || '(empty)',
+    subtitle: `${primaryScript}${n.languageHint ? ` · ${n.languageHint}` : ''} · encoding & language normalization`,
+    avatar: 'Aa',
+    badges,
+    fields: [],
+    normalize: n,
+    raw: d,
+  };
+}
+
 /** Email domain authentication: SPF/DKIM/DMARC posture as a scored company card. */
 function domainAuthToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1387,6 +1415,7 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.is_disposable === 'boolean' && typeof data.matched_on === 'string' && typeof data.category === 'string') return disposableToResult(data);
   // Catch-all detection: `is_catch_all` + a `probe` object + an `evidence` array mark the shape.
   if (typeof data.is_catch_all === 'boolean' && isRecord(data.probe) && Array.isArray(data.evidence)) return catchAllToResult(data);
+  if (typeof data.normalized === 'string' && Array.isArray(data.transformations) && isRecord(data.flags) && typeof data.primaryScript === 'string') return normalizeToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

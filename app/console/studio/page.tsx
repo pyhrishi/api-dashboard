@@ -8,7 +8,7 @@ import {
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
-  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine,
+  MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine, Languages, ArrowDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
@@ -19,6 +19,7 @@ import {
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
+import type { NormalizedText } from '@/lib/text-normalizer';
 import { correctionEntityKey, acceptedCorrectionsFor } from '@/lib/corrections';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { sha256Hex } from '@/lib/sha256';
@@ -28,7 +29,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction, Modal, Field, Textarea } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -628,6 +629,76 @@ function CatchAllPanel({ c }: { c: CatchAllView }) {
   );
 }
 
+function NormalizePanel({ n }: { n: NormalizedText }) {
+  const changed = n.flags.changed;
+  const toneRing = changed ? 'border-teal/30' : 'border-semantic-success/25';
+  const byteDelta = n.bytes.normalized - n.bytes.original;
+  return (
+    <div className="mt-5 space-y-4">
+      <div className={`rounded-xl border p-5 flex items-start gap-4 ${toneRing}`}>
+        <div className={`w-11 h-11 rounded-xl bg-surface-2 border border-border flex items-center justify-center shrink-0 ${changed ? 'text-teal' : 'text-semantic-success'}`}><Languages className="w-5 h-5" /></div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Encoding &amp; language</span>
+            <StatusBadge tone={n.primaryScript === 'Latin' || n.primaryScript === 'Common' ? 'info' : 'teal'}>{n.primaryScript}</StatusBadge>
+            {n.languageHint && <span className="text-[11px] font-semibold text-fg-muted">{n.languageHint}</span>}
+            {n.flags.mixedScript && <StatusBadge tone="warning">Mixed script</StatusBadge>}
+          </div>
+          <p className="text-sm text-fg mt-1.5 leading-snug">
+            {changed ? 'Normalized to canonical UTF-8.' : 'Already clean, canonical UTF-8 — no changes needed.'}
+          </p>
+        </div>
+      </div>
+
+      {/* Before → after */}
+      <div className="rounded-xl border border-border bg-surface-2 p-4 space-y-3">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">Original</div>
+          <div className="text-sm font-mono break-all text-fg-muted">{n.original || '—'}</div>
+        </div>
+        <div className="flex justify-center text-fg-subtle"><ArrowDown className="w-4 h-4" /></div>
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-teal mb-1">Canonical UTF-8</div>
+          <div className="text-sm font-mono break-all text-fg font-semibold">{n.normalized || '—'}</div>
+        </div>
+        {n.ascii && n.ascii !== n.normalized && (
+          <div className="pt-1">
+            <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">ASCII form</div>
+            <div className="text-sm font-mono break-all text-fg-muted">{n.ascii}</div>
+          </div>
+        )}
+        <div className="flex items-center gap-3 pt-2 border-t border-border-subtle text-[11px] text-fg-subtle">
+          <span>{n.bytes.original} → {n.bytes.normalized} bytes{byteDelta !== 0 ? ` (${byteDelta > 0 ? '+' : ''}${byteDelta})` : ''}</span>
+          <span>·</span>
+          <span>Scripts: {n.scripts.length ? n.scripts.join(', ') : 'none'}</span>
+        </div>
+      </div>
+
+      {/* What changed */}
+      {n.transformations.length > 0 ? (
+        <div className="rounded-xl border border-border bg-surface-2 p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">Transformations applied</div>
+          <ul className="space-y-2">
+            {n.transformations.map((t, i) => (
+              <li key={i} className="flex items-start gap-2.5">
+                <Check className="w-3.5 h-3.5 text-semantic-success mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-sm font-semibold text-fg capitalize">{t.type.replace(/_/g, ' ')}</span>
+                  <p className="text-[12px] text-fg-muted leading-snug">{t.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-semantic-success/25 bg-surface-2 p-4 flex items-center gap-2 text-sm text-fg-muted">
+          <BadgeCheck className="w-4 h-4 text-semantic-success shrink-0" /> Input was already valid, composed UTF-8.
+        </div>
+      )}
+    </div>
+  );
+}
+
 const TECH_CATEGORY_ICON: Record<string, React.ElementType> = {
   'Cloud & Infrastructure': Server,
   'Languages & Frameworks': Code2,
@@ -1184,6 +1255,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorr
 
         {result.catchAll && (
           <CatchAllPanel c={result.catchAll} />
+        )}
+
+        {result.normalize && (
+          <NormalizePanel n={result.normalize} />
         )}
 
         {result.technographic && (

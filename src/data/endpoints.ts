@@ -1706,6 +1706,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/explorer?endpoint=suppression-list',
       },
     ],
+  },
+
+  {
+    id: 'text-normalize',
+    name: 'Normalize Text & Encoding',
+    description: "Enforce UTF-8 and normalize language variants on any messy string (F-057). Repairs mojibake (JosÃ© → José), composes to Unicode NFC, strips zero-width/control characters, detects the script(s) and a language hint, and returns both a canonical UTF-8 form and an ASCII form (transliterated for Cyrillic/Greek, diacritic-folded for Latin) — plus the exact list of transformations applied. Deterministic; the same cleanup runs upstream of name matching so records compare correctly regardless of encoding.",
+    method: 'GET',
+    path: '/v1/text/normalize',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'text',
+        type: 'string',
+        required: true,
+        description: 'The raw text to normalize (a name, company, or address)',
+        example: 'JosÃ© GarcÃ­a',
+        placeholder: 'Paste messy or non-UTF-8 text',
+        maxLength: 500,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'normalize-to-canonicalize',
+        title: 'Canonicalize a name',
+        description: 'Feed the clean text into name canonicalization for matching.',
+        category: 'sdks',
+        link: '/console/studio?preset=canonicalize',
+      },
+    ],
   }
 ];
 

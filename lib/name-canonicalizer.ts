@@ -8,8 +8,12 @@
  * reordering, all-caps, diacritics (José → Jose), and surname casing (McDonald,
  * O'Brien, van der Berg). Pure and deterministic — no `Math.random`. This is the
  * SSOT that fuzzy matching (F-024) and entity de-dup consume, so a name is
- * normalized identically everywhere.
+ * normalized identically everywhere. Encoding is repaired upstream via
+ * `canonicalUtf8` (F-057) so a mojibaked or decomposed name canonicalizes the
+ * same as its clean form.
  */
+
+import { canonicalUtf8 } from '@/lib/text-normalizer';
 
 export interface NameComponents {
   prefix: string | null;
@@ -105,7 +109,9 @@ export function canonicalNameString(raw: string): string {
 }
 
 export function canonicalizeName(rawName: string): NameCanonicalization | null {
-  const input = String(rawName || '').trim().replace(/\s+/g, ' ');
+  // Repair encoding (mojibake + NFC + control/whitespace) before parsing so a
+  // corrupted name canonicalizes identically to its clean form (F-057).
+  const input = canonicalUtf8(rawName);
   if (!input) return null;
 
   const changes: string[] = [];

@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.44', date: 'September 2026', headline: 'Encoding & language normalization',
+    changes: [
+      { kind: 'feature', text: 'Encoding & language normalization — a new GET /v1/text/normalize (and a "Normalize text" Studio tool) enforces UTF-8 and cleans up messy real-world text. It repairs mojibake (JosÃ© → José, itâ€™s → it’s), composes to Unicode NFC, strips zero-width and control characters, and collapses whitespace — returning one canonical UTF-8 form plus the exact list of transformations it applied.' },
+      { kind: 'feature', text: 'It also detects the script(s) present (Latin, Cyrillic, Greek, Han, Hiragana/Katakana, Hangul, Arabic, Hebrew, Devanagari, Thai) with a language hint, and returns an ASCII form — transliterated for Cyrillic/Greek (Пётр → Petr) or diacritic-folded for Latin (Müller → Muller) — so non-Latin and accented records become matchable. Deterministic: the same input always normalizes identically.' },
+      { kind: 'improvement', text: 'Name canonicalization now runs this encoding repair upstream, so a mojibaked or decomposed name canonicalizes exactly like its clean form — matching and de-duplication no longer diverge over encoding. Single-sourced in lib/text-normalizer.ts.' },
+    ],
+  },
+  {
     version: 'v4.43', date: 'September 2026', headline: 'Quality SLA dashboard',
     changes: [
       { kind: 'feature', text: 'Quality SLA dashboard — a new /console/quality-sla page puts every data-quality and platform metric against the target we commit to: match rate, field accuracy, coverage, data freshness, API uptime, and p95 latency. Each shows current vs target with a met / at-risk / breached status, a 30-day trend, and a plain-English description — plus an overall SLA-compliance figure and a breach log (open breaches first, then resolved history). This is the enterprise trust surface: “are you hitting the numbers you promised?”, answered honestly.' },

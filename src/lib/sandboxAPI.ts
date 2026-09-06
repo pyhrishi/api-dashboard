@@ -25,6 +25,7 @@ import { canonicalizeName } from '@/lib/name-canonicalizer';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { getBounce, isSuppressed } from '@/lib/gateway/bounceFeedback';
 import { detectCatchAll } from '@/lib/catch-all-detector';
+import { normalizeText } from '@/lib/text-normalizer';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
 import { checkDomainAuth } from '@/lib/email-domain-auth';
@@ -677,6 +678,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...catchAll };
+    }
+
+    case 'text-normalize': {
+      // Deterministic encoding + language normalization (shared SSOT, F-057).
+      const text = String(parameters.text || '');
+      if (!text.trim()) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a "text" value to normalize.' },
+        };
+      }
+      return { success: true, ...normalizeText(text) };
     }
 
     case 'email-disposable': {
