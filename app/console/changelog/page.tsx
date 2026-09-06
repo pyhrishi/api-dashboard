@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.81', date: 'September 2026', headline: 'Key labels & ownership',
+    changes: [
+      { kind: 'feature', text: 'Key Ownership — assign an accountable owner (a team member) and free-form labels to every API key, so a security review can answer "whose key is this and what is it for?" without guessing. A new console lets you tag keys by team, environment, or purpose and filter the list by owner or label.' },
+      { kind: 'improvement', text: 'Unowned keys are surfaced as a governance gap with a one-click filter — an unowned live key is exactly the thing you want to catch. Labels are normalized (lowercased, hyphenated) and deduped; a stale owner resolves to "unassigned" rather than a dangling name. Every change is audit-logged, and only admins can assign owners or edit labels.' },
+    ],
+  },
+  {
     version: 'v4.80', date: 'September 2026', headline: 'Compromised-key kill switch',
     changes: [
       { kind: 'feature', text: 'Compromised-key kill switch — instantly revoke a leaked key everywhere. Killing a key now blocks it across every surface at once (REST, GraphQL, and gRPC), returning 401 KEY_REVOKED on the very next call. A new Kill Switch console lists your keys with a one-click kill (compromised / leaked / rotated / manual), shows recent kill events, and lets you restore a false alarm.' },

@@ -58,6 +58,10 @@ export interface MockKey {
   creditsUsed?: number;
   /** Links a matched test+live credential (F-112); both keys of a pair share it. */
   pairId?: string;
+  /** Governance labels/tags (F-124) — team, environment, purpose. */
+  labels?: string[];
+  /** The team member (TeamMember.id) accountable for this key (F-124). */
+  ownerId?: string;
 }
 
 export interface Organization {
@@ -828,6 +832,11 @@ interface AppState extends FirstCallState, TenantState {
   createKeyPair: (name: string, scopes: string[]) => string;
   /** Revokes both keys of a pair together. Admin only. */
   revokeKeyPair: (pairId: string) => void;
+  // Key labels & ownership (F-124) — governance metadata on keys.
+  /** Sets the labels/tags on a key (normalized, deduped). Admin only. */
+  setKeyLabels: (id: string, labels: string[]) => void;
+  /** Assigns (or clears, with null) the accountable owner of a key. Admin only. */
+  assignKeyOwner: (id: string, ownerId: string | null) => void;
   logApiRequest: (log: ApiLog) => void;
   /** Populate a deterministic 7-day lookup history for the active env when it has little real traffic (Match-rate transparency, F-029). Idempotent. */
   seedRequestHistory: () => void;
@@ -1171,7 +1180,40 @@ export const useStore = create<AppState>()(
           auditLogs: [log, ...state.auditLogs],
         };
       }),
-      
+
+      // ─── Key labels & ownership (F-124) ─────────────────────────────────────
+      setKeyLabels: (id, labels) => set((state) => {
+        if (state.user?.role !== 'admin') throw new Error('Only admins can label keys');
+        const key = state.activeKeys.find((k) => k.id === id);
+        if (!key) return {};
+        // Normalize + dedupe (lowercased, hyphenated, capped), max 8 labels.
+        const norm = Array.from(new Set(labels
+          .map((l) => l.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24))
+          .filter(Boolean))).slice(0, 8);
+        const log = generateAuditLog('key.labelled', key.name, state.user?.email || 'System', state.environment, {
+          changes: { before: { labels: key.labels ?? [] }, after: { labels: norm } },
+        });
+        return {
+          activeKeys: state.activeKeys.map((k) => (k.id === id ? { ...k, labels: norm } : k)),
+          auditLogs: [log, ...state.auditLogs],
+        };
+      }),
+
+      assignKeyOwner: (id, ownerId) => set((state) => {
+        if (state.user?.role !== 'admin') throw new Error('Only admins can assign key ownership');
+        const key = state.activeKeys.find((k) => k.id === id);
+        if (!key) return {};
+        if (ownerId && !state.teamMembers.some((m) => m.id === ownerId)) throw new Error('Unknown team member');
+        const owner = ownerId ? state.teamMembers.find((m) => m.id === ownerId) : null;
+        const log = generateAuditLog('key.owner_assigned', key.name, state.user?.email || 'System', state.environment, {
+          changes: { before: { ownerId: key.ownerId ?? null }, after: { ownerId: ownerId ?? null, owner: owner?.email ?? null } },
+        });
+        return {
+          activeKeys: state.activeKeys.map((k) => (k.id === id ? { ...k, ownerId: ownerId ?? undefined } : k)),
+          auditLogs: [log, ...state.auditLogs],
+        };
+      }),
+
       generateFirstKey: () => {
         const state = get();
         if (state.user?.role !== 'admin') throw new Error('Unauthorized');

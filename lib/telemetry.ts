@@ -184,7 +184,11 @@ export type TelemetryEventName =
   | 'kill_switch_viewed'
   | 'key_killed'
   | 'key_restored'
-  | 'leak_drill_run';
+  | 'leak_drill_run'
+  // governance — key labels & ownership (F-124)
+  | 'key_ownership_viewed'
+  | 'key_owner_assigned'
+  | 'key_labeled';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
