@@ -44,6 +44,7 @@ export type TelemetryEventName =
   | 'social_profile_opened'
   | 'email_deliverability_checked'
   | 'technographic_detected'
+  | 'offices_resolved'
   | 'coverage_viewed'
   | 'coverage_timeframe_changed'
   | 'match_recovery_clicked'

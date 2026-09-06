@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,13 +8,14 @@ import {
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
+  MapPin, Globe, Sun,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
-  type TechnographicView, type ResultTone, type FundingView,
+  type TechnographicView, type ResultTone, type FundingView, type OfficeGeographyView, type OfficeLocationView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
@@ -23,7 +24,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -120,6 +121,9 @@ function StudioInner() {
         }
         if (vm.technographic) {
           track('technographic_detected', { technologies: vm.technographic.total, categories: vm.technographic.categories.length, signals: vm.technographic.signals.length, sophistication: vm.technographic.sophistication, environment });
+        }
+        if (vm.officeGeo) {
+          track('offices_resolved', { offices: vm.officeGeo.officeCount, countries: vm.officeGeo.countryCount, continents: vm.officeGeo.continentCount, followTheSun: vm.officeGeo.followTheSun, environment });
         }
         if (!isFirstCallMade) markFirstCallMade({ endpoint: p.endpointId, method: p.endpoint.method, statusCode: res.status, responseTime: durationMs, response: body });
       } else if (res.status === 402) {
@@ -673,6 +677,82 @@ function FundingPanel({ f }: { f: FundingView }) {
   );
 }
 
+/** Office local wall-clock time from a UTC offset (live, derived — not random). */
+function officeLocalTime(nowMs: number, offsetMin: number): { label: string; open: boolean } {
+  const d = new Date(nowMs);
+  const utcMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+  const local = (((utcMin + offsetMin) % 1440) + 1440) % 1440;
+  const hh = Math.floor(local / 60);
+  const mm = local % 60;
+  return { label: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`, open: local >= 9 * 60 && local < 17 * 60 };
+}
+
+function OfficeGeoPanel({ g }: { g: OfficeGeographyView }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  const summary: { label: string; value: string; icon: React.ElementType }[] = [
+    { label: 'Offices', value: String(g.officeCount), icon: Building2 },
+    { label: 'Countries', value: String(g.countryCount), icon: Globe },
+    { label: 'Continents', value: String(g.continentCount), icon: MapPin },
+    { label: 'HQ window', value: g.outreachWindowUtc, icon: Clock },
+  ];
+
+  return (
+    <div className="mt-5 space-y-4">
+      {/* Reach summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden border border-border">
+        {summary.map((s) => (
+          <div key={s.label} className="bg-surface-2 p-3">
+            <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1 flex items-center gap-1"><s.icon className="w-3 h-3" />{s.label}</div>
+            <div className="text-sm font-black text-fg tabular-nums">{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {g.followTheSun && (
+        <div className="flex items-center gap-2 text-[12px] font-semibold text-teal"><Sun className="w-3.5 h-3.5 shrink-0" /> Follow-the-sun coverage across {g.continentCount} continents</div>
+      )}
+
+      {/* Office list with live local clocks */}
+      <div className="space-y-2.5">
+        {g.offices.map((o: OfficeLocationView, i: number) => {
+          const t = officeLocalTime(now, o.utcOffsetMinutes);
+          return (
+            <motion.div
+              key={o.city + i}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }}
+              className={`rounded-xl border p-4 flex items-start gap-3 ${o.isHq ? 'border-teal/30 bg-teal/5' : 'border-border bg-surface-2'}`}
+            >
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${o.isHq ? 'bg-teal/10 border-teal/30 text-teal' : 'bg-glass border-border-subtle text-fg-subtle'}`}>
+                {o.isHq ? <MapPin className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-bold text-fg">{o.city}, {o.countryCode}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">{o.label}</span>
+                  {o.isHq && <StatusBadge tone="teal">HQ</StatusBadge>}
+                </div>
+                <div className="text-[12px] text-fg-muted mt-0.5 truncate">{o.address}</div>
+                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-fg-subtle flex-wrap">
+                  <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" />{o.headcount.toLocaleString()}</span>
+                  <span className="font-mono tabular-nums">{o.lat.toFixed(2)}, {o.lng.toFixed(2)}</span>
+                  <span className={`inline-flex items-center gap-1 font-semibold ${t.open ? 'text-semantic-success' : 'text-fg-subtle'}`}>
+                    <Clock className="w-3 h-3" />{t.label} local · {t.open ? 'open' : 'closed'}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -749,6 +829,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.funding && (
           <FundingPanel f={result.funding} />
+        )}
+
+        {result.officeGeo && (
+          <OfficeGeoPanel g={result.officeGeo} />
         )}
 
         {result.chips && result.chips.items.length > 0 && (

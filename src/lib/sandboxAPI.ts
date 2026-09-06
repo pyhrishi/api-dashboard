@@ -15,6 +15,7 @@ import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
+import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -529,6 +530,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...funding };
+    }
+
+    case 'company-offices': {
+      // Deterministic HQ & office geo-resolution (single source of truth).
+      const geo = resolveOfficeGeography(String(parameters.domain || ''));
+      if (!geo) {
+        return {
+          success: false,
+          error: { code: 'INVALID_DOMAIN', message: 'No office geography could be resolved. Provide a valid corporate domain.' },
+        };
+      }
+      return { success: true, ...geo };
     }
 
     case 'email-verify': {

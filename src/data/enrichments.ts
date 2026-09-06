@@ -62,6 +62,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'firmographics', endpointId: 'firmographic-append', param: 'domain', inputKind: 'domain', icon: 'BarChart3', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Firmographic append' },
   { id: 'technographics', endpointId: 'technographic-detect', param: 'domain', inputKind: 'domain', icon: 'Cpu', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Technographic detection' },
   { id: 'funding', endpointId: 'funding-signals', param: 'domain', inputKind: 'domain', icon: 'Banknote', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Funding signals' },
+  { id: 'offices', endpointId: 'company-offices', param: 'domain', inputKind: 'domain', icon: 'MapPin', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'HQ & office geo' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -228,6 +229,32 @@ export interface FundingView {
   rounds: FundingRoundView[];
   investors: string[];
 }
+/** One office location, for the geo footprint map/list. */
+export interface OfficeLocationView {
+  type: string;
+  label: string;
+  address: string;
+  city: string;
+  country: string;
+  countryCode: string;
+  continent: string;
+  timezone: string;
+  utcOffsetMinutes: number;
+  lat: number;
+  lng: number;
+  headcount: number;
+  isHq: boolean;
+}
+/** Structured HQ & office geography (F-013) — rendered as a geo footprint. */
+export interface OfficeGeographyView {
+  hq: OfficeLocationView;
+  offices: OfficeLocationView[];
+  officeCount: number;
+  countryCount: number;
+  continentCount: number;
+  followTheSun: boolean;
+  outreachWindowUtc: string;
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -246,6 +273,8 @@ export interface EnrichmentResult {
   technographic?: TechnographicView;
   /** Structured funding profile (F-009) — rendered as a round timeline + investor roster. */
   funding?: FundingView;
+  /** Structured HQ & office geography (F-013) — rendered as a geo footprint. */
+  officeGeo?: OfficeGeographyView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
   completeness?: CompletenessScore;
   confidence?: number;
@@ -618,6 +647,71 @@ function fundingToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** HQ & office geo-resolution (F-013): a geocoded HQ + office footprint. */
+function officeGeoToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const company = str('company') || str('domain') || 'Company';
+
+  const toOffice = (o: Record<string, unknown>): OfficeLocationView => {
+    const geo = isRecord(o.geo) ? (o.geo as Record<string, unknown>) : {};
+    const s = (k: string, src: Record<string, unknown> = o) => (typeof src[k] === 'string' ? (src[k] as string) : '');
+    const n = (k: string, src: Record<string, unknown> = o) => (typeof src[k] === 'number' ? (src[k] as number) : 0);
+    const parts = [s('street'), s('city'), s('region'), s('postal_code'), s('country')].filter(Boolean);
+    return {
+      type: s('type'),
+      label: s('label'),
+      address: parts.join(', '),
+      city: s('city'),
+      country: s('country'),
+      countryCode: s('country_code'),
+      continent: s('continent'),
+      timezone: s('timezone'),
+      utcOffsetMinutes: n('utc_offset_minutes'),
+      lat: n('lat', geo),
+      lng: n('lng', geo),
+      headcount: n('headcount'),
+      isHq: o.is_hq === true,
+    };
+  };
+
+  const rawOffices = Array.isArray(d.offices) ? (d.offices as Record<string, unknown>[]) : [];
+  const offices = rawOffices.map(toOffice);
+  const hq = isRecord(d.hq) ? toOffice(d.hq as Record<string, unknown>) : (offices[0] ?? null);
+  const officeCount = num('office_count') ?? offices.length;
+  const countryCount = num('country_count') ?? 0;
+  const continentCount = num('continent_count') ?? 0;
+  const followTheSun = d.follow_the_sun === true;
+  const outreachWindowUtc = str('outreach_window_utc') || '—';
+
+  const fields: EnrichmentField[] = hq
+    ? [
+        { label: 'HQ', value: `${hq.city}, ${hq.country}` },
+        { label: 'HQ address', value: hq.address || '—' },
+        { label: 'Coordinates', value: `${hq.lat.toFixed(4)}, ${hq.lng.toFixed(4)}`, mono: true },
+        { label: 'HQ timezone', value: hq.timezone || '—', mono: true },
+        { label: 'Offices', value: `${officeCount} · ${countryCount} countr${countryCount === 1 ? 'y' : 'ies'}` },
+        { label: 'Best window', value: outreachWindowUtc },
+      ]
+    : [];
+
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: str('domain') || undefined,
+    avatar: initialsOf(company),
+    badges: [`${officeCount} office${officeCount === 1 ? '' : 's'}`, followTheSun ? 'Follow-the-sun' : `${countryCount} countr${countryCount === 1 ? 'y' : 'ies'}`].filter(Boolean),
+    fields,
+    officeGeo: hq
+      ? { hq, offices, officeCount, countryCount, continentCount, followTheSun, outreachWindowUtc }
+      : undefined,
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 /** Email deliverability scoring: a 0-100 reachability score + a decomposed signal breakdown. */
 function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -839,6 +933,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.detections) && typeof data.sophistication === 'number') return technographicToResult(data);
   // Funding & investment signals: a `rounds` array + a `funding_stage` mark the shape.
   if (Array.isArray(data.rounds) && typeof data.funding_stage === 'string') return fundingToResult(data);
+  // HQ & office geo-resolution: an `offices` array + an `hq` object mark the shape.
+  if (Array.isArray(data.offices) && isRecord(data.hq)) return officeGeoToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.

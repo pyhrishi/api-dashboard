@@ -879,6 +879,36 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'company-offices',
+    name: 'HQ & Office Geo-Resolution',
+    description: "Resolve a domain to its headquarters — a full geocoded address (street, region, postal code, ISO country, latitude/longitude, IANA timezone, UTC offset) — and its wider office footprint: every location by function (engineering, sales, support, remote hub) with headcount, coordinates, and local time. Derives reach signals: countries, continents, follow-the-sun coverage, and the best UTC window to reach HQ. Anchored to the company graph so geography never contradicts the dossier.",
+    method: 'GET',
+    path: '/v1/companies/offices',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'Company domain to resolve HQ and office locations for',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 100,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'offices-to-company',
+        title: 'Full company dossier',
+        description: 'Enrich the same domain into industry, headcount, and tech stack.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
+  },
+
+  {
     id: 'email-verify',
     name: 'Verify Email Deliverability',
     description: 'Score any email for inbox reachability before you send. Returns a 0-100 deliverability score and a decisive verdict, decomposed into every check behind it — syntax, MX, SMTP mailbox handshake, catch-all, disposable, role-based, and free-provider — each with its own result and provenance. Catches typos with a did-you-mean suggestion.',

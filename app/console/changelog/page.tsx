@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.24', date: 'September 2026', headline: 'HQ & office geo-resolution',
+    changes: [
+      { kind: 'feature', text: 'HQ & office geo-resolution — GET /v1/companies/offices turns a domain into its headquarters (a full geocoded address: street, region, postal code, ISO country, latitude/longitude, IANA timezone, UTC offset) and its wider office footprint — every location by function (engineering, sales, support, remote hub) with headcount and coordinates.' },
+      { kind: 'feature', text: 'Beyond the map, it derives reach signals: country and continent counts, follow-the-sun coverage, and the best UTC window to reach HQ during its business hours — so “where are they and when can I call them” is one call.' },
+      { kind: 'improvement', text: 'Available as a one-input preset in the Enrichment Studio with a geo footprint panel — each office shows its live local time (open/closed) ticking in real time. Deterministic and coherent — anchored to the company dossier’s own HQ city, country, and timezone.' },
+    ],
+  },
+  {
     version: 'v4.23', date: 'September 2026', headline: 'Funding & investment signals',
     changes: [
       { kind: 'feature', text: 'Funding & investment signals — turn a domain into a company\'s full funding story: a round-by-round history (Seed → Series E) with each round\'s date, amount, lead investor, participating investors, and post-money valuation, plus the deduplicated investor roster, total raised, and latest valuation. New GET /v1/companies/funding endpoint (2 credits), shipped as a Studio preset with a round-timeline panel.' },
