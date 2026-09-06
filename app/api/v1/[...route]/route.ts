@@ -7,6 +7,7 @@ import { checkNegativeCache, recordNegativeMiss, registerNegativeHit, getNegativ
 import { getBounceStats, recordBounce, isSuppressed, type BounceType } from '@/lib/gateway/bounceFeedback';
 import { getCorrectionStats, recordCorrection } from '@/lib/gateway/corrections';
 import { addSuppression, removeSuppression, checkSuppression, getSuppressionStats, type SuppressionReason } from '@/lib/gateway/suppressionList';
+import { parseFields, projectFields, applySparseDiscount, sparseDiscountPct, payloadBytes } from '@/lib/gateway/fieldSelection';
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure } from '@/lib/gateway/circuitBreaker';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
@@ -708,9 +709,19 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
   }
 
+  // Field selection (F-062): a caller can name just the fields they need via
+  // `?fields=a,b,company.name`. A sparse request costs less (pay for what you
+  // pull) and — since the gateway projects the payload after masking — returns
+  // less PII. Parse once here; the billing stage discounts and the response
+  // stage projects.
+  const requestedFields = request.method === 'GET'
+    ? parseFields(typeof parameters.fields === 'string' ? parameters.fields : '')
+    : [];
+
   let appliedCreditCost = 0;
   let remainingCredits = 0;
   let appliedDiscount = 0;
+  let appliedSparseDiscount = 0;
 
   // 4. Metered Billing Engine
   if (!result && !isIdempotentReplay && endpoint) {
@@ -721,7 +732,11 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
 
     // Apply Volume Discount Automation
-    const { cost: finalCreditCost, discountPct } = calculateVolumeDiscount(apiKey, baseCreditCost);
+    const { cost: volumeCost, discountPct } = calculateVolumeDiscount(apiKey, baseCreditCost);
+
+    // Sparse-response discount — fewer fields, lower cost.
+    const { cost: finalCreditCost, discountPct: sparsePct } = applySparseDiscount(volumeCost, requestedFields.length);
+    appliedSparseDiscount = sparsePct;
 
     const billingResult = deductCredits(apiKey, finalCreditCost);
     appliedCreditCost = finalCreditCost;
@@ -753,6 +768,9 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     responseHeaders['X-Credits-Remaining'] = billingResult.remaining.toString();
     if (discountPct > 0) {
       responseHeaders['X-Credits-Discount-Pct'] = discountPct.toString();
+    }
+    if (sparsePct > 0) {
+      responseHeaders['X-Sparse-Discount-Pct'] = sparsePct.toString();
     }
   }
 
@@ -960,6 +978,31 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
   }
 
+  // Field selection (F-062): project the (already-masked) payload down to the
+  // requested fields. Runs after masking so it minimizes the compliant payload —
+  // you get less PII, a smaller body, and (via the sparse discount above) a lower
+  // bill. Deterministic, so re-projecting an idempotent replay is harmless.
+  let sparseMeta: { requested: string[]; returned: number; omitted: number; bytes_before: number; bytes_after: number; discount_pct: number } | undefined;
+  if (requestedFields.length) {
+    const bytesBefore = payloadBytes(payload);
+    const proj = projectFields(payload, requestedFields);
+    if (proj.applied) {
+      payload = proj.data;
+      const bytesAfter = payloadBytes(payload);
+      responseHeaders['X-Fields-Selected'] = (proj.selected.length ? proj.selected : requestedFields).join(',');
+      if (proj.omitted.length) responseHeaders['X-Fields-Omitted'] = String(proj.omitted.length);
+      responseHeaders['X-Sparse-Response'] = 'true';
+      sparseMeta = {
+        requested: requestedFields,
+        returned: proj.selected.length,
+        omitted: proj.omitted.length,
+        bytes_before: bytesBefore,
+        bytes_after: bytesAfter,
+        discount_pct: sparseDiscountPct(requestedFields.length),
+      };
+    }
+  }
+
   // 5. Return standard envelope
   return sendResponse({
     success: true,
@@ -971,8 +1014,10 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       billing: appliedCreditCost > 0 ? {
         cost: appliedCreditCost,
         remaining: remainingCredits,
-        discount_applied_pct: appliedDiscount > 0 ? appliedDiscount : undefined
+        discount_applied_pct: appliedDiscount > 0 ? appliedDiscount : undefined,
+        sparse_discount_pct: appliedSparseDiscount > 0 ? appliedSparseDiscount : undefined
       } : undefined,
+      sparse: sparseMeta,
       compliance: {
         framework: privacyFramework,
         country_code: countryCode,

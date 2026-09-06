@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.46', date: 'September 2026', headline: 'Field selection / sparse responses',
+    changes: [
+      { kind: 'feature', text: 'Field selection — ask for only the attributes you need. Add ?fields=phone,carrier (dotted paths like company.domain work too) to any enrichment call and the gateway returns just those fields. A typical response drops from ~15 fields to 3 — often a 90% smaller payload — with X-Fields-Selected, X-Fields-Omitted, X-Sparse-Response headers and a sparse{} metadata block reporting bytes before/after.' },
+      { kind: 'feature', text: 'Sparse requests cost less — pay for what you pull. A request that names fewer than a full record’s worth of fields is discounted (up to 50% off, surfaced as X-Sparse-Discount-Pct and in the billing metadata), so trimming a response trims the bill. And because the gateway projects the payload after masking, you also pull less PII: field selection is data-minimization by default.' },
+      { kind: 'feature', text: 'A new Field Selection playground (/console/field-selection) makes it tangible: pick an endpoint, analyze the full record, toggle fields off, and watch the payload size and credit cost shrink live against the real gateway — with a copyable request URL. Single-sourced in src/lib/gateway/fieldSelection.ts, deterministic, and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.45', date: 'September 2026', headline: 'Idempotency keys',
     changes: [
       { kind: 'feature', text: 'Idempotency keys — retries are now safe. Send an `Idempotency-Key: <uuid>` header on a pipeline write (e.g. batch enrichment) and the first call runs normally while its response is stored for 24 hours; any retry with the same key replays that exact response, not re-processed and not re-charged (look for X-Idempotency-Replayed: true). A dropped connection or a nervous client retry can no longer double-charge — retrying a 500-domain batch replays the original instead of billing another 500 credits.' },

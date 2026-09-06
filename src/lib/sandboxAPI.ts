@@ -217,10 +217,14 @@ function validateRequestParameters(
   parameters: Record<string, unknown>
 ): { isValid: boolean; error?: string } {
   const allowedParamNames = new Set(endpoint.parameters.map(p => p.name));
-  
+
+  // Universal gateway params accepted on every endpoint (handled by the gateway,
+  // not the endpoint): `fields` selects a sparse response (F-062).
+  const GLOBAL_PARAMS = new Set(['fields']);
+
   // 1. Strict unknown parameter check
   for (const key of Object.keys(parameters)) {
-    if (!allowedParamNames.has(key)) {
+    if (!allowedParamNames.has(key) && !GLOBAL_PARAMS.has(key)) {
       return {
         isValid: false,
         error: `Strict Validation Failed: Unknown parameter '${key}' is not allowed for this endpoint.`,

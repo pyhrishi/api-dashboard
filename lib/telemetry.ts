@@ -84,7 +84,10 @@ export type TelemetryEventName =
   | 'correction_reported'
   | 'correction_reviewed'
   // reliability — idempotency keys (F-061)
-  | 'idempotency_viewed';
+  | 'idempotency_viewed'
+  // efficiency — field selection / sparse responses (F-062)
+  | 'field_selection_analyzed'
+  | 'field_selection_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
