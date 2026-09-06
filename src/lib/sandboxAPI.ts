@@ -14,6 +14,7 @@ import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { resolveCompanyHierarchy } from '@/lib/company-hierarchy';
+import { appendDemographics } from '@/lib/demographic-resolver';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -519,6 +520,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...firmo };
+    }
+
+    case 'people-demographics': {
+      // Deterministic professional-demographic append (single source of truth).
+      const demo = appendDemographics(String(parameters.email || ''));
+      if (!demo) {
+        return {
+          success: false,
+          error: { code: 'NO_PROFILE', message: 'No professional demographics could be appended. Provide a valid corporate email (personal mailboxes have no role profile).' },
+        };
+      }
+      return { success: true, ...demo };
     }
 
     case 'company-hierarchy': {

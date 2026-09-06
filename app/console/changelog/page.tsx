@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.56', date: 'September 2026', headline: 'Person demographic append',
+    changes: [
+      { kind: 'feature', text: 'Demographic append — a new GET /v1/people/demographics (and a "Demographic append" Studio lookup) appends a contact’s professional demographics from just their email: seniority tier, department, job function, management level, decision-making / buying role, years of experience and tenure, education and field of study, top skills, and a composite seniority score you can lead-score on.' },
+      { kind: 'feature', text: 'Compliance-native by design: this appends professional demographics only. Protected characteristics — age, gender, race/ethnicity, religion, marital status, nationality — are never inferred or returned, and the response lists them under excluded_attributes so you can prove it. It’s the honest alternative to enrichment tools that quietly guess gender or age.' },
+      { kind: 'improvement', text: 'The professional taxonomy (seniority, function, department, decision-maker) comes from the same title normalizer the rest of the platform uses, so a demographic append agrees with a direct person lookup. Deterministic, state-aware, and unit-tested. Personal or unresolvable emails return no profile.' },
+    ],
+  },
+  {
     version: 'v4.55', date: 'September 2026', headline: 'Buyer intent signals',
     changes: [
       { kind: 'feature', text: 'Buyer intent signals — see which accounts are in-market. A new GET /v1/companies/intent (and a "Buyer intent" Studio lookup) scores a company 0–100 with a hot / warm / cool / cold tier, surfaces the topics they’re actively researching (Data Enrichment, Sales Intelligence, Lead Scoring, ABM, and more) each with a week-over-week trend, and lists the contributing signals — recent funding (fresh budget), GTM/data hiring, competitive-tech evaluation, trigger events, and content engagement — with a recommended next action.' },

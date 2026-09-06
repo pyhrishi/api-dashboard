@@ -1865,6 +1865,35 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=news',
       },
     ],
+  },
+
+  {
+    id: 'people-demographics',
+    name: 'Demographic Append',
+    description: "Append a contact's PROFESSIONAL demographics (F-014): seniority tier, department, job function, management level, decision-making / buying role, years of experience and tenure, education, and top skills — plus a composite seniority score. Compliance-native: protected characteristics (age, gender, race/ethnicity, religion) are never inferred or returned, and the response lists them under excluded_attributes. Personal or unresolvable emails return no profile.",
+    method: 'GET',
+    path: '/v1/people/demographics',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'The corporate email of the contact to profile.',
+        example: 'jane.doe@acme.com',
+        placeholder: 'user@company.com',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'demographics-to-person',
+        title: 'Resolve the full person',
+        description: 'Get contact details alongside the demographic signals.',
+        category: 'sdks',
+        link: '/console/studio?preset=person',
+      },
+    ],
   }
 ];
 

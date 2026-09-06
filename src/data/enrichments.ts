@@ -84,6 +84,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'email-disposable', endpointId: 'email-disposable', param: 'email', inputKind: 'email', icon: 'Trash2', category: 'person', examples: ['user@mailinator.com', 'signup@sneaky-tempmail.io', 'jane.doe@acme.com'], label: 'Detect disposable' },
   { id: 'catch-all', endpointId: 'catch-all-detect', param: 'domain', inputKind: 'domain', icon: 'MailQuestion', category: 'company', examples: ['stripe.com', 'acme.com', 'datadoghq.com'], label: 'Catch-all detection' },
   { id: 'text-normalize', endpointId: 'text-normalize', param: 'text', inputKind: 'title', icon: 'Languages', category: 'identity', examples: ['JosÃ© GarcÃ­a', 'MÃ¼ller & CÃ´té', 'Пётр Ильич'], label: 'Normalize text' },
+  { id: 'demographics', endpointId: 'people-demographics', param: 'email', inputKind: 'email', icon: 'IdCard', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'priya.nair@zomato.in'], label: 'Demographic append' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -957,6 +958,38 @@ function intentToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Professional demographic append (F-014): role/career signals; protected attributes excluded by design. */
+function demographicToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : 0);
+  const name = str('full_name') || 'Contact';
+  const skills = Array.isArray(d.skills) ? (d.skills as string[]) : [];
+  const excluded = Array.isArray(d.excluded_attributes) ? (d.excluded_attributes as string[]) : [];
+  const decisionMaker = d.is_decision_maker === true;
+  const buyingRole = str('buying_role').replace(/_/g, ' ');
+  return {
+    kind: 'person',
+    title: name,
+    subtitle: `${str('canonical_title') || str('title')} · ${str('job_function')}`,
+    avatar: initialsOf(name),
+    badges: [str('seniority'), decisionMaker ? 'Decision maker' : '', titleCase(buyingRole), `Score ${num('seniority_score')}`].filter(Boolean),
+    fields: [
+      { label: 'Seniority', value: `${str('seniority')} · tier ${num('seniority_tier')}/7` },
+      { label: 'Department', value: str('department') },
+      { label: 'Management level', value: str('management_level') },
+      { label: 'Buying role', value: titleCase(buyingRole) },
+      { label: 'Experience', value: `${num('years_experience')} yrs · ${str('years_experience_band')}` },
+      { label: 'Tenure', value: `${num('years_at_company')} yr at company · ${num('years_in_role')} yr in role` },
+      { label: 'Education', value: `${str('education_level')}${str('field_of_study') ? ` · ${str('field_of_study')}` : ''}` },
+      { label: 'Excluded by design', value: excluded.length ? excluded.map(titleCase).join(', ') : '—' },
+    ],
+    chips: skills.length ? { label: 'Skills', items: skills } : undefined,
+    confidence: typeof d.confidence === 'number' ? (d.confidence as number) : undefined,
+    lastVerified: typeof d.as_of === 'string' ? (d.as_of as string) : undefined,
+    raw: d,
+  };
+}
+
 /** Probabilistic fuzzy matching (F-024): ranked candidates for a messy name + company. */
 function fuzzyToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1421,6 +1454,10 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   // Social profile discovery: a `profiles` array + platform_count mark the shape.
   if (Array.isArray(data.profiles) && typeof data.platform_count === 'number') return socialToResult(data);
   // Job title normalization: canonical_title + seniority mark the shape.
+  // Demographic append (F-014): a numeric seniority_tier + the excluded_attributes
+  // compliance list mark the shape. Must precede the title check (it also carries
+  // canonical_title + seniority).
+  if (typeof data.seniority_tier === 'number' && Array.isArray(data.excluded_attributes)) return demographicToResult(data);
   if (typeof data.canonical_title === 'string' && typeof data.seniority === 'string') return titleToResult(data);
   // Firmographic append: naics_code + sic_code mark the shape.
   if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);
