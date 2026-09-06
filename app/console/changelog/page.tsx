@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.21', date: 'September 2026', headline: 'Health & status endpoint',
+    changes: [
+      { kind: 'feature', text: 'Health & status endpoint — a public, keyless GET /api/health now reports platform health programmatically: per-component status (API Gateway, Identity Engine, Company Graph, Billing, Webhook Dispatcher, Console), latency, a 60-day uptime history, an overall status, and a degraded flag — returning 200 when healthy and 503 when down, so any uptime monitor can consume it directly.' },
+      { kind: 'improvement', text: 'The public /status page now renders from that same source, so the page and the API can never disagree. Health is deterministic (a stable snapshot, never a wall-clock read) and lives outside the /v1 auth + rate-limit path, as a status endpoint should.' },
+    ],
+  },
+  {
     version: 'v4.20', date: 'September 2026', headline: 'Async job endpoints',
     changes: [
       { kind: 'feature', text: 'Async job endpoints — kick off a long enrichment as a background job instead of holding a connection open for thousands of rows. POST /v1/jobs with a list of identifiers returns immediately with a job id; GET /v1/jobs/{id} polls live status (queued / running / completed / cancelled), progress, matched/missed counts, and the per-row results once done. List recent jobs with GET /v1/jobs and stop one with POST /v1/jobs/{id}/cancel. Credits are charged up front for the batch.' },
