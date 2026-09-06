@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execute } from '@/lib/graphql/executor';
 import { buildSDL } from '@/lib/graphql/schema';
 import { deductCredits } from '@/lib/gateway/billing';
-import { detectPrivacyFramework, applyPrivacyMasking } from '@/lib/gateway/privacy';
+import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
 
 function requestId(): string {
   return `gql_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -82,20 +82,35 @@ export async function POST(request: NextRequest) {
     remaining = billing.remaining;
   }
 
-  // 5. Live-key PII masking (sandbox keys return full synthetic data).
+  // 5. Live-key governance — mirror the REST gateway exactly. Middleware doesn't
+  //    run on /api/graphql, so the compliance framework is derived HERE the same
+  //    way the REST route derives it: from the key's deterministic home region
+  //    (not the absent x-country-code header). Live keys get opt-out propagation
+  //    then PII masking; sandbox keys return full synthetic data. A US-home key
+  //    resolves to NONE and is unmasked — identical to REST for the same key.
   const isLive = apiKey.startsWith('sk_live_');
+  const REGIONS = ['us-east-1', 'eu-west-1', 'ap-south-1'];
+  const keyHash = Array.from(apiKey).reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 0);
+  const homeRegion = REGIONS[Math.abs(keyHash) % REGIONS.length];
+  const simulatedCountry = homeRegion === 'eu-west-1' ? 'DE' : homeRegion === 'ap-south-1' ? 'IN' : 'US';
+  const framework = detectPrivacyFramework(request.headers.get('x-country-code') || simulatedCountry);
+  const redactionApplied = isLive && framework !== 'NONE';
+
   let data = result.data;
+  let optOutsRemoved = 0;
   if (isLive && data) {
-    const framework = detectPrivacyFramework(request.headers.get('x-country-code'));
-    data = applyPrivacyMasking(data, framework) as Record<string, unknown> | null;
+    const optOut = enforceOptOutPropagation(data);
+    data = optOut.sanitizedData as Record<string, unknown> | null;
+    optOutsRemoved = optOut.optOutsRemoved;
+    if (data) data = applyPrivacyMasking(data, framework) as Record<string, unknown> | null;
   }
 
   return NextResponse.json(
     {
       data,
       errors: result.errors.length ? result.errors : undefined,
-      extensions: { cost: result.cost, remaining, masked: isLive, environment: isLive ? 'live' : 'sandbox', requestId: rid },
+      extensions: { cost: result.cost, remaining, masked: redactionApplied, framework, optOutsRemoved, environment: isLive ? 'live' : 'sandbox', requestId: rid },
     },
-    { status: 200, headers: { 'X-Request-Id': rid, 'X-GraphQL-Cost': String(result.cost) } },
+    { status: 200, headers: { 'X-Request-Id': rid, 'X-GraphQL-Cost': String(result.cost), 'X-Privacy-Framework': framework } },
   );
 }

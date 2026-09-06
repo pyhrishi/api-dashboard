@@ -88,15 +88,13 @@ function GraphQLInner() {
   };
 
   const copyResponse = () => {
-    if (!response) return;
-    try {
-      navigator.clipboard.writeText(JSON.stringify(response, null, 2));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch { /* clipboard unavailable */ }
+    if (!response || !navigator.clipboard) return;
+    navigator.clipboard.writeText(JSON.stringify(response, null, 2))
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })
+      .catch(() => { /* clipboard denied — leave the label unchanged */ });
   };
 
-  const insert = (q: GqlQuery) => { setQuery(templateFor(q)); setResponse(null); };
+  const insert = (q: GqlQuery) => { setQuery(templateFor(q)); setResponse(null); setNetError(null); };
 
   if (!activeKey) {
     return (
@@ -189,22 +187,24 @@ function GraphQLInner() {
           <GlassCard className="p-0 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 border-b border-border-subtle bg-surface-2/50">
               <span className="text-[11px] font-mono text-fg-subtle inline-flex items-center gap-1.5"><Braces className="w-3.5 h-3.5" /> Query · {environment}</span>
-              <Button variant="primary" size="sm" onClick={run} disabled={running}>
-                {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} Run
+              <Button variant="primary" size="sm" onClick={run} disabled={running || !query.trim()} aria-busy={running}>
+                {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />} {running ? 'Running…' : 'Run'}
               </Button>
             </div>
             <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); run(); } }}
               spellCheck={false}
               rows={12}
-              aria-label="GraphQL query editor"
+              aria-label="GraphQL query editor. Press Command or Control plus Enter to run."
               className="w-full bg-transparent text-fg font-mono text-[13px] leading-relaxed p-4 resize-y focus:outline-none placeholder:text-fg-subtle"
               placeholder="{ person(email: &quot;jane@stripe.com&quot;) { full_name } }"
             />
           </GlassCard>
 
-          {/* Response */}
+          {/* Response — announced to assistive tech when it changes. */}
+          <div aria-live="polite" aria-busy={running}>
           {netError ? (
             <GlassCard className="p-4 border-semantic-error/30">
               <div className="flex items-center gap-2 text-sm text-semantic-error"><AlertTriangle className="w-4 h-4" /> {netError}</div>
@@ -243,6 +243,7 @@ function GraphQLInner() {
               <p className="text-[13px] text-fg-muted">Run a query to see the response. Pick one from the schema browser, or edit the example above.</p>
             </GlassCard>
           )}
+          </div>
 
           <div className="flex items-center gap-4 text-[12px] text-fg-subtle flex-wrap">
             <Link href="/console/logs" className="inline-flex items-center gap-1.5 hover:text-teal transition-colors">Runs log to Logs <ArrowRight className="w-3.5 h-3.5" /></Link>

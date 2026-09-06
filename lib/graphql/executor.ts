@@ -293,7 +293,7 @@ export function execute(query: string, variables: Record<string, unknown> = {}):
   return { data, errors, cost };
 }
 
-/** Estimate a query's credit cost without executing it (for the Explorer's pre-run hint). */
+/** Estimate a query's credit cost without executing it (e.g. to preview cost before a run). */
 export function estimateCost(query: string): number {
   try {
     const op = parse(query, {});
