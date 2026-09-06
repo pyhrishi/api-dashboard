@@ -201,7 +201,11 @@ export type TelemetryEventName =
   | 'throughput_tier_checked'
   // resilience — graceful 429 with retry-after (F-134)
   | 'retry_strategy_viewed'
-  | 'retry_429_triggered';
+  | 'retry_429_triggered'
+  // security — web application firewall (F-303)
+  | 'waf_viewed'
+  | 'waf_rule_tested'
+  | 'waf_live_probe';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

@@ -110,6 +110,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Logs', href: '/console/logs', icon: <FileText className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Request Inspector', href: '/console/debug', icon: <Bug className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Security Hub', href: '/console/security', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Firewall (WAF)', href: '/console/waf', icon: <ShieldAlert className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'CORS Policy', href: '/console/cors', icon: <Globe className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Billing', href: '/console/billing', icon: <CreditCard className="w-5 h-5" />, roles: ['admin', 'billing'] },
     { name: 'Partners', href: '/console/partners', icon: <Handshake className="w-5 h-5" />, roles: ['admin'] },

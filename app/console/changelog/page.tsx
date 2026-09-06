@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.86', date: 'September 2026', headline: 'Web Application Firewall',
+    changes: [
+      { kind: 'feature', text: 'A Web Application Firewall now inspects every request at the edge before it reaches your data — the URL, headers, and body — against a catalog of attack signatures: SQL injection, command injection, cross-site scripting, path traversal, and remote/local file inclusion. A request that trips a rule is stopped with a 406 Not Acceptable and never touches the pipeline. Registered security researchers can bypass it with a Safe-Harbor bug-bounty token to test deeper.' },
+      { kind: 'feature', text: 'A new Firewall (WAF) console lists every enforced rule with its severity and a blocked/allowed example, and a payload tester runs the exact edge catalog client-side — then lets you fire the payload at the real gateway and confirm the 406. The rules the console advertises are the rules the edge enforces, from one shared catalog: no drift, no decorative rules.' },
+    ],
+  },
+  {
     version: 'v4.85', date: 'September 2026', headline: 'Graceful 429 handling with Retry-After',
     changes: [
       { kind: 'feature', text: 'A 429 isn’t a failure — it’s a schedule. When the gateway rate-limits you, it now tells you exactly when to come back with a Retry-After header, and we’ve shipped the client-side pattern to match: honour Retry-After when it’s there, fall back to exponential backoff with jitter when it isn’t, and retry only what’s retryable (429 and 5xx — never a 4xx). It ships as a real, tested fetchWithRetry helper you can copy, not just prose.' },

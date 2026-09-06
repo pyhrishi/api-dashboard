@@ -1,26 +1,21 @@
 /**
  * Gateway Web Application Firewall (WAF)
- * Deep Packet Inspection for SQLi, XSS, and Malicious Payloads.
- * Integrates Bug Bounty Safe Harbor policies.
+ * Deep Packet Inspection for SQLi, XSS, command injection, path traversal, and file
+ * inclusion. Integrates Bug Bounty Safe Harbor policies.
+ *
+ * The signatures live in ONE place — `lib/waf-rules.ts` (the rule catalog SSOT) — which
+ * the `/console/waf` console also renders, so the rules advertised in the UI are exactly
+ * the rules enforced here at the edge. This module owns the request-composition and the
+ * safe-harbor bypass; the catalog owns the detection.
  */
+
+import { WAF_RULES } from '@/lib/waf-rules';
 
 export interface WafResult {
   blocked: boolean;
   reason?: string;
   threatLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
-
-const sqlInjectionPatterns = [
-  /(\b(select|update|delete|insert|drop|truncate|alter)\b\s+.*?\b(from|into|table)\b)/i,
-  /('|")\s*(OR|AND)\s*('|")?\d/i // ' OR 1=1
-];
-
-const xssPatterns = [
-  /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i,
-  /javascript:/i,
-  /onerror\s*=/i,
-  /onload\s*=/i
-];
 
 export function inspectPayload(url: string, headers: Headers, body?: unknown): WafResult {
   // Bug Bounty Safe Harbor
@@ -47,25 +42,16 @@ export function inspectPayload(url: string, headers: Headers, body?: unknown): W
     // Fallback if parsing fails
   }
 
-  // 1. Detect SQL Injection
-  for (const pattern of sqlInjectionPatterns) {
-    if (pattern.test(payloadString)) {
-      return {
-        blocked: true,
-        reason: 'WAF_SQLI_DETECTED',
-        threatLevel: 'CRITICAL'
-      };
-    }
-  }
-
-  // 2. Detect Cross-Site Scripting (XSS)
-  for (const pattern of xssPatterns) {
-    if (pattern.test(payloadString)) {
-      return {
-        blocked: true,
-        reason: 'WAF_XSS_DETECTED',
-        threatLevel: 'HIGH'
-      };
+  // Run the catalog in severity order (CRITICAL → LOW); first match blocks with a 406.
+  for (const rule of WAF_RULES) {
+    for (const pattern of rule.signatures) {
+      if (pattern.test(payloadString)) {
+        return {
+          blocked: true,
+          reason: rule.id,
+          threatLevel: rule.severity,
+        };
+      }
     }
   }
 
