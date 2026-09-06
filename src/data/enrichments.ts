@@ -15,6 +15,7 @@ import { attributeSources, type SourceAttribution } from '@/lib/source-catalog';
 import type { NormalizedText } from '@/lib/text-normalizer';
 import type { BuyerIntentProfile } from '@/lib/intent-resolver';
 import type { CompanyTimeseries } from '@/lib/company-timeseries-resolver';
+import type { CompanyAliasResolution } from '@/lib/company-alias-resolver';
 import { zidForPerson, zidForCompany } from '@/lib/zinbit-id';
 
 export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
@@ -75,6 +76,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'news', endpointId: 'company-news', param: 'domain', inputKind: 'domain', icon: 'Newspaper', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Company news' },
   { id: 'intent', endpointId: 'company-intent', param: 'domain', inputKind: 'domain', icon: 'Crosshair', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Buyer intent' },
   { id: 'timeseries', endpointId: 'company-timeseries', param: 'domain', inputKind: 'domain', icon: 'LineChart', category: 'company', examples: ['stripe.com', 'shopify.com', 'datadoghq.com'], label: 'Growth history' },
+  { id: 'company-resolve', endpointId: 'company-resolve', param: 'name', inputKind: 'title', icon: 'Building2', category: 'company', examples: ['Jaded Pixel', 'GOOGL', 'stripe.com'], label: 'Resolve company alias' },
   { id: 'hashed-email', endpointId: 'hashed-email', param: 'email_sha256', inputKind: 'email', icon: 'Hash', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'sarah.chen@notion.so'], label: 'Hashed-email lookup', transform: 'sha256' },
   { id: 'fuzzy', endpointId: 'fuzzy-match', param: 'query', inputKind: 'auto', icon: 'GitCompareArrows', category: 'identity', examples: ['Jhon Smith, Stipe', 'Bob Johnson, Datadog', 'Micheal Chen, notion'], label: 'Fuzzy match' },
   { id: 'dedupe', endpointId: 'records-dedupe', param: 'records', inputKind: 'auto', icon: 'Layers', category: 'identity', examples: ['John Smith, Stripe; Jhon Smith, Stipe; Jane Doe, Acme', 'Bob Johnson, Datadog; Robert Johnson, datadoghq.com; Bob Johnson, Datadog Inc'], label: 'De-duplicate records' },
@@ -401,6 +403,8 @@ export interface EnrichmentResult {
   intent?: BuyerIntentProfile;
   /** Historical attribute time-series (F-022) — rendered as sparkline growth cards. */
   timeseries?: CompanyTimeseries;
+  /** Company alias resolution (F-031) — rendered as a canonical-company panel. */
+  companyAlias?: CompanyAliasResolution;
   /** Structured fuzzy-match result (F-024) — rendered as a ranked candidate list. */
   fuzzy?: FuzzyMatchView;
   /** Structured name-canonicalization result (F-030) — rendered as parsed forms + a change log. */
@@ -980,6 +984,33 @@ function timeseriesToResult(d: Record<string, unknown>): EnrichmentResult {
     timeseries: t,
     confidence: typeof t.confidence === 'number' ? t.confidence : undefined,
     lastVerified: typeof t.last_verified === 'string' ? t.last_verified : undefined,
+    raw: d,
+  };
+}
+
+/** Company alias resolution (F-031): a messy company name mapped to its canonical entity. */
+function companyAliasToResult(d: Record<string, unknown>): EnrichmentResult {
+  const a = d as unknown as CompanyAliasResolution;
+  const resolvedName = a.resolved?.name ?? '';
+  const title = resolvedName || (typeof a.input === 'string' ? a.input : 'Unresolved');
+  const matched = a.matchType === 'none';
+  return {
+    kind: 'company',
+    title,
+    subtitle: matched
+      ? `No canonical match for "${a.input}"`
+      : `${a.input} → ${resolvedName}${a.aliasType ? ` · matched ${a.aliasType} alias` : ''}`,
+    avatar: initialsOf(title),
+    badges: [a.matchType, a.aliasType ?? ''].filter(Boolean),
+    fields: a.resolved ? [
+      { label: 'Canonical name', value: a.resolved.name },
+      { label: 'Domain', value: a.resolved.domain, mono: true },
+      { label: 'Legal name', value: a.resolved.legal_name },
+      { label: 'Matched alias', value: `${a.matchedAlias}${a.aliasType ? ` (${a.aliasType})` : ''}` },
+    ] : [],
+    companyAlias: a,
+    confidence: typeof a.confidence === 'number' ? a.confidence : undefined,
+    links: a.resolved ? [{ label: 'Enrich company', href: `/console/studio?preset=company` }] : undefined,
     raw: d,
   };
 }
@@ -1577,6 +1608,7 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (Array.isArray(data.events) && typeof data.event_count === 'number') return newsToResult(data);
   if (typeof data.tier === 'string' && typeof data.in_market === 'boolean' && Array.isArray(data.topics) && Array.isArray(data.signals)) return intentToResult(data);
   if (Array.isArray(data.attributes) && typeof data.momentum === 'string' && typeof data.months === 'number') return timeseriesToResult(data);
+  if (typeof data.matchType === 'string' && typeof data.normalizedInput === 'string' && Array.isArray(data.candidates)) return companyAliasToResult(data);
   // Probabilistic fuzzy matching: a `candidates` array + a `verdict` mark the shape.
   if (Array.isArray(data.candidates) && typeof data.verdict === 'string' && isRecord(data.interpreted)) return fuzzyToResult(data);
   // Name canonicalization: a `components` object + a `canonical` string + a `changes` array.

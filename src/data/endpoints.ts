@@ -2023,6 +2023,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/reconciliation',
       },
     ],
+  },
+
+  {
+    id: 'company-resolve',
+    name: 'Resolve a Company Alias',
+    description: "Map any name a company goes by — DBA, legal name, brand, former name, ticker, abbreviation, or domain — to one canonical, enrichable entity (F-031). Returns the canonical company (name + domain + legal name), the alias type that matched, a confidence, and runner-up candidates. Exact match first, then Jaro-Winkler fuzzy; catches rebrands (e.g. Jaded Pixel → Shopify). Deterministic.",
+    method: 'GET',
+    path: '/v1/companies/resolve',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'name',
+        type: 'string',
+        required: true,
+        description: 'A company name, brand, legal/DBA/former name, ticker, abbreviation, or domain',
+        example: 'Jaded Pixel',
+        placeholder: 'Alphabet Inc. / GOOGL / google.com',
+        maxLength: 200,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'resolve-to-enrich',
+        title: 'Enrich the resolved company',
+        description: 'Run a full company enrichment on the canonical domain.',
+        category: 'sdks',
+        link: '/console/studio?preset=company',
+      },
+    ],
   }
 ];
 

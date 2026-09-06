@@ -24,6 +24,7 @@ import { resolveCompanyNews } from '@/lib/company-news-resolver';
 import { resolveBuyerIntent } from '@/lib/intent-resolver';
 import { resolveCompanyTimeseries } from '@/lib/company-timeseries-resolver';
 import { reconcile, type FieldObservations } from '@/lib/reconciliation';
+import { resolveCompanyAlias } from '@/lib/company-alias-resolver';
 import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { deduplicateRecords } from '@/lib/entity-dedup';
@@ -573,6 +574,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
       });
       const result = reconcile(fields);
       return { success: true, subject: person.email, company: person.company, ...result };
+    }
+
+    case 'company-resolve': {
+      // Deterministic company alias resolution (single source of truth, F-031).
+      const name = String(parameters.name || '').trim();
+      if (!name) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a company name, brand, legal/DBA/former name, ticker, abbreviation, or domain to resolve.' },
+        };
+      }
+      return { success: true, ...resolveCompanyAlias(name) };
     }
 
     case 'companies-job-signals': {

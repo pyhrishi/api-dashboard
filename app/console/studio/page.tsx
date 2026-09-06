@@ -23,6 +23,7 @@ import type { SourceAttribution, SourceCategory } from '@/lib/source-catalog';
 import type { NormalizedText } from '@/lib/text-normalizer';
 import type { BuyerIntentProfile, IntentTopic, IntentSignal, IntentTier, IntentTrend } from '@/lib/intent-resolver';
 import type { CompanyTimeseries, AttributeSeries } from '@/lib/company-timeseries-resolver';
+import type { CompanyAliasResolution } from '@/lib/company-alias-resolver';
 import { correctionEntityKey, acceptedCorrectionsFor } from '@/lib/corrections';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { sha256Hex } from '@/lib/sha256';
@@ -154,6 +155,7 @@ function StudioInner() {
         track('enrichment_run', { preset: p.id, endpoint: p.endpointId, confidence: vm.confidence ?? null, environment, durationMs });
         if (vm.intent) track('intent_resolved', { domain: raw, score: vm.intent.score, tier: vm.intent.tier, in_market: vm.intent.in_market, environment });
         if (vm.timeseries) track('timeseries_resolved', { domain: raw, months: vm.timeseries.months, momentum: vm.timeseries.momentum, environment });
+        if (vm.companyAlias) track('company_alias_resolved', { query: raw, matchType: vm.companyAlias.matchType, aliasType: vm.companyAlias.aliasType, confidence: vm.companyAlias.confidence, environment });
         if (vm.partial?.partial) track('partial_result_received', { preset: p.id, endpoint: p.endpointId, completeness: vm.partial.completeness, degraded: vm.partial.degraded_upstreams.join(','), environment });
         if (vm.deliverability) {
           track('email_deliverability_checked', { verdict: vm.deliverability.verdict, score: vm.deliverability.score, environment });
@@ -984,6 +986,36 @@ function fmtTsValue(v: number, unit: string): string {
   }
   return v.toLocaleString();
 }
+function CompanyAliasPanel({ a }: { a: CompanyAliasResolution }) {
+  const tone: BadgeTone = a.matchType === 'none' ? 'error' : a.matchType === 'fuzzy' ? 'warning' : 'success';
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="rounded-xl border border-border bg-surface-2 p-4 flex items-center gap-2 flex-wrap">
+        <span className="text-teal shrink-0"><GitCompareArrows className="w-5 h-5" /></span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">Alias match</span>
+        <StatusBadge tone={tone}>{a.matchType}</StatusBadge>
+        {a.aliasType && <StatusBadge tone="info">{a.aliasType}</StatusBadge>}
+        <span className="text-[11px] text-fg-muted">“{a.input}” → {a.resolved ? a.resolved.name : 'no canonical match'}</span>
+      </div>
+      {a.candidates.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface-2 p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">{a.resolved ? 'Other candidates' : 'Closest candidates'}</div>
+          <ul className="space-y-2">
+            {a.candidates.map((c, i) => (
+              <li key={i} className="flex items-center gap-2.5 text-[12px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-fg-subtle shrink-0" />
+                <span className="min-w-0 flex-1 truncate text-fg">{c.name} <span className="text-fg-subtle">· {c.domain}</span></span>
+                <span className="text-fg-subtle truncate max-w-[10rem]">matched {c.matchedAlias} ({c.aliasType})</span>
+                <span className="text-fg-subtle tabular-nums w-12 text-right">{Math.round(c.similarity * 100)}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TimeseriesPanel({ t }: { t: CompanyTimeseries }) {
   return (
     <div className="mt-5 space-y-4">
@@ -1466,6 +1498,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorr
 
         {result.timeseries && (
           <TimeseriesPanel t={result.timeseries} />
+        )}
+
+        {result.companyAlias && (
+          <CompanyAliasPanel a={result.companyAlias} />
         )}
 
         {result.fuzzy && (

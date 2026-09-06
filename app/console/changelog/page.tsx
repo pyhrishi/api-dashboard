@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.61', date: 'September 2026', headline: 'Company alias resolution',
+    changes: [
+      { kind: 'feature', text: 'Company alias resolution — map any name a company goes by to one canonical, enrichable entity. A new GET /v1/companies/resolve (and a "Resolve a company alias" Studio lookup) takes a brand, legal name, DBA, former name, ticker, abbreviation, or domain and returns the canonical company (name + domain + legal name), the alias type that matched, a confidence, and runner-up candidates. It even catches rebrands — "Jaded Pixel" → Shopify, "ZEIT" → Vercel, "Foodiebay" → Zomato.' },
+      { kind: 'improvement', text: 'Exact (normalized) match first, then Jaro-Winkler fuzzy for typos, else an honest "no match" with the closest candidates. The resolved company is the same entity the rest of the platform enriches (via the shared company resolver), so a resolved alias is immediately enrichable. Reuses the F-024 similarity engine; single-sourced in lib/company-alias-resolver.ts, deterministic, and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.60', date: 'September 2026', headline: 'Cross-source reconciliation',
     changes: [
       { kind: 'feature', text: 'Cross-source reconciliation — when data providers disagree on a field, the gateway now picks the value to trust. A new GET /v1/reconcile (and a Reconciliation console) gathers what each source reports for a contact and merges it into a golden record: the winning value per field, weighted by provider reliability and how recently each source observed it, with the winning source, source agreement, and — when providers genuinely disagree — a conflict flag showing every candidate.' },

@@ -119,7 +119,9 @@ export type TelemetryEventName =
   | 'timeseries_resolved'
   // data quality — cross-source reconciliation (F-027)
   | 'reconciliation_viewed'
-  | 'reconciliation_run';
+  | 'reconciliation_run'
+  // firmographics — company alias resolution (F-031)
+  | 'company_alias_resolved';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
