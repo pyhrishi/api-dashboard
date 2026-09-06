@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.50', date: 'September 2026', headline: 'Request replay & debug echo',
+    changes: [
+      { kind: 'feature', text: 'Debug echo — add X-Debug-Echo: true to any request and the gateway does NOT execute it; instead it returns exactly how it read the request: the parsed params, the redacted headers, which endpoint matched, the resolved region and node, your key type and environment, the privacy framework that would apply, what the call would cost, and which edge policies fired. A dry run for integration debugging — see the gateway’s interpretation before spending a credit.' },
+      { kind: 'feature', text: 'Request Inspector (/console/debug) — compose a request and Inspect it (echo) or Run it live, then replay any recent request straight from your logs. Replays re-fire against the live gateway and diff the new status against the original, so you can reproduce a bug for real.' },
+      { kind: 'improvement', text: 'Replay is now real everywhere: the Logs page’s “Replay” button used to just re-log the original response — it now genuinely re-fires the request against the gateway and records the actual result (removing a placeholder and its Math.random). Debug echo is single-sourced in src/lib/gateway/debugEcho.ts, redacts secrets, and is unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.49', date: 'September 2026', headline: 'Webhook-backed async results',
     changes: [
       { kind: 'feature', text: 'Webhook-backed async results — stop polling. Submit a long-running job (POST /v1/jobs) with a callback_url and Zinbit pushes the finished result to your endpoint as a signed webhook POST when it completes. Each delivery carries an X-Zinbit-Signature (HMAC-SHA256) you verify against your endpoint secret, so you can trust the payload came from us.' },

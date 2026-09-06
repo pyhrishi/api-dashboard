@@ -12,6 +12,7 @@ import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/l
 import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
 import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gateway/upstreams';
 import { getDeliveryStats, replayDelivery } from '@/lib/gateway/webhookDelivery';
+import { buildDebugEcho } from '@/lib/gateway/debugEcho';
 import { planPartial, computePartial } from '@/lib/gateway/partialResult';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
 import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
@@ -687,6 +688,39 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   const simulatedCountry = selectedRegion === 'eu-west-1' ? 'DE' : selectedRegion === 'ap-south-1' ? 'IN' : 'US';
   const countryCode = request.headers.get('x-country-code') || simulatedCountry;
   const privacyFramework = detectPrivacyFramework(countryCode);
+
+  // Debug echo (F-074): with `X-Debug-Echo: true`, return the gateway's read of the
+  // request — parsed params, region, policies, would-be cost — instead of executing
+  // it. A dry run for integration debugging, at zero credits.
+  if (request.headers.get('x-debug-echo') === 'true' && endpoint) {
+    const echoHeaders: Record<string, string> = {};
+    request.headers.forEach((v, k) => { echoHeaders[k] = v; });
+    const wouldCharge = calculateVolumeDiscount(apiKey, endpoint.creditCost || 1).cost;
+    const echo = buildDebugEcho({
+      method: request.method,
+      path,
+      params: parameters,
+      headers: echoHeaders,
+      bodyPresent: request.method !== 'GET',
+      apiKey,
+      region: selectedRegion,
+      node: serverNodeId,
+      countryCode,
+      privacyFramework,
+      endpointId: endpoint.id,
+      endpointName: endpoint.name,
+      endpointMatched: true,
+      baseCreditCost: endpoint.creditCost || 1,
+      wouldCharge,
+      rateLimit: { limit: Number(limit), remaining: Number(remaining) },
+    });
+    responseHeaders['X-Credits-Cost'] = '0';
+    responseHeaders['X-Debug-Echo'] = 'true';
+    return NextResponse.json(
+      { success: true, data: echo, metadata: { requestId, timestamp: Date.now() } },
+      { status: 200, headers: responseHeaders },
+    );
+  }
 
   if (keyRecord) {
     const msaContext = enforceMSAControls(keyRecord.msaStatus);

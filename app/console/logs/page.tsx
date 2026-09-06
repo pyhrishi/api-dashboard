@@ -4,7 +4,7 @@ import { track } from '@/lib/telemetry';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, Search, Filter, AlertCircle, Clock, Database, CheckCircle2, ServerCrash, Zap, X, Pause, Play, Download, Copy, RotateCw, ShieldAlert, LifeBuoy, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { API_BASE_URL } from '@/lib/api-config';
+import { API_BASE_URL, authHeaderValue } from '@/lib/api-config';
 import { JsonViewer } from '@/components/JsonViewer';
 import { TraceWaterfall } from '@/components/TraceWaterfall';
 import { EndpointFilter } from '@/components/EndpointFilter';
@@ -180,23 +180,52 @@ export default function LogsPage() {
 
   const handleReplay = async (log: ApiLog) => {
     setIsReplaying(true);
-    // Simulate network delay for replay
-    await new Promise(r => setTimeout(r, 600));
-    
-    logApiRequest({
-      id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-      timestamp: new Date().toISOString(),
-      environment: log.environment,
-      method: log.method,
-      path: log.path,
-      status: log.status, // We replay and just get the same status in this mock
-      duration: Math.floor(Math.random() * 100) + 20, // New duration
-      ip: log.ip,
-      request: log.request,
-      response: log.response
-    });
-    
-    setIsReplaying(false);
+    // Real replay (F-074): re-fire the logged request against the live gateway and
+    // log the actual response — not a canned copy of the original.
+    const apiKey = activeKeys[0]?.key ?? '';
+    try {
+      const params = log.request?.parameters ?? {};
+      const qs = new URLSearchParams(
+        Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)]),
+      );
+      const url = `/api${log.path}${qs.toString() ? `?${qs}` : ''}`;
+      const started = performance.now();
+      const res = await fetch(url, {
+        method: log.method,
+        headers: { Authorization: authHeaderValue(apiKey), 'Content-Type': 'application/json' },
+        ...(log.method === 'GET' ? {} : { body: JSON.stringify(params) }),
+      });
+      const duration = Math.round(performance.now() - started);
+      let body: unknown;
+      try { body = await res.json(); } catch { body = { error: { message: 'Invalid response from gateway' } }; }
+      logApiRequest({
+        id: `log_${Date.now().toString(36)}_replay`,
+        timestamp: new Date().toISOString(),
+        environment: log.environment,
+        method: log.method,
+        path: log.path,
+        status: res.status,
+        duration,
+        ip: log.ip,
+        request: log.request,
+        response: body,
+      });
+    } catch (e) {
+      logApiRequest({
+        id: `log_${Date.now().toString(36)}_replay`,
+        timestamp: new Date().toISOString(),
+        environment: log.environment,
+        method: log.method,
+        path: log.path,
+        status: 0,
+        duration: 0,
+        ip: log.ip,
+        request: log.request,
+        response: { error: { message: e instanceof Error ? e.message : 'Network error reaching the gateway' } },
+      });
+    } finally {
+      setIsReplaying(false);
+    }
   };
 
   return (

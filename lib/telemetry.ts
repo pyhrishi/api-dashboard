@@ -96,7 +96,11 @@ export type TelemetryEventName =
   // delivery — webhook-backed async results (F-072)
   | 'webhook_delivery_viewed'
   | 'async_result_dispatched'
-  | 'webhook_delivery_replayed';
+  | 'webhook_delivery_replayed'
+  // debugging — request replay & debug echo (F-074)
+  | 'debug_inspector_viewed'
+  | 'debug_echo_run'
+  | 'request_replayed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
