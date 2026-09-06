@@ -1143,6 +1143,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-022', // Historical time-series attributes — lib/company-timeseries-resolver.ts (monthly headcount/revenue/tech/roles back-projected from current firmographics + MoM growth/trend) + GET /v1/companies/timeseries + Studio sparkline panel
   'F-027', // Cross-source reconciliation — lib/reconciliation.ts (weight observations by provider reliability × recency, cluster variants via jaroWinkler, winner+confidence+conflicts) + GET /v1/reconcile + /console/reconciliation
   'F-031', // Company alias resolution — lib/company-alias-resolver.ts (brand/legal/DBA/former/ticker/abbreviation/domain → canonical company via exact+jaroWinkler; catches rebrands) + GET /v1/companies/resolve + Studio preset
+  'F-032', // Household & account grouping — lib/account-grouping.ts (cluster contacts into buying accounts by domain + corporate-family rollup via hierarchy + buying-committee inference) + POST /v1/accounts/group + /console/accounts
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

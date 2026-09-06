@@ -2053,6 +2053,35 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=company',
       },
     ],
+  },
+
+  {
+    id: 'accounts-group',
+    name: 'Account Grouping',
+    description: "Cluster a list of contacts into buying accounts (F-032). POST a `contacts` array (or a newline/comma-delimited string) of emails and domains; the gateway groups them by company, enriches each account with its firmographics and corporate-family context (a subsidiary rolls up to its parent), and surfaces the buying committee inferred from the roles present. Personal mailboxes and unrecognized inputs are returned separately rather than force-fit into an account.",
+    method: 'POST',
+    path: '/v1/accounts/group',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'contacts',
+        type: 'array',
+        required: true,
+        description: 'The emails and/or domains to cluster into accounts.',
+        example: '["ceo@stripe.com","sales@stripe.com","a@datadoghq.com"]',
+        placeholder: '["user@company.com", "company.com"]',
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'accounts-to-hierarchy',
+        title: 'See an account\'s corporate family',
+        description: 'Expand any grouped account into its full org tree.',
+        category: 'sdks',
+        link: '/console/hierarchy',
+      },
+    ],
   }
 ];
 

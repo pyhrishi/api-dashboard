@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.62', date: 'September 2026', headline: 'Household & account grouping',
+    changes: [
+      { kind: 'feature', text: 'Account grouping — turn a messy contact list into clean buying accounts. A new POST /v1/accounts/group (and an Account Grouping console at /console/accounts) takes a list of emails and domains and clusters them by company: all contacts at the same employer roll up into one account, each enriched with its firmographics and — via the company hierarchy — its corporate family, so a contact at a subsidiary is attributed to the parent account.' },
+      { kind: 'feature', text: 'Each account surfaces its buying committee, inferred from the roles present in the contacts (Executive, Finance, Procurement, Engineering, …), so you can see at a glance whether you have the whole committee or a single champion. Personal mailboxes and unrecognized inputs are set aside with a reason instead of being forced into an account.' },
+      { kind: 'improvement', text: 'Built on the shared company and hierarchy resolvers, so an account’s facts and family agree with a direct lookup. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.61', date: 'September 2026', headline: 'Company alias resolution',
     changes: [
       { kind: 'feature', text: 'Company alias resolution — map any name a company goes by to one canonical, enrichable entity. A new GET /v1/companies/resolve (and a "Resolve a company alias" Studio lookup) takes a brand, legal name, DBA, former name, ticker, abbreviation, or domain and returns the canonical company (name + domain + legal name), the alias type that matched, a confidence, and runner-up candidates. It even catches rebrands — "Jaded Pixel" → Shopify, "ZEIT" → Vercel, "Foodiebay" → Zomato.' },

@@ -121,7 +121,10 @@ export type TelemetryEventName =
   | 'reconciliation_viewed'
   | 'reconciliation_run'
   // firmographics — company alias resolution (F-031)
-  | 'company_alias_resolved';
+  | 'company_alias_resolved'
+  // accounts — household & account grouping (F-032)
+  | 'accounts_viewed'
+  | 'accounts_grouped';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

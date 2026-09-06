@@ -65,6 +65,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Enrichment Studio', href: '/console/studio', icon: <Sparkles className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Identity Resolution', href: '/console/identity', icon: <GitMerge className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Company Hierarchy', href: '/console/hierarchy', icon: <Network className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
+    { name: 'Account Grouping', href: '/console/accounts', icon: <Users className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Bulk Jobs', href: '/console/jobs', icon: <ListChecks className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Async Jobs', href: '/console/async-jobs', icon: <Boxes className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Result Delivery', href: '/console/webhook-deliveries', icon: <Webhook className="w-5 h-5" />, roles: ['admin', 'developer'] },

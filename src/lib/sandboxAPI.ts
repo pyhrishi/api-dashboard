@@ -17,6 +17,7 @@ import { resolveCompanyHierarchy } from '@/lib/company-hierarchy';
 import { appendDemographics } from '@/lib/demographic-resolver';
 import { resolveJobGrowthSignals } from '@/lib/job-signal-resolver';
 import { enrichMerchant } from '@/lib/ecommerce-merchant-resolver';
+import { groupIntoAccounts } from '@/lib/account-grouping';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -598,6 +599,23 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...jobs };
+    }
+
+    case 'accounts-group': {
+      // Cluster a contact list into buying accounts (single source of truth).
+      const rawContacts = parameters.contacts;
+      const contacts = Array.isArray(rawContacts)
+        ? rawContacts.map((c) => String(c ?? ''))
+        : typeof rawContacts === 'string'
+          ? rawContacts.replace(/^\s*\[|\]\s*$/g, '').split(/[\n,]/).map((s) => s.trim().replace(/^["']|["']$/g, ''))
+          : [];
+      if (contacts.filter(Boolean).length === 0) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide a non-empty "contacts" array (or delimited string) of emails/domains to group.' },
+        };
+      }
+      return { success: true, ...groupIntoAccounts(contacts) };
     }
 
     case 'companies-merchant': {
