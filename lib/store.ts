@@ -8,7 +8,9 @@ import { DEFAULT_THRESHOLDS, type MatchUseCase } from '@/lib/threshold-tuning';
 import { generateReverifiableRecords, reverifyRecords, computeDueRecords, DEFAULT_CADENCE, CADENCE_BOUNDS, type ReverificationCadence, type ReVerificationRun } from '@/lib/reverification';
 import type { DecaySeverity, DecayAlertState } from '@/lib/data-decay';
 import { getBenchmarkReport, type AccuracyBenchmarkRun } from '@/lib/accuracy-benchmark';
+import { analyzeCoverageGaps, makeExpansionRequest, type CoverageExpansionRequest } from '@/lib/coverage-gaps';
 import { generateSeedCorrections, correctionEntityKey, inferFieldKind, makeCorrectionId, type Correction, type CorrectionInput } from '@/lib/corrections';
+import { generateSeedSnapshots, buildGoldenRecord, snapshotFromRecord, hashRecord, resolveGoldenEntity, type GoldenSnapshot } from '@/lib/golden-record';
 import { triageCorrection } from '@/lib/insight-engine';
 
 /**
@@ -503,6 +505,8 @@ export interface TenantState {
   enrichments: EnrichmentRecord[];
   /** User-reported field corrections (F-046) — the review queue + applied overlay. */
   corrections: Correction[];
+  /** Golden-record snapshots (F-054) — immutable, versioned canonical-record history per entity. */
+  goldenSnapshots: GoldenSnapshot[];
 }
 
 export const extractTenantState = (state: AppState): TenantState => ({
@@ -546,6 +550,7 @@ export const extractTenantState = (state: AppState): TenantState => ({
   bulkJobs: state.bulkJobs,
   enrichments: state.enrichments,
   corrections: state.corrections,
+  goldenSnapshots: state.goldenSnapshots,
 });
 
 export const defaultTenantState = (): TenantState => ({
@@ -589,6 +594,7 @@ export const defaultTenantState = (): TenantState => ({
   bulkJobs: [],
   enrichments: [],
   corrections: [],
+  goldenSnapshots: [],
 });
 
 interface AppState extends FirstCallState, TenantState {
@@ -664,6 +670,11 @@ interface AppState extends FirstCallState, TenantState {
   accuracyBenchmarkRuns: AccuracyBenchmarkRun[];
   /** Re-samples the benchmark (new cycle). Returns the run. Billing role cannot. */
   runAccuracyBenchmark: () => AccuracyBenchmarkRun;
+  // Coverage gap reporting (F-053) — expansion requests for thin-coverage segments.
+  /** Submitted coverage-expansion requests (newest first, capped at 30); persisted. */
+  coverageExpansionRequests: CoverageExpansionRequest[];
+  /** Requests a coverage expansion for a gap segment. Returns the new id. Billing role cannot. */
+  requestCoverageExpansion: (segmentId: string, note: string) => string;
   // User-reported corrections — governed field-correction feedback loop (F-046).
   /** Idempotently seeds demo corrections on mount (like seedMergeCandidates). No audit log. */
   seedCorrections: () => void;
@@ -673,6 +684,17 @@ interface AppState extends FirstCallState, TenantState {
   reviewCorrection: (id: string, decision: 'accepted' | 'rejected') => void;
   /** Sends a reviewed correction back to pending (undo). Billing role cannot. */
   revertCorrectionReview: (id: string) => void;
+  // Golden-record snapshots (F-054) — immutable, versioned canonical-record history.
+  /** Idempotently seeds demo snapshot chains on mount. No audit log. */
+  seedGoldenSnapshots: () => void;
+  /** Captures the current golden record for an identifier as a new version. Returns the snapshot id, or null if unchanged/unresolved. Billing role cannot. */
+  captureGoldenSnapshot: (query: string) => string | null;
+  /** Pins one version as the record of truth for its entity (unpins siblings). Billing role cannot. */
+  pinGoldenSnapshot: (id: string) => void;
+  /** Sets a human label on a snapshot. Billing role cannot. */
+  labelGoldenSnapshot: (id: string, label: string) => void;
+  /** Deletes a snapshot (a pinned one re-pins the latest remaining). Billing role cannot. */
+  deleteGoldenSnapshot: (id: string) => void;
   webhooks: WebhookEndpoint[];
   webhookLogs: WebhookLog[];
   webhookRetryQueue: WebhookRetryItem[];
@@ -887,6 +909,7 @@ export const useStore = create<AppState>()(
       bulkJobs: [],
       enrichments: [],
       corrections: [],
+      goldenSnapshots: [],
       mergeableEntities: [],
       entityMerges: [],
       reverificationCadence: DEFAULT_CADENCE,
@@ -894,6 +917,7 @@ export const useStore = create<AppState>()(
       decayAlertThreshold: 'medium',
       decayAlertStates: {},
       accuracyBenchmarkRuns: [],
+      coverageExpansionRequests: [],
       matchThresholds: { ...DEFAULT_THRESHOLDS },
       webhooks: [],
       webhookLogs: [],
@@ -2707,6 +2731,24 @@ export const useStore = create<AppState>()(
         return run;
       },
 
+      // ─── Coverage gap reporting (F-053) ─────────────────────────────────────
+      requestCoverageExpansion: (segmentId, note) => {
+        const state = get();
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot request coverage expansion');
+        const report = analyzeCoverageGaps(state.activeOrganizationId);
+        const gap = report.gaps.find((g) => g.id === segmentId);
+        if (!gap) throw new Error('Unknown coverage segment');
+        const req = makeExpansionRequest(gap, note);
+        const log = generateAuditLog('coverage.expansion_requested', `${gap.regionName} ${gap.dataTypeLabel}`, state.user?.email || 'System', state.environment, {
+          changes: { after: { segment: gap.id, missed: gap.missed } },
+        });
+        set((s) => ({
+          coverageExpansionRequests: [req, ...s.coverageExpansionRequests].slice(0, 30),
+          auditLogs: [log, ...s.auditLogs],
+        }));
+        return req.id;
+      },
+
       // ─── User-reported corrections (F-046) ──────────────────────────────────
       seedCorrections: () => set((state) => {
         if (state.corrections.length > 0) return {};
@@ -2767,6 +2809,84 @@ export const useStore = create<AppState>()(
         return {
           corrections: state.corrections.map((c) => c.id === id ? { ...c, status: 'pending', reviewedBy: undefined, reviewedAt: undefined } : c),
         };
+      }),
+
+      // ─── Golden-record snapshots (F-054) ────────────────────────────────────
+      seedGoldenSnapshots: () => set((state) => {
+        if (state.goldenSnapshots.length > 0) return {};
+        return { goldenSnapshots: generateSeedSnapshots() };
+      }),
+
+      captureGoldenSnapshot: (query) => {
+        const state = get();
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot capture snapshots');
+        const entity = resolveGoldenEntity(query);
+        if (!entity) return null;
+        const rec = buildGoldenRecord(query);
+        if (!rec) return null;
+        const chain = state.goldenSnapshots.filter((s) => s.entityKey === entity.entityKey);
+        const hash = hashRecord(rec.fields);
+        const latest = chain.reduce<GoldenSnapshot | null>((m, s) => (!m || s.version > m.version ? s : m), null);
+        // No material change since the last version → no-op.
+        if (latest && latest.hash === hash) return null;
+        const version = (latest?.version ?? 0) + 1;
+        const capturedAt = new Date().toISOString().slice(0, 10);
+        // A newly captured version becomes the pinned record of truth for its entity.
+        const snap = snapshotFromRecord(rec, version, capturedAt, 'manual', '', true);
+        const actor = state.user?.email || 'System';
+        const log = generateAuditLog('golden_record.captured', `${entity.display} v${version}`, actor, state.environment, {
+          changes: { after: { version, hash, fields: rec.fields.length } },
+        });
+        set((s) => ({
+          goldenSnapshots: [
+            snap,
+            ...s.goldenSnapshots.map((x) => x.entityKey === entity.entityKey ? { ...x, pinned: false } : x),
+          ],
+          auditLogs: [log, ...s.auditLogs],
+        }));
+        return snap.id;
+      },
+
+      pinGoldenSnapshot: (id) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot pin snapshots');
+        const target = state.goldenSnapshots.find((s) => s.id === id);
+        if (!target) return {};
+        const actor = state.user?.email || 'System';
+        const log = generateAuditLog('golden_record.pinned', `${target.display} v${target.version}`, actor, state.environment, {
+          changes: { after: { version: target.version } },
+        });
+        return {
+          goldenSnapshots: state.goldenSnapshots.map((s) =>
+            s.entityKey === target.entityKey ? { ...s, pinned: s.id === id } : s),
+          auditLogs: [log, ...state.auditLogs],
+        };
+      }),
+
+      labelGoldenSnapshot: (id, label) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot label snapshots');
+        if (!state.goldenSnapshots.some((s) => s.id === id)) return {};
+        const clean = String(label ?? '').slice(0, 60);
+        return { goldenSnapshots: state.goldenSnapshots.map((s) => s.id === id ? { ...s, label: clean } : s) };
+      }),
+
+      deleteGoldenSnapshot: (id) => set((state) => {
+        if (state.user?.role === 'billing') throw new Error('Billing users cannot delete snapshots');
+        const target = state.goldenSnapshots.find((s) => s.id === id);
+        if (!target) return {};
+        let remaining = state.goldenSnapshots.filter((s) => s.id !== id);
+        // If we removed the pinned version, re-pin the latest remaining one for that entity.
+        if (target.pinned) {
+          const siblings = remaining.filter((s) => s.entityKey === target.entityKey);
+          if (siblings.length > 0) {
+            const newest = siblings.reduce((m, s) => (s.version > m.version ? s : m), siblings[0]);
+            remaining = remaining.map((s) => s.entityKey === target.entityKey ? { ...s, pinned: s.id === newest.id } : s);
+          }
+        }
+        const actor = state.user?.email || 'System';
+        const log = generateAuditLog('golden_record.deleted', `${target.display} v${target.version}`, actor, state.environment, {
+          changes: { before: { version: target.version } },
+        });
+        return { goldenSnapshots: remaining, auditLogs: [log, ...state.auditLogs] };
       }),
 
       setMatchThreshold: (useCase, value) => set((state) => {
@@ -2837,6 +2957,7 @@ export const useStore = create<AppState>()(
         bulkJobs: state.bulkJobs,
         enrichments: state.enrichments,
         corrections: state.corrections,
+        goldenSnapshots: state.goldenSnapshots,
         // Merge audit trail (candidates are re-seeded, so only the merges persist)
         entityMerges: state.entityMerges,
         reverificationCadence: state.reverificationCadence,
@@ -2844,6 +2965,7 @@ export const useStore = create<AppState>()(
         decayAlertThreshold: state.decayAlertThreshold,
         decayAlertStates: state.decayAlertStates,
         accuracyBenchmarkRuns: state.accuracyBenchmarkRuns,
+        coverageExpansionRequests: state.coverageExpansionRequests,
         matchThresholds: state.matchThresholds,
         // First-call state persistence
         completedOnboardingSteps: state.completedOnboardingSteps,
