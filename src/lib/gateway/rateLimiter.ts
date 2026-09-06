@@ -7,6 +7,8 @@
  * this Map may reset per-isolate, but it's sufficient for sandbox testing.
  */
 
+import { RATE_LIMIT } from '@/lib/rate-limit';
+
 interface RateLimitData {
   tokens: number;
   lastRefillTime: number;
@@ -25,9 +27,10 @@ export interface RateLimitResult {
 export function checkRateLimit(apiKey: string): RateLimitResult {
   const now = Date.now();
   
-  // Token Bucket Configuration
-  const capacity = 100; // Maximum burst capacity
-  const refillRatePerMinute = 100; 
+  // Token Bucket Configuration — single source of truth (lib/rate-limit.ts),
+  // shared with the console so the visualizer and the real limiter agree (F-129).
+  const capacity = RATE_LIMIT.capacity; // Maximum burst capacity
+  const refillRatePerMinute = RATE_LIMIT.refillPerMinute;
   const refillRatePerMs = refillRatePerMinute / 60000;
 
   let currentData = store.get(apiKey);

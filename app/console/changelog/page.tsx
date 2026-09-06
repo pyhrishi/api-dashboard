@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.82', date: 'September 2026', headline: 'Token-bucket rate limiting',
+    changes: [
+      { kind: 'feature', text: 'Rate Limits — a new console that makes the gateway\'s token bucket visible and testable. Every key can burst up to the capacity instantly, then throttles to the steady refill rate; the page explains the model, previews a burst with a deterministic simulator (no requests sent), and can fire a real burst against the gateway to watch the bucket drain to 429s with a Retry-After.' },
+      { kind: 'improvement', text: 'The bucket constants now come from one source of truth (lib/rate-limit.ts), shared by the console simulator and the real limiter — so what you preview is exactly what the gateway enforces. Requests below the sustained refill rate are never throttled; bursts above it are smoothed. See Rate-Limit Headers for the standard limit/remaining/reset returned on every response.' },
+    ],
+  },
+  {
     version: 'v4.81', date: 'September 2026', headline: 'Key labels & ownership',
     changes: [
       { kind: 'feature', text: 'Key Ownership — assign an accountable owner (a team member) and free-form labels to every API key, so a security review can answer "whose key is this and what is it for?" without guessing. A new console lets you tag keys by team, environment, or purpose and filter the list by owner or label.' },

@@ -188,7 +188,11 @@ export type TelemetryEventName =
   // governance — key labels & ownership (F-124)
   | 'key_ownership_viewed'
   | 'key_owner_assigned'
-  | 'key_labeled';
+  | 'key_labeled'
+  // rate limiting — token-bucket rate limiting (F-129)
+  | 'rate_limits_viewed'
+  | 'rate_limit_simulated'
+  | 'rate_limit_burst_tested';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
