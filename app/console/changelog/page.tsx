@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.15', date: 'September 2026', headline: 'Cross-field validation',
+    changes: [
+      { kind: 'feature', text: 'Cross-field validation — a new "Validate a record" lookup runs consistency rules across a record\'s fields and catches impossible or improbable combinations that single-field checks miss: email vs company domain, title vs seniority (the classic "VP" title on a "Junior" record), phone vs HQ geography, and name vs email local-part. Returns a 0-100 integrity score, a decisive consistent / minor-issues / inconsistent verdict, and a per-rule breakdown with the reason for each. New GET /v1/records/validate endpoint (1 credit), shipped as a Studio preset.' },
+      { kind: 'improvement', text: 'Validation is deterministic and reuses the person, company, phone, and title resolvers, so every rule reflects the real resolved record and the same email always validates the same way.' },
+    ],
+  },
+  {
     version: 'v4.14', date: 'September 2026', headline: 'Field-level freshness timestamps',
     changes: [
       { kind: 'feature', text: 'Field-level freshness timestamps — every enrichment result now stamps each attribute with its own last-verified date and a fresh / aging / stale tier, not just one date for the whole record. The Studio result card shows a color-coded freshness chip on every field (e.g. "verified 12d ago"), so you know exactly which attributes to trust and which to re-verify before you act on them. Applies across every lookup — person, company, phone, socials, title, firmographics, deliverability, and domain auth.' },

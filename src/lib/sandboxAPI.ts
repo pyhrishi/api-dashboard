@@ -15,6 +15,7 @@ import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { checkDomainAuth } from '@/lib/email-domain-auth';
+import { validateRecord } from '@/lib/record-validator';
 
 export interface APIRequest {
   endpoint: Endpoint;
@@ -526,6 +527,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...auth };
+    }
+
+    case 'record-validate': {
+      // Deterministic cross-field record consistency validation (single source of truth).
+      const validation = validateRecord(String(parameters.email || ''));
+      if (!validation) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Provide an email to validate a record.' },
+        };
+      }
+      return { success: true, ...validation };
     }
 
     case 'phone-to-email':

@@ -876,6 +876,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio',
       },
     ],
+  },
+
+  {
+    id: 'record-validate',
+    name: 'Validate a Record',
+    description: 'Run cross-field consistency checks on a resolved record and catch impossible or improbable combinations single-field validation misses — email vs company domain, title vs seniority, phone vs HQ geo, name vs email. Returns an integrity score, a decisive consistent/inconsistent verdict, and a per-rule breakdown.',
+    method: 'GET',
+    path: '/v1/records/validate',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'email',
+        type: 'email',
+        required: true,
+        description: 'Email of the record to validate',
+        example: 'jane.doe@acme.com',
+        placeholder: 'user@company.com',
+        maxLength: 254,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'validate-to-person',
+        title: 'See the full record',
+        description: 'Resolve the same email to the complete profile behind the checks.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+    ],
   }
 ];
 

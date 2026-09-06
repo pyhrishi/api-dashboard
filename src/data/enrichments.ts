@@ -61,6 +61,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'firmographics', endpointId: 'firmographic-append', param: 'domain', inputKind: 'domain', icon: 'BarChart3', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Firmographic append' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
+  { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -528,6 +529,45 @@ function domainAuthToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Cross-field validation: a per-rule consistency report with an integrity score. */
+function validationToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const subject = str('subject') || str('email') || 'Record';
+  const verdict = str('verdict');
+  const score = num('integrity_score');
+  const consistent = d.consistent === true;
+  const rules = Array.isArray(d.rules) ? (d.rules as Record<string, unknown>[]) : [];
+  const verdictLabel =
+    verdict === 'consistent' ? 'Consistent' :
+    verdict === 'minor_issues' ? 'Minor issues' :
+    verdict === 'inconsistent' ? 'Inconsistent' : (verdict || '—');
+  const sym = (s: string) => (s === 'pass' ? '✓' : s === 'warn' ? '!' : '✕');
+
+  const fields: EnrichmentField[] = [
+    { label: 'Verdict', value: `${verdictLabel}${score !== undefined ? ` · ${score}/100 integrity` : ''}`, verified: consistent },
+    ...rules.map((r) => {
+      const status = typeof r.status === 'string' ? r.status : '';
+      const label = typeof r.label === 'string' ? r.label : 'Rule';
+      const detail = typeof r.detail === 'string' ? r.detail : '';
+      return { label, value: `${sym(status)} ${status.toUpperCase()} — ${detail}`, verified: status === 'pass' };
+    }),
+  ];
+
+  return {
+    kind: 'person',
+    title: subject,
+    subtitle: `Cross-field validation${score !== undefined ? ` · ${score}/100 integrity` : ''}`,
+    avatar: initialsOf(subject),
+    badges: [verdictLabel, consistent ? 'No conflicts' : 'Conflicts found'].filter(Boolean),
+    fields,
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 // ── Field-level freshness (F-040) ────────────────────────────────────────────
 /** Fixed demo "today" for deterministic freshness — never Date.now (it would drift on re-render). */
 const FRESHNESS_NOW = Date.UTC(2026, 8, 6);
@@ -584,6 +624,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.
   if (typeof data.spoofable === 'boolean' && isRecord(data.dmarc)) return domainAuthToResult(data);
+  // Cross-field validation: a `rules` array + numeric `integrity_score` mark the shape.
+  if (Array.isArray(data.rules) && typeof data.integrity_score === 'number') return validationToResult(data);
   // identity-resolve / reverse: { type, resolved_from, profile }
   if (isRecord(data.profile)) {
     const profile = data.profile as Record<string, unknown>;

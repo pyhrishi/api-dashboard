@@ -1032,6 +1032,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-023', // Deterministic match keys — identity-resolve auto-detect on exact email/domain/phone
   'F-025', // Confidence score on every field — per-field confidence + provenance on every result
   'F-040', // Field-level freshness timestamps — per-field last-verified date + fresh/aging/stale tier on every result
+  'F-047', // Cross-field validation — Studio "Validate a record" (GET /v1/records/validate)
 ]);
 
 export function isFeatureBuilt(id: string): boolean {
