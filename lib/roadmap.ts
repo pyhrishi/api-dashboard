@@ -1146,6 +1146,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-032', // Household & account grouping — lib/account-grouping.ts (cluster contacts into buying accounts by domain + corporate-family rollup via hierarchy + buying-committee inference) + POST /v1/accounts/group + /console/accounts
   'F-035', // Historical identity graph — lib/identity-history-resolver.ts (career identity timeline: prior companies/emails/titles + typed transitions, tied to one persistent Zinbit ID) + GET /v1/people/identity-history + /console/identity-history timeline
   'F-037', // Domain-to-employer linking — lib/domain-employer-linker.ts (classify corporate/personal-ESP/disposable/subsidiary/edu/gov + link to employer, subsidiary→parent rollup, honest no-employer for free/disposable) + GET /v1/domains/employer + Studio preset
+  'F-039', // Cross-reference ID mapping — lib/xref-resolver.ts (any identifier → canonical entity + its ID in every system: CRM/data-provider/social/registry/financial, each with a public URL, forward + reverse anchor-scan) + GET /v1/identity/xref + Studio preset + /console/xref ID Map
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

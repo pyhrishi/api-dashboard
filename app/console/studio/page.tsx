@@ -9,7 +9,7 @@ import {
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
   Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
   MapPin, Globe, Sun, Hash, GitCompareArrows, SpellCheck, MailQuestion, Flag, PencilLine, Languages, ArrowDown, Unplug,
-  Crosshair, Flame, TrendingUp, TrendingDown, IdCard, BriefcaseBusiness, Store, LineChart,
+  Crosshair, Flame, TrendingUp, TrendingDown, IdCard, BriefcaseBusiness, Store, LineChart, Waypoints,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
@@ -24,6 +24,7 @@ import type { NormalizedText } from '@/lib/text-normalizer';
 import type { BuyerIntentProfile, IntentTopic, IntentSignal, IntentTier, IntentTrend } from '@/lib/intent-resolver';
 import type { CompanyTimeseries, AttributeSeries } from '@/lib/company-timeseries-resolver';
 import type { CompanyAliasResolution } from '@/lib/company-alias-resolver';
+import type { XrefResolution, CrossReference, SystemCategory } from '@/lib/xref-resolver';
 import { correctionEntityKey, acceptedCorrectionsFor } from '@/lib/corrections';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
 import { sha256Hex } from '@/lib/sha256';
@@ -33,7 +34,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction, Modal, Field, Textarea, Sparkline } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages, Crosshair, IdCard, BriefcaseBusiness, Store, LineChart };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote, MapPin, Newspaper, Hash, GitCompareArrows, Layers, SpellCheck, MailQuestion, Languages, Crosshair, IdCard, BriefcaseBusiness, Store, LineChart, Waypoints };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -156,6 +157,7 @@ function StudioInner() {
         if (vm.intent) track('intent_resolved', { domain: raw, score: vm.intent.score, tier: vm.intent.tier, in_market: vm.intent.in_market, environment });
         if (vm.timeseries) track('timeseries_resolved', { domain: raw, months: vm.timeseries.months, momentum: vm.timeseries.momentum, environment });
         if (vm.companyAlias) track('company_alias_resolved', { query: raw, matchType: vm.companyAlias.matchType, aliasType: vm.companyAlias.aliasType, confidence: vm.companyAlias.confidence, environment });
+        if (vm.xref) track('cross_reference_resolved', { query: raw, input_system: vm.xref.input_system, entity_type: vm.xref.entity_type, reference_count: vm.xref.references.length, resolution_path: vm.xref.resolution_path, confidence: vm.xref.confidence, environment });
         if (vm.partial?.partial) track('partial_result_received', { preset: p.id, endpoint: p.endpointId, completeness: vm.partial.completeness, degraded: vm.partial.degraded_upstreams.join(','), environment });
         if (vm.deliverability) {
           track('email_deliverability_checked', { verdict: vm.deliverability.verdict, score: vm.deliverability.score, environment });
@@ -1016,6 +1018,82 @@ function CompanyAliasPanel({ a }: { a: CompanyAliasResolution }) {
   );
 }
 
+const XREF_CATEGORY_LABEL: Record<SystemCategory, string> = {
+  internal: 'Zinbit & natural keys', 'data-provider': 'Data providers', crm: 'CRM systems', social: 'Social', registry: 'Registries', financial: 'Financial',
+};
+const XREF_CATEGORY_ORDER: SystemCategory[] = ['internal', 'crm', 'data-provider', 'social', 'registry', 'financial'];
+
+function XrefRow({ r }: { r: CrossReference }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(r.id).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1200); }).catch(() => {});
+  };
+  return (
+    <li className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-[12px] transition-colors ${r.matched ? 'border-teal/40 bg-teal/10' : 'border-border bg-surface'}`}>
+      <span className="min-w-0 w-40 shrink-0 flex items-center gap-1.5">
+        {r.canonical && <BadgeCheck className="w-3.5 h-3.5 text-teal shrink-0" />}
+        <span className="truncate text-fg font-medium">{r.label}</span>
+      </span>
+      <span className="min-w-0 flex-1 truncate font-mono text-fg-muted">{r.id}</span>
+      {r.matched && <StatusBadge tone="info">matched</StatusBadge>}
+      <span className="tabular-nums text-fg-subtle w-9 text-right">{Math.round(r.confidence * 100)}%</span>
+      <button onClick={copy} aria-label={`Copy ${r.label} ID`} className="text-fg-subtle hover:text-fg transition-colors shrink-0">
+        {copied ? <Check className="w-3.5 h-3.5 text-teal" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+      {r.url ? (
+        <a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${r.label}`} className="text-fg-subtle hover:text-teal transition-colors shrink-0">
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      ) : (
+        <span className="w-3.5 shrink-0" />
+      )}
+    </li>
+  );
+}
+
+function XrefPanel({ x }: { x: XrefResolution }) {
+  const byCat = useMemo(() => {
+    const m = new Map<SystemCategory, CrossReference[]>();
+    x.references.forEach((r) => { const list = m.get(r.category) ?? []; list.push(r); m.set(r.category, list); });
+    return m;
+  }, [x.references]);
+  const withUrl = x.references.filter((r) => r.url).length;
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="rounded-xl border border-border bg-surface-2 p-4 flex items-center gap-2 flex-wrap">
+        <span className="text-teal shrink-0"><Waypoints className="w-5 h-5" /></span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-fg-subtle">ID map</span>
+        <StatusBadge tone="info">{x.input_system}</StatusBadge>
+        <StatusBadge tone={x.resolution_path === 'reverse' ? 'warning' : 'success'}>{x.resolution_path}</StatusBadge>
+        <span className="text-[11px] text-fg-muted">{x.references.length} references · {withUrl} public URLs · {x.unresolved.length} not found</span>
+        <span className="ml-auto font-mono text-[11px] text-teal">{x.zinbit_id}</span>
+      </div>
+      {XREF_CATEGORY_ORDER.filter((c) => byCat.has(c)).map((cat) => (
+        <div key={cat} className="rounded-xl border border-border bg-surface-2 p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">{XREF_CATEGORY_LABEL[cat]}</div>
+          <ul className="space-y-2">
+            {byCat.get(cat)!.map((r, i) => <XrefRow key={i} r={r} />)}
+          </ul>
+        </div>
+      ))}
+      {x.unresolved.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface-2 p-4">
+          <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">Not found</div>
+          <ul className="space-y-2">
+            {x.unresolved.map((u, i) => (
+              <li key={i} className="flex items-center gap-2.5 text-[12px]">
+                <CircleX className="w-3.5 h-3.5 text-fg-subtle shrink-0" />
+                <span className="text-fg">{u.label}</span>
+                <span className="text-fg-subtle truncate">· {u.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TimeseriesPanel({ t }: { t: CompanyTimeseries }) {
   return (
     <div className="mt-5 space-y-4">
@@ -1502,6 +1580,9 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy, onReportCorr
 
         {result.companyAlias && (
           <CompanyAliasPanel a={result.companyAlias} />
+        )}
+        {result.xref && (
+          <XrefPanel x={result.xref} />
         )}
 
         {result.fuzzy && (

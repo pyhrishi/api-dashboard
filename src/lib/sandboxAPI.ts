@@ -32,6 +32,7 @@ import { resolveByEmailHash } from '@/lib/hashed-email-resolver';
 import { fuzzyMatch } from '@/lib/fuzzy-matcher';
 import { deduplicateRecords } from '@/lib/entity-dedup';
 import { resolveZinbitId } from '@/lib/zinbit-id';
+import { resolveCrossReference } from '@/lib/xref-resolver';
 import { canonicalizeName } from '@/lib/name-canonicalizer';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { getBounce, isSuppressed } from '@/lib/gateway/bounceFeedback';
@@ -799,6 +800,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...zid };
+    }
+
+    case 'identity-xref': {
+      // Cross-reference ID mapping (F-039) — single source of truth.
+      const xref = resolveCrossReference(String(parameters.query || ''));
+      if (!xref) {
+        return {
+          success: false,
+          error: { code: 'INVALID_PARAMETERS', message: 'Could not resolve that identifier to a known entity. Try a corporate email, a company domain, a company name or ticker, a profile URL, or a Zinbit ID.' },
+        };
+      }
+      return { success: true, ...xref };
     }
 
     case 'name-canonicalize': {

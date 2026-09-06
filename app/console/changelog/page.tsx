@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.65', date: 'September 2026', headline: 'Cross-reference ID mapping',
+    changes: [
+      { kind: 'feature', text: 'Cross-reference ID mapping — a new GET /v1/identity/xref (plus an "ID Map" console page and a Studio lookup) turns any identifier into the same entity’s ID in every system. Paste a domain, a corporate email, a company name or ticker, a LinkedIn or Crunchbase URL, a Salesforce/HubSpot record ID, a DUNS number, or a Zinbit ID, and get back the full cross-reference map — CRM, data providers, social, registries, and financial — each ID with a resolvable public URL where one exists, all unified under one persistent Zinbit ID.' },
+      { kind: 'improvement', text: 'Navigable in both directions: forward inputs (email → person, domain/name/ticker → company) resolve directly, and opaque IDs (a bare Salesforce/HubSpot/DUNS or a Zinbit ID) reverse-resolve back to the same entity, with the matched reference highlighted. Real fields (LinkedIn/X/GitHub, tickers) come straight from the shared resolvers and every synthetic ID is a frozen, deterministic function of the entity — so the map always agrees with a direct lookup. Copy any ID or export the whole map as JSON. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.64', date: 'September 2026', headline: 'Domain-to-employer linking',
     changes: [
       { kind: 'feature', text: 'Domain-to-employer linking — a new GET /v1/domains/employer (and a "Domain → employer" Studio lookup) classifies any domain or email (corporate, personal mailbox provider, disposable, subsidiary/brand, educational, government, or parked) and links it to the real employer. A subsidiary or brand domain rolls up to its parent employer via the company hierarchy, so a contact at a regional entity attributes to the right company.' },

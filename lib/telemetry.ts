@@ -127,7 +127,11 @@ export type TelemetryEventName =
   | 'accounts_grouped'
   // identity — historical identity graph (F-035)
   | 'identity_history_viewed'
-  | 'identity_history_resolved';
+  | 'identity_history_resolved'
+  // identity — cross-reference ID mapping (F-039)
+  | 'cross_reference_viewed'
+  | 'cross_reference_resolved'
+  | 'cross_reference_exported';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

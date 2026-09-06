@@ -16,6 +16,7 @@ import type { NormalizedText } from '@/lib/text-normalizer';
 import type { BuyerIntentProfile } from '@/lib/intent-resolver';
 import type { CompanyTimeseries } from '@/lib/company-timeseries-resolver';
 import type { CompanyAliasResolution } from '@/lib/company-alias-resolver';
+import type { XrefResolution } from '@/lib/xref-resolver';
 import { zidForPerson, zidForCompany } from '@/lib/zinbit-id';
 
 export type InputKind = 'email' | 'domain' | 'phone' | 'linkedin' | 'cin' | 'din' | 'ip' | 'title' | 'auto';
@@ -81,6 +82,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'fuzzy', endpointId: 'fuzzy-match', param: 'query', inputKind: 'auto', icon: 'GitCompareArrows', category: 'identity', examples: ['Jhon Smith, Stipe', 'Bob Johnson, Datadog', 'Micheal Chen, notion'], label: 'Fuzzy match' },
   { id: 'dedupe', endpointId: 'records-dedupe', param: 'records', inputKind: 'auto', icon: 'Layers', category: 'identity', examples: ['John Smith, Stripe; Jhon Smith, Stipe; Jane Doe, Acme', 'Bob Johnson, Datadog; Robert Johnson, datadoghq.com; Bob Johnson, Datadog Inc'], label: 'De-duplicate records' },
   { id: 'zid', endpointId: 'identity-zid', param: 'query', inputKind: 'auto', icon: 'Fingerprint', category: 'identity', examples: ['jane.doe@acme.com', 'marcus@stripe.com', 'stripe.com'], label: 'Persistent Zinbit ID' },
+  { id: 'xref', endpointId: 'identity-xref', param: 'query', inputKind: 'auto', icon: 'Waypoints', category: 'identity', examples: ['stripe.com', 'SHOP', 'jane.doe@acme.com'], label: 'Cross-reference ID map' },
   { id: 'canonicalize', endpointId: 'name-canonicalize', param: 'name', inputKind: 'auto', icon: 'SpellCheck', category: 'person', examples: ['SMITH, Bob', "mary jane o'brien", 'Dr. josé garcía jr.'], label: 'Canonicalize name' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
@@ -406,6 +408,8 @@ export interface EnrichmentResult {
   timeseries?: CompanyTimeseries;
   /** Company alias resolution (F-031) — rendered as a canonical-company panel. */
   companyAlias?: CompanyAliasResolution;
+  /** Cross-reference ID map (F-039) — rendered as a category-grouped ID graph. */
+  xref?: XrefResolution;
   /** Structured fuzzy-match result (F-024) — rendered as a ranked candidate list. */
   fuzzy?: FuzzyMatchView;
   /** Structured name-canonicalization result (F-030) — rendered as parsed forms + a change log. */
@@ -1012,6 +1016,31 @@ function companyAliasToResult(d: Record<string, unknown>): EnrichmentResult {
     companyAlias: a,
     confidence: typeof a.confidence === 'number' ? a.confidence : undefined,
     links: a.resolved ? [{ label: 'Enrich company', href: `/console/studio?preset=company` }] : undefined,
+    raw: d,
+  };
+}
+
+/** Cross-reference ID map (F-039): one identifier → the same entity's ID in every system. */
+function xrefToResult(d: Record<string, unknown>): EnrichmentResult {
+  const x = d as unknown as XrefResolution;
+  const refs = Array.isArray(x.references) ? x.references : [];
+  const withUrl = refs.filter((r) => r.url).length;
+  return {
+    kind: x.entity_type === 'person' ? 'person' : 'company',
+    title: x.canonical || x.zinbit_id || 'Entity',
+    subtitle: `${x.display} · ${refs.length} cross-references across ${new Set(refs.map((r) => r.category)).size} systems`,
+    avatar: initialsOf(x.canonical || 'ID'),
+    badges: [x.input_system, x.resolution_path].filter(Boolean),
+    fields: [
+      { label: 'Zinbit ID', value: x.zinbit_id, mono: true, verified: true },
+      { label: 'Matched on', value: x.input_system },
+      { label: 'Systems mapped', value: `${refs.length} (${withUrl} with public URL)` },
+      { label: 'Resolution', value: x.resolution_path === 'reverse' ? 'reverse (ID → entity)' : 'forward (input → entity)' },
+    ],
+    chips: refs.length ? { label: `Maps to ${refs.length} systems`, items: refs.map((r) => `${r.label}: ${r.id}`) } : undefined,
+    xref: x,
+    confidence: typeof x.confidence === 'number' ? x.confidence : undefined,
+    links: [{ label: 'Persistent Zinbit ID', href: `/console/studio?preset=zid` }],
     raw: d,
   };
 }
@@ -1649,6 +1678,9 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (isRecord(data.components) && typeof data.canonical === 'string' && Array.isArray(data.changes)) return nameCanonicalToResult(data);
   // Entity de-duplication: a `clusters` array + numeric `dedup_rate` mark the shape.
   if (Array.isArray(data.clusters) && typeof data.dedup_rate === 'number') return dedupToResult(data);
+  // Cross-reference ID map (F-039): a `zinbit_id` + a `references` array + an
+  // `input_system`. Must precede the Zinbit ID check (both carry `zinbit_id`).
+  if (typeof data.zinbit_id === 'string' && Array.isArray(data.references) && typeof data.input_system === 'string') return xrefToResult(data);
   // Persistent Zinbit ID: a `zinbit_id` string + an `aliases` array mark the shape.
   if (typeof data.zinbit_id === 'string' && Array.isArray(data.aliases)) return zidToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.

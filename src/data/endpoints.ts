@@ -1405,6 +1405,36 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'identity-xref',
+    name: 'Cross-reference ID mapping',
+    description: "Map any identifier from any system to the same canonical entity and get back its ID everywhere else. Paste a corporate email, a company domain, a company name or ticker, a LinkedIn or Crunchbase URL, a Salesforce/HubSpot record ID, a DUNS number, an Apollo/PDL id, a GitHub org, an X handle, or a Zinbit ID — the response returns the entity's persistent Zinbit ID plus its identifier in every other system (CRM, data providers, social, registry, financial), each with a resolvable public URL where one exists, provenance, and a confidence. The ID Rosetta Stone for joining and de-duping records across your whole stack.",
+    method: 'GET',
+    path: '/v1/identity/xref',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'query',
+        type: 'string',
+        required: true,
+        description: 'Any identifier — email, domain, company name, ticker, a profile/permalink URL, a CRM/DUNS/provider id, or a Zinbit ID',
+        example: 'stripe.com',
+        placeholder: 'email · domain · name · ticker · URL · CRM/DUNS id · Zinbit ID',
+        maxLength: 200,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'xref-to-zid',
+        title: 'Key on the Zinbit ID',
+        description: 'Use the persistent Zinbit ID as the join key across every source in the map.',
+        category: 'sdks',
+        link: '/console/studio?preset=zid',
+      },
+    ],
+  },
+
+  {
     id: 'name-canonicalize',
     name: 'Name Canonicalization',
     description: "Normalize any spelling, casing, ordering, or accenting of a personal name into one canonical form. Returns the canonical \"First Last\", an ASCII-folded form, a formal form (with prefix + suffix), the parsed components (prefix / first / middle / last / suffix), and a log of exactly what changed — reordering, nickname expansion (Bob → Robert), typo fixes, diacritic folding, and surname casing (McDonald, O'Brien, van der Berg).",
