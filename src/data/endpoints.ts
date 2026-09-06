@@ -1818,6 +1818,26 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'coalescing-stats',
+    name: 'Request Coalescing',
+    description: "Read the request-coalescing (single-flight) registry (F-068): waves collapsed, upstream calls saved, credits saved, largest wave, and any in-flight waves right now. When identical GET requests are in flight at the same moment (a cache stampede or a retry storm), only the first does the work — the rest coalesce onto it and share the one result, not re-billed and not re-computed. POST { path, concurrency } to fire a drill that proves N truly-concurrent calls collapse to a single upstream call. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/coalescing',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'coalescing-to-console',
+        title: 'Open the Request Coalescing console',
+        description: 'Watch waves collapse live and run a coalescing drill.',
+        category: 'sdks',
+        link: '/console/coalescing',
+      },
+    ],
+  },
+
+  {
     id: 'compression-stats',
     name: 'Compression Savings',
     description: "Read cumulative payload-compression savings (F-080): total bytes saved, overall ratio, and a per-encoding breakdown (Brotli / Gzip / uncompressed). To compress a response, send an `Accept-Encoding: br` (or `gzip`) header on any request — the gateway picks the best encoding you offered (Brotli preferred), sets Content-Encoding + Vary, and reports X-Uncompressed-Bytes / X-Compressed-Bytes / X-Compression-Ratio. Small payloads pass through uncompressed. Free, keyless-billed.",

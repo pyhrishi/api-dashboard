@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces, Merge } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -74,6 +74,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Result Delivery', href: '/console/webhook-deliveries', icon: <Webhook className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Streaming', href: '/console/stream', icon: <Radio className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Idempotency', href: '/console/idempotency', icon: <Repeat2 className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Request Coalescing', href: '/console/coalescing', icon: <Merge className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Field Selection', href: '/console/field-selection', icon: <ListFilter className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Query Builder', href: '/console/query', icon: <Filter className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Compression', href: '/console/compression', icon: <Archive className="w-5 h-5" />, roles: ['admin', 'developer'] },

@@ -150,7 +150,10 @@ export type TelemetryEventName =
   // developer experience — GraphQL gateway (F-065)
   | 'graphql_explorer_viewed'
   | 'graphql_query_run'
-  | 'graphql_query_failed';
+  | 'graphql_query_failed'
+  // reliability — request coalescing (F-068)
+  | 'coalescing_viewed'
+  | 'coalescing_drill_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

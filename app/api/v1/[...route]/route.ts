@@ -10,6 +10,7 @@ import { addSuppression, removeSuppression, checkSuppression, getSuppressionStat
 import { parseFields, projectFields, applySparseDiscount, sparseDiscountPct, payloadBytes } from '@/lib/gateway/fieldSelection';
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
+import { getCoalescingStats, runCoalescingDrill } from '@/lib/gateway/coalescing';
 import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gateway/upstreams';
 import { getDeliveryStats, replayDelivery } from '@/lib/gateway/webhookDelivery';
 import { buildDebugEcho } from '@/lib/gateway/debugEcho';
@@ -548,6 +549,37 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
     return NextResponse.json(
       { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/circuits (state) or POST /v1/circuits (force a drill).' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
+  // Request coalescing / single-flight (F-068) — GET reads the registry (waves
+  // collapsed, upstream calls + credits saved, in-flight now); POST fires a drill
+  // of N truly-concurrent identical requests to prove they collapse to one upstream
+  // call. Free meta endpoint; handled before route resolution + billing.
+  if (path === '/v1/coalescing') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getCoalescingStats(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'POST') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const body = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as Record<string, unknown>;
+      const drillPath = typeof body.path === 'string' && body.path.trim() ? body.path.trim() : '/v1/companies/enrich';
+      const concurrency = typeof body.concurrency === 'number' ? body.concurrency : 12;
+      const apiKeyHeader = request.headers.get('x-api-key') || request.headers.get('authorization') || 'drill';
+      const result = await runCoalescingDrill(apiKeyHeader, drillPath, concurrency, 1);
+      return NextResponse.json(
+        { success: true, data: { ...result, stats: getCoalescingStats() }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/coalescing (stats) or POST /v1/coalescing (run a drill).' } },
       { status: 405, headers: responseHeaders },
     );
   }

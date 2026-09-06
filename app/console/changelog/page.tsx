@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.71', date: 'September 2026', headline: 'Request coalescing',
+    changes: [
+      { kind: 'feature', text: 'Request coalescing (single-flight) — when identical GET requests are in flight at the same instant (a cache stampede, a fan-out from many workers, a retry storm), only the first does the work; the rest coalesce onto it and share the one result — not re-computed, not re-billed. A new Request Coalescing console and GET /v1/coalescing show waves collapsed, upstream calls saved, and credits saved, with any in-flight waves live.' },
+      { kind: 'improvement', text: 'Prove it in one click: POST /v1/coalescing (or the console\'s "Run drill" button) fires N truly-concurrent identical requests and shows them collapse to a single upstream call. It\'s the concurrency-time complement to the edge cache — the cache dedupes completed work, coalescing dedupes work that is still happening. Real single-flight implementation, unit-tested under concurrency.' },
+    ],
+  },
+  {
     version: 'v4.70', date: 'September 2026', headline: 'GraphQL gateway',
     changes: [
       { kind: 'feature', text: 'GraphQL gateway — query exactly the enrichment graph you need in one call. A new POST /api/graphql (and a GraphQL console at /console/graphql) exposes a typed schema over the same enrichment resolvers: resolve a person, walk to their employer, and select only the fields you want — one round-trip, no over-fetching. GET /api/graphql returns the SDL.' },
