@@ -1736,6 +1736,26 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=canonicalize',
       },
     ],
+  },
+
+  {
+    id: 'idempotency-stats',
+    name: 'Idempotency Registry',
+    description: "Read the idempotency registry (F-061): active keys, replays served, and the credits those replays saved. To make a pipeline write idempotent (e.g. batch enrichment), send an `Idempotency-Key: <uuid>` header on the POST — the first call runs and its response is stored for 24h; any retry with the same key replays that exact response, not re-processed and not re-billed (X-Idempotency-Replayed: true). Reusing a key with a different request body returns 409 IDEMPOTENCY_KEY_REUSED. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/idempotency',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'idempotency-to-console',
+        title: 'Open the Idempotency console',
+        description: 'See active keys, replays, and credits saved with live TTL countdowns.',
+        category: 'sdks',
+        link: '/console/idempotency',
+      },
+    ],
   }
 ];
 

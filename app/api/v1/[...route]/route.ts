@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveEndpoint } from '@/lib/gateway/router';
 import { logRequest } from '@/lib/gateway/logger';
-import { checkCache, setCache, generateCacheKey, checkIdempotency, setIdempotency } from '@/lib/gateway/cache';
+import { checkCache, setCache, generateCacheKey } from '@/lib/gateway/cache';
+import { checkIdempotency, storeIdempotency, fingerprintRequest, getIdempotencyStats } from '@/lib/gateway/idempotency';
 import { checkNegativeCache, recordNegativeMiss, registerNegativeHit, getNegativeCacheStats } from '@/lib/gateway/negativeCache';
 import { getBounceStats, recordBounce, isSuppressed, type BounceType } from '@/lib/gateway/bounceFeedback';
 import { getCorrectionStats, recordCorrection } from '@/lib/gateway/corrections';
@@ -473,6 +474,22 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     );
   }
 
+  // Idempotency registry stats (F-061) — active keys, replays served, and credits
+  // saved by replays. Free meta endpoint; handled before route resolution + billing.
+  if (path === '/v1/idempotency') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getIdempotencyStats(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/idempotency. To create an idempotent write, send an Idempotency-Key header on any POST.' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
   // 1. Route resolution
   const endpoint = resolveEndpoint(path);
 
@@ -624,10 +641,24 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   let cacheHeader = 'MISS';
   let isIdempotentReplay = false;
 
-  if (request.method === 'POST' && idempotencyKey) {
-    const idemResult = checkIdempotency(apiKey, idempotencyKey);
-    if (idemResult.hit && !simulateStatus) {
-      result = { status: 200, data: idemResult.payload, duration: 5, timestamp: Date.now() } as APIResponse;
+  const idempotencyFingerprint = idempotencyKey ? fingerprintRequest(request.method, path, parameters) : '';
+  if (request.method === 'POST' && idempotencyKey && !simulateStatus) {
+    const idem = checkIdempotency(apiKey, idempotencyKey, idempotencyFingerprint);
+    if (idem.status === 'conflict') {
+      // Same key, different request body — a client bug. Reject rather than replay stale data.
+      responseHeaders['X-Idempotency-Key'] = idempotencyKey;
+      responseHeaders['X-Idempotency-Replayed'] = 'false';
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'IDEMPOTENCY_KEY_REUSED',
+          message: 'This Idempotency-Key was already used with a different request body. Use a new key for a different request, or resend the original request unchanged.',
+        },
+        metadata: { requestId, timestamp: Date.now() },
+      }, { status: 409, headers: responseHeaders });
+    }
+    if (idem.status === 'replay') {
+      result = { status: idem.httpStatus, data: idem.payload, duration: 5, timestamp: Date.now() } as APIResponse;
       isIdempotentReplay = true;
     }
   }
@@ -818,7 +849,13 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
         if (request.method === 'GET' && cacheHeader !== 'STALE') {
           setCache(cacheKey, result.data);
         } else if (request.method === 'POST' && idempotencyKey) {
-          setIdempotency(apiKey, idempotencyKey, result.data);
+          storeIdempotency(apiKey, idempotencyKey, {
+            payload: result.data,
+            status: result.status,
+            fingerprint: idempotencyFingerprint,
+            path,
+            creditCost: appliedCreditCost,
+          });
         }
       }
 
@@ -839,8 +876,9 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     responseHeaders['X-Negative-Cache'] = 'MISS';
   }
   responseHeaders['X-Trace-Id'] = traceId;
-  if (isIdempotentReplay) {
-    responseHeaders['X-Idempotency-Replayed'] = 'true';
+  if (idempotencyKey) {
+    responseHeaders['X-Idempotency-Key'] = idempotencyKey;
+    responseHeaders['X-Idempotency-Replayed'] = isIdempotentReplay ? 'true' : 'false';
   }
 
   const duration = Date.now() - startTime;

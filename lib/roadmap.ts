@@ -1126,6 +1126,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-052', // Suppression list honoring — src/lib/gateway/suppressionList.ts do-not-contact registry + GET/POST/DELETE /v1/suppression + pre-billing enforcement gate (email/domain lookups return "suppressed, details withheld" at 0 credits)
   'F-055', // Quality SLA dashboard — /console/quality-sla (lib/quality-sla.ts) — 6 quality metrics vs committed targets, met/at-risk/breached, 30-day trend + breach log; single-sourced from region-coverage + health
   'F-057', // Encoding & language normalization — lib/text-normalizer.ts SSOT (mojibake repair + NFC + script detect/transliterate + language hint) + GET /v1/text/normalize + Studio panel; wired upstream of name canonicalization
+  'F-061', // Idempotency keys — src/lib/gateway/idempotency.ts SSOT (fingerprint + conflict 409 + credits-saved stats) + pipeline replay (no re-bill) + GET /v1/idempotency + /console/idempotency
 ]);
 
 export function isFeatureBuilt(id: string): boolean {

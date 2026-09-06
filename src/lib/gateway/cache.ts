@@ -66,35 +66,4 @@ export function setCache(cacheKey: string, payload: unknown, ttlSeconds: number 
   });
 }
 
-// Store for idempotency keys
-const idempotencyStore = new Map<string, CacheEntry>();
-
-/**
- * Check if an idempotency key has been used (within 24h).
- */
-export function checkIdempotency(apiKey: string, idempotencyKey: string): CacheResult {
-  const key = `${apiKey}::${idempotencyKey}`;
-  const entry = idempotencyStore.get(key);
-
-  if (!entry) {
-    return { hit: false };
-  }
-
-  if (Date.now() > entry.expiresAt) {
-    idempotencyStore.delete(key);
-    return { hit: false };
-  }
-
-  return { hit: true, payload: entry.payload };
-}
-
-/**
- * Store the result against an idempotency key for 24h.
- */
-export function setIdempotency(apiKey: string, idempotencyKey: string, payload: unknown): void {
-  const key = `${apiKey}::${idempotencyKey}`;
-  idempotencyStore.set(key, {
-    payload,
-    expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
-  });
-}
+// Idempotency keys moved to their own SSOT — see src/lib/gateway/idempotency.ts (F-061).

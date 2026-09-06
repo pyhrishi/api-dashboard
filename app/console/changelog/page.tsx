@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.45', date: 'September 2026', headline: 'Idempotency keys',
+    changes: [
+      { kind: 'feature', text: 'Idempotency keys — retries are now safe. Send an `Idempotency-Key: <uuid>` header on a pipeline write (e.g. batch enrichment) and the first call runs normally while its response is stored for 24 hours; any retry with the same key replays that exact response, not re-processed and not re-charged (look for X-Idempotency-Replayed: true). A dropped connection or a nervous client retry can no longer double-charge — retrying a 500-domain batch replays the original instead of billing another 500 credits.' },
+      { kind: 'feature', text: 'Reusing a key with a different request body now returns 409 IDEMPOTENCY_KEY_REUSED instead of silently replaying stale data — so an idempotency key can never mask a genuinely different request. A new Idempotency console (/console/idempotency) shows active keys, replays served, the credits those replays saved, and a live TTL countdown per key.' },
+      { kind: 'improvement', text: 'A free GET /v1/idempotency reads the registry (active keys, replays, credits saved). Idempotency is single-sourced in src/lib/gateway/idempotency.ts and consulted before billing, so a replay is genuinely free. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.44', date: 'September 2026', headline: 'Encoding & language normalization',
     changes: [
       { kind: 'feature', text: 'Encoding & language normalization — a new GET /v1/text/normalize (and a "Normalize text" Studio tool) enforces UTF-8 and cleans up messy real-world text. It repairs mojibake (JosÃ© → José, itâ€™s → it’s), composes to Unicode NFC, strips zero-width and control characters, and collapses whitespace — returning one canonical UTF-8 form plus the exact list of transformations it applied.' },

@@ -82,7 +82,9 @@ export type TelemetryEventName =
   // data quality — user-reported corrections (F-046)
   | 'corrections_viewed'
   | 'correction_reported'
-  | 'correction_reviewed';
+  | 'correction_reviewed'
+  // reliability — idempotency keys (F-061)
+  | 'idempotency_viewed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
