@@ -85,6 +85,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'catch-all', endpointId: 'catch-all-detect', param: 'domain', inputKind: 'domain', icon: 'MailQuestion', category: 'company', examples: ['stripe.com', 'acme.com', 'datadoghq.com'], label: 'Catch-all detection' },
   { id: 'text-normalize', endpointId: 'text-normalize', param: 'text', inputKind: 'title', icon: 'Languages', category: 'identity', examples: ['JosÃ© GarcÃ­a', 'MÃ¼ller & CÃ´té', 'Пётр Ильич'], label: 'Normalize text' },
   { id: 'demographics', endpointId: 'people-demographics', param: 'email', inputKind: 'email', icon: 'IdCard', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'priya.nair@zomato.in'], label: 'Demographic append' },
+  { id: 'job-signals', endpointId: 'companies-job-signals', param: 'domain', inputKind: 'domain', icon: 'BriefcaseBusiness', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Job-posting growth' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -990,6 +991,36 @@ function demographicToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Job-posting growth signals (F-016): hiring as an expansion indicator. */
+function jobSignalsToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : 0);
+  const company = str('company') || str('domain') || 'Company';
+  const depts = Array.isArray(d.by_department) ? (d.by_department as { department: string; open: number; share_pct: number }[]) : [];
+  const signals = Array.isArray(d.signals) ? (d.signals as string[]) : [];
+  const topDept = depts[0];
+  const fundingCtx = str('funding_context');
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: `Hiring · ${str('hiring_velocity')} · ${num('open_roles')} open roles`,
+    avatar: initialsOf(company),
+    badges: [str('hiring_velocity'), str('growth_tier'), fundingCtx].filter(Boolean),
+    fields: [
+      { label: 'Open roles', value: String(num('open_roles')) },
+      { label: 'Headcount growth', value: `~${num('headcount_growth_rate_pct')}% implied` },
+      { label: 'Net new (90d)', value: String(num('net_new_last_90d')) },
+      { label: 'Fastest-growing team', value: topDept ? `${topDept.department} · ${topDept.share_pct}% of roles` : '—' },
+      { label: 'Growth score', value: `${num('growth_score')}/100` },
+      { label: 'Departments hiring', value: depts.map((x) => `${x.department} (${x.open})`).join(', ') || '—' },
+    ],
+    chips: signals.length ? { label: 'Signals', items: signals } : undefined,
+    confidence: typeof d.confidence === 'number' ? (d.confidence as number) : undefined,
+    lastVerified: typeof d.as_of === 'string' ? (d.as_of as string) : undefined,
+    raw: d,
+  };
+}
+
 /** Probabilistic fuzzy matching (F-024): ranked candidates for a messy name + company. */
 function fuzzyToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1458,6 +1489,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   // compliance list mark the shape. Must precede the title check (it also carries
   // canonical_title + seniority).
   if (typeof data.seniority_tier === 'number' && Array.isArray(data.excluded_attributes)) return demographicToResult(data);
+  // Job-posting growth signals (F-016): open_roles + hiring_velocity + by_department.
+  if (typeof data.open_roles === 'number' && typeof data.hiring_velocity === 'string' && Array.isArray(data.by_department)) return jobSignalsToResult(data);
   if (typeof data.canonical_title === 'string' && typeof data.seniority === 'string') return titleToResult(data);
   // Firmographic append: naics_code + sic_code mark the shape.
   if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);

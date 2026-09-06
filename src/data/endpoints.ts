@@ -1894,6 +1894,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=person',
       },
     ],
+  },
+
+  {
+    id: 'companies-job-signals',
+    name: 'Job-Posting Growth Signals',
+    description: "Read a company's hiring as a growth signal (F-016): open-role count, hiring velocity (surging → frozen), implied headcount growth rate, a department-by-department breakdown of where they're hiring, the specific roles, locations, seniority mix, and plain-English signals. Where a company is hiring — and how fast — is one of the earliest expansion indicators. Reuses the funding signal, so a recent raise reads as accelerated hiring. Personal or unrecognized domains return no signals.",
+    method: 'GET',
+    path: '/v1/companies/job-signals',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'The company domain to read hiring/growth signals for.',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 253,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'job-signals-to-intent',
+        title: 'Cross-check buyer intent',
+        description: 'Hiring plus in-market intent is a strong expansion signal.',
+        category: 'sdks',
+        link: '/console/studio?preset=intent',
+      },
+    ],
   }
 ];
 

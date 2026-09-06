@@ -15,6 +15,7 @@ import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { resolveCompanyHierarchy } from '@/lib/company-hierarchy';
 import { appendDemographics } from '@/lib/demographic-resolver';
+import { resolveJobGrowthSignals } from '@/lib/job-signal-resolver';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -532,6 +533,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...demo };
+    }
+
+    case 'companies-job-signals': {
+      // Deterministic hiring/growth signals (single source of truth).
+      const jobs = resolveJobGrowthSignals(String(parameters.domain || ''));
+      if (!jobs) {
+        return {
+          success: false,
+          error: { code: 'NO_SIGNALS', message: 'No hiring signals could be resolved. Provide a valid company domain (personal mailbox domains have no hiring footprint).' },
+        };
+      }
+      return { success: true, ...jobs };
     }
 
     case 'company-hierarchy': {

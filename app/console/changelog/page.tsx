@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.57', date: 'September 2026', headline: 'Job-posting growth signals',
+    changes: [
+      { kind: 'feature', text: 'Job-posting growth signals — read a company’s hiring as a growth signal. A new GET /v1/companies/job-signals (and a "Job-posting growth" Studio lookup) returns open-role count, hiring velocity (surging → frozen), implied headcount-growth rate, a department-by-department breakdown of where they’re hiring, the specific roles, locations, seniority mix, and plain-English signals. Where a company is hiring — and how fast — is one of the earliest expansion indicators for prospecting and account scoring.' },
+      { kind: 'improvement', text: 'Coherent with the rest of the platform: the signal reuses the real company and funding resolvers, so a recently-funded company reads as accelerated hiring — funding, firmographics, and growth tell one story. Deterministic (the same domain always resolves the same), state-aware, and unit-tested. Personal or unrecognized domains return no signals.' },
+    ],
+  },
+  {
     version: 'v4.56', date: 'September 2026', headline: 'Person demographic append',
     changes: [
       { kind: 'feature', text: 'Demographic append — a new GET /v1/people/demographics (and a "Demographic append" Studio lookup) appends a contact’s professional demographics from just their email: seniority tier, department, job function, management level, decision-making / buying role, years of experience and tenure, education and field of study, top skills, and a composite seniority score you can lead-score on.' },
