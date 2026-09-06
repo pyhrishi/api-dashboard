@@ -91,6 +91,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'demographics', endpointId: 'people-demographics', param: 'email', inputKind: 'email', icon: 'IdCard', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'priya.nair@zomato.in'], label: 'Demographic append' },
   { id: 'job-signals', endpointId: 'companies-job-signals', param: 'domain', inputKind: 'domain', icon: 'BriefcaseBusiness', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Job-posting growth' },
   { id: 'merchant', endpointId: 'companies-merchant', param: 'domain', inputKind: 'domain', icon: 'Store', category: 'company', examples: ['allbirds.com', 'chewy.com', 'peloton.com'], label: 'Ecommerce merchant' },
+  { id: 'domain-employer', endpointId: 'domain-employer', param: 'domain', inputKind: 'domain', icon: 'Building2', category: 'company', examples: ['jane@stripe.com', 'gmail.com', 'user@mailinator.com'], label: 'Domain → employer' },
 ];
 
 /** Build the full preset list, merging each config with its endpoint from the catalog. */
@@ -1123,6 +1124,37 @@ function merchantToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Domain-to-employer link (F-037): classify a domain and link it to the employer. */
+function domainEmployerToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const domain = str('domain');
+  const type = str('domain_type');
+  const isEmployer = d.is_employer_domain === true;
+  const employer = isRecord(d.employer) ? (d.employer as Record<string, unknown>) : null;
+  const empName = employer && typeof employer.name === 'string' ? employer.name : null;
+  const signals = Array.isArray(d.signals) ? (d.signals as string[]) : [];
+  return {
+    kind: 'company',
+    title: empName ?? domain,
+    subtitle: `${titleCase(type)}${empName ? ` · employer: ${empName}` : ' · no employer'}`,
+    avatar: initialsOf(empName ?? domain),
+    badges: [titleCase(type), isEmployer ? 'Employer domain' : 'Not an employer', employer && typeof employer.relationship === 'string' ? titleCase(employer.relationship as string) : ''].filter(Boolean),
+    fields: [
+      { label: 'Domain', value: domain, mono: true },
+      { label: 'Classification', value: titleCase(type) },
+      { label: 'Employer', value: empName ?? '— (not derivable from domain)' },
+      ...(employer && typeof employer.canonical_domain === 'string' ? [{ label: 'Canonical domain', value: employer.canonical_domain as string, mono: true }] : []),
+      ...(employer && typeof employer.industry === 'string' ? [{ label: 'Industry', value: employer.industry as string }] : []),
+      ...(employer && typeof employer.employee_band === 'string' ? [{ label: 'Size', value: `${employer.employee_band} employees` }] : []),
+      { label: 'Guidance', value: str('guidance') },
+    ],
+    chips: signals.length ? { label: 'Signals', items: signals } : undefined,
+    confidence: typeof d.confidence === 'number' ? (d.confidence as number) : undefined,
+    lastVerified: typeof d.as_of === 'string' ? (d.as_of as string) : undefined,
+    raw: d,
+  };
+}
+
 /** Probabilistic fuzzy matching (F-024): ranked candidates for a messy name + company. */
 function fuzzyToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -1595,6 +1627,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.open_roles === 'number' && typeof data.hiring_velocity === 'string' && Array.isArray(data.by_department)) return jobSignalsToResult(data);
   // Ecommerce merchant enrichment (F-017): is_merchant + platform + merchant_confidence.
   if (typeof data.is_merchant === 'boolean' && typeof data.platform === 'string' && typeof data.merchant_confidence === 'number') return merchantToResult(data);
+  // Domain-to-employer link (F-037): domain_type + is_employer_domain mark the shape.
+  if (typeof data.domain_type === 'string' && typeof data.is_employer_domain === 'boolean' && typeof data.guidance === 'string') return domainEmployerToResult(data);
   if (typeof data.canonical_title === 'string' && typeof data.seniority === 'string') return titleToResult(data);
   // Firmographic append: naics_code + sic_code mark the shape.
   if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);

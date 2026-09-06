@@ -19,6 +19,7 @@ import { resolveJobGrowthSignals } from '@/lib/job-signal-resolver';
 import { enrichMerchant } from '@/lib/ecommerce-merchant-resolver';
 import { groupIntoAccounts } from '@/lib/account-grouping';
 import { resolveIdentityHistory } from '@/lib/identity-history-resolver';
+import { linkDomainToEmployer } from '@/lib/domain-employer-linker';
 import { detectTechnographics } from '@/lib/technographic-resolver';
 import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { resolveOfficeGeography } from '@/lib/hq-geo-resolver';
@@ -600,6 +601,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...jobs };
+    }
+
+    case 'domain-employer': {
+      // Deterministic domain classification + employer link (single source of truth).
+      const link = linkDomainToEmployer(String(parameters.domain || ''));
+      if (!link) {
+        return {
+          success: false,
+          error: { code: 'INVALID_DOMAIN', message: 'Provide a valid domain or email to classify and link to an employer.' },
+        };
+      }
+      return { success: true, ...link };
     }
 
     case 'people-identity-history': {

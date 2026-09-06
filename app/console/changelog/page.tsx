@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.64', date: 'September 2026', headline: 'Domain-to-employer linking',
+    changes: [
+      { kind: 'feature', text: 'Domain-to-employer linking — a new GET /v1/domains/employer (and a "Domain → employer" Studio lookup) classifies any domain or email (corporate, personal mailbox provider, disposable, subsidiary/brand, educational, government, or parked) and links it to the real employer. A subsidiary or brand domain rolls up to its parent employer via the company hierarchy, so a contact at a regional entity attributes to the right company.' },
+      { kind: 'improvement', text: 'Honest by default: a free mailbox (gmail.com) or a disposable address is flagged as such with no employer and clear guidance, rather than inventing a company — the opposite of tools that guess. Built on the shared company + hierarchy resolvers and the disposable detector, so the link agrees with a direct lookup. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.63', date: 'September 2026', headline: 'Historical identity graph',
     changes: [
       { kind: 'feature', text: 'Identity history — see how a contact’s identity changed over their career. A new GET /v1/people/identity-history (and an Identity History console at /console/identity-history) reconstructs the person’s timeline: the companies they worked at, the emails and titles they held, and the typed transitions between them (job change, promotion, relocation, email change) — rendered as a career timeline.' },

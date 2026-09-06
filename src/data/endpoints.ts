@@ -2111,6 +2111,36 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/studio?preset=zid',
       },
     ],
+  },
+
+  {
+    id: 'domain-employer',
+    name: 'Domain-to-Employer Link',
+    description: "Classify a domain and link it to the real employer (F-037). Pass a domain or an email and the gateway classifies it — corporate, personal mailbox provider, disposable, subsidiary/brand, educational, or government — and, when it's an employer domain, links it to the employing company, rolling a subsidiary/brand domain up to its parent employer. Free mailboxes and disposable addresses are flagged honestly with no employer, rather than guessing.",
+    method: 'GET',
+    path: '/v1/domains/employer',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'A domain or email to classify and link to an employer.',
+        example: 'jane@stripe.com',
+        placeholder: 'company.com or user@company.com',
+        maxLength: 254,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'domain-employer-to-hierarchy',
+        title: 'See the employer\'s corporate family',
+        description: 'Expand the linked employer into its full org tree.',
+        category: 'sdks',
+        link: '/console/hierarchy',
+      },
+    ],
   }
 ];
 
