@@ -1838,6 +1838,33 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'bulk-export',
+    name: 'Bulk export',
+    description: "Stream a filtered slice of your enriched data out in one call (F-076). Pick an entity (companies or people), narrow it with the same filter/sort grammar as the Query endpoint, select just the columns you want, and choose a format: NDJSON streams row-by-row (memory-flat at any size), CSV for spreadsheets, JSON for a quick load. Add &preview=1 for a free summary + sample (row counts, cost, fields) before you pull the full dataset. Billed per 50-row block; Content-Disposition returns it as a download.",
+    method: 'GET',
+    path: '/v1/export',
+    creditCost: 1,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      { name: 'entity', type: 'string', required: false, description: 'What to export: companies (default) or people', example: 'companies', placeholder: 'companies', maxLength: 20 },
+      { name: 'format', type: 'string', required: false, description: 'ndjson (default) · csv · json', example: 'ndjson', placeholder: 'ndjson', maxLength: 10 },
+      { name: 'filter', type: 'string', required: false, description: 'Filter clauses field:op:value, comma-separated (op: eq ne gt gte lt lte contains startsWith endsWith in)', example: 'hq_country:eq:United States', placeholder: 'industry:eq:Fintech', maxLength: 300 },
+      { name: 'sort', type: 'string', required: false, description: 'Sort fields, comma-separated; prefix - for descending', example: '-founded_year', placeholder: '-founded_year', maxLength: 120 },
+      { name: 'fields', type: 'string', required: false, description: 'Comma-separated columns to include (default: all)', example: 'domain,name,industry', placeholder: 'domain,name,industry', maxLength: 300 },
+      { name: 'limit', type: 'number', required: false, description: 'Max rows (capped at 500)', example: '100', placeholder: '100', maxLength: 4 },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'export-to-console',
+        title: 'Open the Bulk Export console',
+        description: 'Build filters, preview counts + cost, and download the dataset.',
+        category: 'sdks',
+        link: '/console/export',
+      },
+    ],
+  },
+
+  {
     id: 'compression-stats',
     name: 'Compression Savings',
     description: "Read cumulative payload-compression savings (F-080): total bytes saved, overall ratio, and a per-encoding breakdown (Brotli / Gzip / uncompressed). To compress a response, send an `Accept-Encoding: br` (or `gzip`) header on any request — the gateway picks the best encoding you offered (Brotli preferred), sets Content-Encoding + Vary, and reports X-Uncompressed-Bytes / X-Compressed-Bytes / X-Compression-Ratio. Small payloads pass through uncompressed. Free, keyless-billed.",

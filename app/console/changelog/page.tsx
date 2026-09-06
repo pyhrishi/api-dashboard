@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.73', date: 'September 2026', headline: 'Bulk export endpoint',
+    changes: [
+      { kind: 'feature', text: 'Bulk export — pull a filtered slice of your enriched data in one call. A new GET /v1/export (and a Bulk Export console) streams companies or people as NDJSON (row-by-row, memory-flat at any size), CSV, or JSON, narrowed with the same filter/sort grammar as the Query endpoint and projected to just the columns you choose. Add &preview=1 for a free summary — matched rows, credit cost, and a sample — before you pull the full dataset.' },
+      { kind: 'improvement', text: 'Know the cost before you commit: preview is free and reports exactly how many rows match and what the export will bill (per 50-row block). The console builds the query visually, shows a live sample table, and hands you a ready-to-run curl; downloads arrive as a named attachment. Reuses the shared query engine + field selection, so filters behave identically across the product. Deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.72', date: 'September 2026', headline: 'Regional API endpoints',
     changes: [
       { kind: 'feature', text: 'Regional API endpoints — pin your API traffic to a region for latency and data residency. Alongside the global host (which smart-routes to the nearest edge), you can now call region-pinned endpoints — us.api.zinbit.zintlr.com, eu.api.zinbit.zintlr.com, in.api.zinbit.zintlr.com — so every request, and the data it touches, stays in one region under that region\'s compliance regime (CCPA, GDPR, or DPDP). A new API Regions console shows each edge, its endpoint, its compliance frameworks, and a live latency test.' },

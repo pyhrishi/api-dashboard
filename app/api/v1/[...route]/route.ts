@@ -11,6 +11,7 @@ import { parseFields, projectFields, applySparseDiscount, sparseDiscountPct, pay
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
 import { getCoalescingStats, runCoalescingDrill } from '@/lib/gateway/coalescing';
+import { planExport, serializeExport } from '@/lib/gateway/bulkExport';
 import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gateway/upstreams';
 import { getDeliveryStats, replayDelivery } from '@/lib/gateway/webhookDelivery';
 import { buildDebugEcho } from '@/lib/gateway/debugEcho';
@@ -582,6 +583,74 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/coalescing (stats) or POST /v1/coalescing (run a drill).' } },
       { status: 405, headers: responseHeaders },
     );
+  }
+
+  // Bulk export (F-076) — stream a filtered dataset out as NDJSON / CSV / JSON.
+  // GET /v1/export?entity=&filter=&sort=&fields=&format=&limit= streams the data
+  // (billed per row-block); add &preview=1 for a free JSON summary + sample.
+  if (path === '/v1/export') {
+    if (request.method !== 'GET') {
+      return NextResponse.json(
+        { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/export with entity/filter/sort/fields/format/limit query params.' } },
+        { status: 405, headers: responseHeaders },
+      );
+    }
+    const sp = new URL(request.url).searchParams;
+    const { plan, error } = planExport({
+      entity: sp.get('entity') ?? undefined,
+      filter: sp.get('filter'),
+      sort: sp.get('sort'),
+      fields: sp.get('fields'),
+      format: sp.get('format'),
+      limit: sp.get('limit'),
+    });
+    if (!plan || error) {
+      return NextResponse.json(
+        { success: false, error: { code: 'INVALID_PARAMETERS', message: error ?? 'Could not plan the export.' } },
+        { status: 400, headers: responseHeaders },
+      );
+    }
+
+    // Preview: free JSON summary + a small sample, no billing.
+    if (sp.get('preview') === '1' || sp.get('preview') === 'true') {
+      responseHeaders['X-Credits-Cost'] = '0';
+      return NextResponse.json(
+        { success: true, data: { entity: plan.entity, format: plan.format, total: plan.total, matched: plan.matched, exported: plan.rows.length, cost: plan.cost, fields: plan.fields, warnings: plan.warnings, sample: plan.rows.slice(0, 5) }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+
+    // Real export: bill per row-block, then stream/serialize.
+    const charge = deductCredits(apiKey, plan.cost);
+    if (!charge.success) {
+      return NextResponse.json(
+        { success: false, error: { code: 'PAYMENT_REQUIRED', message: charge.error ?? `Insufficient credits for this export (${plan.cost}).` } },
+        { status: 402, headers: responseHeaders },
+      );
+    }
+    responseHeaders['X-Credits-Cost'] = String(plan.cost);
+    responseHeaders['X-Export-Rows'] = String(plan.rows.length);
+    responseHeaders['X-Export-Matched'] = String(plan.matched);
+    responseHeaders['Content-Disposition'] = `attachment; filename="${plan.filename}"`;
+
+    if (plan.format === 'ndjson') {
+      const encoder = new TextEncoder();
+      const rows = plan.rows;
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (let i = 0; i < rows.length; i++) controller.enqueue(encoder.encode(JSON.stringify(rows[i]) + '\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: { ...responseHeaders, 'Content-Type': plan.contentType, 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' },
+      });
+    }
+    return new Response(serializeExport(plan), {
+      status: 200,
+      headers: { ...responseHeaders, 'Content-Type': plan.contentType },
+    });
   }
 
   // Webhook-backed async results (F-072) — the delivery registry for job results

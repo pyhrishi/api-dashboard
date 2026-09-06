@@ -157,7 +157,10 @@ export type TelemetryEventName =
   // compliance — regional API endpoints (F-070)
   | 'api_regions_viewed'
   | 'region_latency_tested'
-  | 'data_residency_pinned';
+  | 'data_residency_pinned'
+  // data portability — bulk export endpoint (F-076)
+  | 'bulk_export_previewed'
+  | 'bulk_export_downloaded';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
