@@ -2,6 +2,7 @@ import { getEnrichmentPresets, getPresetById, detectInputKind, validateInput, to
 import { resolvePersonFromEmail } from '@/lib/person-resolver';
 import { resolveCompanyFromDomain } from '@/lib/company-resolver';
 import { discoverSocialProfiles } from '@/lib/social-resolver';
+import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 
@@ -80,6 +81,22 @@ describe('enrichment registry', () => {
     // Trusted domains tone success.
     const trusted = toEnrichmentResult({ ...detectDisposable('sam@gmail.com')! })!;
     expect(trusted.disposable?.tone).toBe('success');
+  });
+
+  it('maps a funding response to the structured timeline view-model (F-009)', () => {
+    const funding = resolveFundingForDomain('stripe.com')!;
+    const vm = toEnrichmentResult({ ...funding })!;
+    expect(vm.kind).toBe('company');
+    expect(vm.funding).toBeDefined();
+    expect(vm.funding?.hasFunding).toBe(true);
+    expect(vm.funding?.rounds.length).toBe(funding.rounds.length);
+    expect(vm.funding?.investors.length).toBe(funding.investor_count);
+    expect(vm.fields).toHaveLength(0); // rendered via the timeline panel
+    expect(vm.badges.some((b) => /round/.test(b))).toBe(true);
+    // A no-funding company yields the empty-state view, not rounds.
+    const boot = toEnrichmentResult({ ...resolveFundingForDomain('gmail.com')! })!;
+    expect(boot.funding?.hasFunding).toBe(false);
+    expect(boot.funding?.rounds).toHaveLength(0);
   });
 
   it('flattens a generic flat response into fields', () => {

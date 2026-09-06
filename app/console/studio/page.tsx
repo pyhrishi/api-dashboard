@@ -7,14 +7,14 @@ import {
   Sparkles, Search, ArrowRight, Copy, Check, Lock, ShieldCheck, Clock, Trash2, RefreshCw,
   ExternalLink, Info, Zap, Layers, UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3,
   Users, Code2, AtSign, Award, Newspaper, BadgeCheck, MailCheck, CircleCheck, CircleAlert, CircleX, CircleDot,
-  Cpu, Server, Database, Gauge, Lightbulb, Wallet,
+  Cpu, Server, Database, Gauge, Lightbulb, Wallet, Banknote,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useStore, type EnrichmentRecord } from '@/lib/store';
 import {
   getEnrichmentPresets, getPresetById, detectInputKind, validateInput, toEnrichmentResult, freshnessAgeLabel,
   type EnrichmentPreset, type EnrichmentResult, type SocialProfileView, type DeliverabilityView, type FieldFreshness, type DisposableView,
-  type TechnographicView, type ResultTone,
+  type TechnographicView, type ResultTone, type FundingView,
 } from '@/data/enrichments';
 import type { CompletenessScore } from '@/lib/completeness-scorer';
 import { consoleApiUrl, authHeaderValue } from '@/lib/api-config';
@@ -23,7 +23,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { PageHeader, KpiTile, GlassCard, Button, Input, StatusBadge, EmptyState, Skeleton, ConfirmAction } from '@/components/ui';
 import type { BadgeTone } from '@/components/ui';
 
-const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu };
+const ICONS: Record<string, React.ElementType> = { UserSearch, Building2, PhoneCall, Mail, Fingerprint, Landmark, Globe2, Network, Share2, Tags, BarChart3, MailCheck, ShieldCheck, BadgeCheck, Trash2, Sparkles, Cpu, Banknote };
 
 type Phase = 'idle' | 'running' | 'ok' | 'not_found' | 'error';
 
@@ -599,6 +599,80 @@ function TechnographicPanel({ t }: { t: TechnographicView }) {
   );
 }
 
+const ROUND_TONE: Record<string, string> = {
+  Seed: 'bg-fg-subtle', 'Series A': 'bg-teal', 'Series B': 'bg-teal', 'Series C': 'bg-semantic-success',
+  'Series D': 'bg-semantic-success', 'Series E': 'bg-semantic-success',
+};
+
+function FundingPanel({ f }: { f: FundingView }) {
+  if (!f.hasFunding) {
+    return (
+      <div className="mt-5 rounded-xl border border-border bg-surface-2 p-5 flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl bg-glass border border-border-subtle flex items-center justify-center shrink-0 text-fg-subtle"><Banknote className="w-4 h-4" /></div>
+        <div>
+          <div className="text-sm font-bold text-fg">No venture funding on record</div>
+          <p className="text-[13px] text-fg-muted mt-0.5">{f.noFundingReason || 'This company has no disclosed institutional funding rounds.'}</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-5 space-y-5">
+      {/* Headline */}
+      <div className="grid grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border">
+        {[
+          { label: 'Total raised', value: f.totalRaised },
+          { label: 'Stage', value: f.stage },
+          { label: 'Latest valuation', value: f.latestValuation ?? '—' },
+        ].map((s) => (
+          <div key={s.label} className="bg-surface-2 p-3.5">
+            <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-1">{s.label}</div>
+            <div className="text-lg font-black text-fg tabular-nums">{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Round timeline */}
+      <div>
+        <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-3">Round history</div>
+        <ol className="relative border-l border-border-subtle ml-2 space-y-4">
+          {f.rounds.map((r, i) => (
+            <motion.li key={r.stage + r.date} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }} className="ml-4">
+              <span className={`absolute -left-[5px] w-2.5 h-2.5 rounded-full ${ROUND_TONE[r.stage] ?? 'bg-teal'}`} aria-hidden />
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-fg">{r.stage}</span>
+                  <span className="text-[11px] text-fg-subtle">{r.date}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-black text-fg tabular-nums">{r.amount}</span>
+                  {r.valuation && <span className="text-[11px] text-fg-subtle">at {r.valuation} post</span>}
+                </div>
+              </div>
+              <div className="text-[12px] text-fg-muted mt-0.5">
+                Led by <span className="font-semibold text-fg">{r.lead}</span>
+                {r.investors.length > 1 && <span className="text-fg-subtle"> · with {r.investors.filter((x) => x !== r.lead).join(', ')}</span>}
+              </div>
+            </motion.li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Investor roster */}
+      {f.investors.length > 0 && (
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-fg-subtle mb-2">Investors ({f.investors.length})</div>
+          <div className="flex flex-wrap gap-1.5">
+            {f.investors.map((inv) => (
+              <span key={inv} className="text-[11px] font-semibold px-2 py-1 rounded-md bg-glass text-fg-muted border border-border-subtle">{inv}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
   result: EnrichmentResult; preset: EnrichmentPreset; isLive: boolean;
   meta: { durationMs?: number }; copied: string | null; onCopy: (t: string, id: string) => void;
@@ -671,6 +745,10 @@ function ResultCard({ result, preset, isLive, meta, copied, onCopy }: {
 
         {result.technographic && (
           <TechnographicPanel t={result.technographic} />
+        )}
+
+        {result.funding && (
+          <FundingPanel f={result.funding} />
         )}
 
         {result.chips && result.chips.items.length > 0 && (

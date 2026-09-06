@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.23', date: 'September 2026', headline: 'Funding & investment signals',
+    changes: [
+      { kind: 'feature', text: 'Funding & investment signals — turn a domain into a company\'s full funding story: a round-by-round history (Seed → Series E) with each round\'s date, amount, lead investor, participating investors, and post-money valuation, plus the deduplicated investor roster, total raised, and latest valuation. New GET /v1/companies/funding endpoint (2 credits), shipped as a Studio preset with a round-timeline panel.' },
+      { kind: 'improvement', text: 'Funding is anchored to the company graph — the same domain\'s firmographic stage caps the round ladder and the totals sum to the rounds, so funding and firmographics never disagree. Deterministic per domain; bootstrapped, public-only, and personal domains return a clean no-funding result instead of an error.' },
+    ],
+  },
+  {
     version: 'v4.22', date: 'September 2026', headline: 'Technographic detection',
     changes: [
       { kind: 'feature', text: 'Technographic detection — GET /v1/companies/technographics turns a domain into its technology stack, categorized (cloud & infrastructure, data & analytics, monitoring & security, CRM, payments, martech…). Every technology carries the method it was detected by (DNS record, HTTP header, JS fingerprint, job posting), a confidence, a vendor, and first/last-seen dates.' },

@@ -61,6 +61,7 @@ const PRESET_CONFIG: PresetConfig[] = [
   { id: 'title-normalize', endpointId: 'title-normalize', param: 'title', inputKind: 'title', icon: 'Tags', category: 'person', examples: ['VP, Engineering', 'Sr. SWE II', 'Head of Growth'], label: 'Normalize a title' },
   { id: 'firmographics', endpointId: 'firmographic-append', param: 'domain', inputKind: 'domain', icon: 'BarChart3', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Firmographic append' },
   { id: 'technographics', endpointId: 'technographic-detect', param: 'domain', inputKind: 'domain', icon: 'Cpu', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'shopify.com'], label: 'Technographic detection' },
+  { id: 'funding', endpointId: 'funding-signals', param: 'domain', inputKind: 'domain', icon: 'Banknote', category: 'company', examples: ['stripe.com', 'datadoghq.com', 'zomato.in'], label: 'Funding signals' },
   { id: 'email-verify', endpointId: 'email-verify', param: 'email', inputKind: 'email', icon: 'MailCheck', category: 'person', examples: ['john@datadoghq.com', 'contact@figma.com', 'user@mailinator.com'], label: 'Verify deliverability' },
   { id: 'email-domain-auth', endpointId: 'email-domain-auth', param: 'domain', inputKind: 'domain', icon: 'ShieldCheck', category: 'company', examples: ['stripe.com', 'zomato.in', 'shopify.com'], label: 'Domain auth (SPF/DKIM/DMARC)' },
   { id: 'record-validate', endpointId: 'record-validate', param: 'email', inputKind: 'email', icon: 'BadgeCheck', category: 'person', examples: ['jane.doe@acme.com', 'ceo@stripe.com', 'info@acme.com'], label: 'Validate a record' },
@@ -208,6 +209,25 @@ export interface TechnographicView {
   categories: TechCategoryView[];
   signals: TechSignalView[];
 }
+/** One funding round, for the timeline (F-009). */
+export interface FundingRoundView {
+  stage: string;
+  date: string;
+  amount: string;
+  lead: string;
+  valuation: string | null;
+  investors: string[];
+}
+/** Structured funding profile — rendered as a round timeline + investor roster. */
+export interface FundingView {
+  hasFunding: boolean;
+  noFundingReason: string | null;
+  stage: string;
+  totalRaised: string;
+  latestValuation: string | null;
+  rounds: FundingRoundView[];
+  investors: string[];
+}
 export interface EnrichmentResult {
   kind: 'person' | 'company' | 'generic';
   title: string;
@@ -224,6 +244,8 @@ export interface EnrichmentResult {
   disposable?: DisposableView;
   /** Structured technographic profile (F-006) — rendered as a category-grouped stack. */
   technographic?: TechnographicView;
+  /** Structured funding profile (F-009) — rendered as a round timeline + investor roster. */
+  funding?: FundingView;
   /** How filled-out the returned record is (F-048) — present only for field-bearing records. */
   completeness?: CompletenessScore;
   confidence?: number;
@@ -550,6 +572,52 @@ function technographicToResult(d: Record<string, unknown>): EnrichmentResult {
   };
 }
 
+/** Funding & investment signals (F-009): a round timeline + investors + valuation. */
+function fundingToResult(d: Record<string, unknown>): EnrichmentResult {
+  const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
+  const num = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : undefined);
+  const company = str('company') || str('domain') || 'Company';
+  const money = (n: number | null | undefined) =>
+    n == null || n <= 0 ? null : n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `$${Math.round(n / 1e6)}M` : `$${n.toLocaleString()}`;
+
+  const hasFunding = d.has_funding === true;
+  const rawRounds = Array.isArray(d.rounds) ? (d.rounds as Record<string, unknown>[]) : [];
+  const rounds: FundingRoundView[] = rawRounds.map((r) => ({
+    stage: typeof r.stage === 'string' ? r.stage : '',
+    date: typeof r.date === 'string' ? r.date : '',
+    amount: money(typeof r.amount_usd === 'number' ? r.amount_usd : 0) ?? '—',
+    lead: typeof r.lead_investor === 'string' ? r.lead_investor : '',
+    valuation: money(typeof r.valuation_usd === 'number' ? r.valuation_usd : null),
+    investors: Array.isArray(r.investors) ? (r.investors as unknown[]).filter((x): x is string => typeof x === 'string') : [],
+  }));
+  const investors = Array.isArray(d.investors) ? (d.investors as unknown[]).filter((x): x is string => typeof x === 'string') : [];
+  const totalRaised = money(num('total_raised_usd')) ?? '$0';
+  const latestValuation = money(num('latest_valuation_usd'));
+  const stage = str('funding_stage') || '—';
+
+  return {
+    kind: 'company',
+    title: company,
+    subtitle: str('domain') || undefined,
+    avatar: initialsOf(company),
+    badges: hasFunding ? [stage, `${rounds.length} round${rounds.length === 1 ? '' : 's'}`] : [stage, 'No VC funding'],
+    fields: [],
+    funding: {
+      hasFunding,
+      noFundingReason: str('no_funding_reason') || null,
+      stage,
+      totalRaised,
+      latestValuation,
+      rounds,
+      investors,
+    },
+    confidence: num('confidence'),
+    provenance: Array.isArray(d.provenance) ? (d.provenance as EnrichmentProvenance[]) : undefined,
+    lastVerified: str('last_verified') || undefined,
+    raw: d,
+  };
+}
+
 /** Email deliverability scoring: a 0-100 reachability score + a decomposed signal breakdown. */
 function deliverabilityToResult(d: Record<string, unknown>): EnrichmentResult {
   const str = (k: string) => (typeof d[k] === 'string' ? (d[k] as string) : '');
@@ -769,6 +837,8 @@ function buildEnrichmentResult(data: unknown): EnrichmentResult | null {
   if (typeof data.naics_code === 'string' && typeof data.sic_code === 'string') return firmographicToResult(data);
   // Technographic detection: a `detections` array + numeric `sophistication` mark the shape.
   if (Array.isArray(data.detections) && typeof data.sophistication === 'number') return technographicToResult(data);
+  // Funding & investment signals: a `rounds` array + a `funding_stage` mark the shape.
+  if (Array.isArray(data.rounds) && typeof data.funding_stage === 'string') return fundingToResult(data);
   // Email deliverability: a `verdict` + numeric `score` + a `checks` array mark the shape.
   if (typeof data.verdict === 'string' && typeof data.score === 'number' && Array.isArray(data.checks)) return deliverabilityToResult(data);
   // Email domain authentication: a `spoofable` verdict + a `dmarc` object mark the shape.

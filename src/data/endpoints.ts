@@ -842,6 +842,43 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'funding-signals',
+    name: 'Funding & Investment Signals',
+    description: "Turn a domain into a company's full funding story — a round-by-round history (Seed → Series E) with each round's date, amount, lead investor, participating investors, and post-money valuation — plus the deduplicated investor roster, total raised, and latest valuation. Anchored to the company graph, so funding never contradicts the firmographic stage. Bootstrapped, public-only, and personal domains return a clean no-funding result.",
+    method: 'GET',
+    path: '/v1/companies/funding',
+    creditCost: 2,
+    isRecommendedForFirstCall: false,
+    parameters: [
+      {
+        name: 'domain',
+        type: 'string',
+        required: true,
+        description: 'Company domain to look up funding history for',
+        example: 'stripe.com',
+        placeholder: 'company.com',
+        maxLength: 100,
+      },
+    ],
+    nextStepRecommendations: [
+      {
+        id: 'funding-to-company',
+        title: 'Full company dossier',
+        description: 'Enrich the same domain into industry, headcount, and tech stack.',
+        category: 'sdks',
+        link: '/console/studio',
+      },
+      {
+        id: 'funding-to-signals',
+        title: 'Watch for new rounds',
+        description: 'Get notified when a target company raises a new round.',
+        category: 'webhooks',
+        link: '/console/webhooks',
+      },
+    ],
+  },
+
+  {
     id: 'email-verify',
     name: 'Verify Email Deliverability',
     description: 'Score any email for inbox reachability before you send. Returns a 0-100 deliverability score and a decisive verdict, decomposed into every check behind it — syntax, MX, SMTP mailbox handshake, catch-all, disposable, role-based, and free-provider — each with its own result and provenance. Catches typos with a did-you-mean suggestion.',

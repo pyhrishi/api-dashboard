@@ -14,6 +14,7 @@ import { discoverSocialProfiles } from '@/lib/social-resolver';
 import { normalizeJobTitle } from '@/lib/title-normalizer';
 import { appendFirmographics } from '@/lib/firmographic-resolver';
 import { detectTechnographics } from '@/lib/technographic-resolver';
+import { resolveFundingForDomain } from '@/lib/funding-resolver';
 import { verifyEmailDeliverability } from '@/lib/email-verifier';
 import { detectDisposable } from '@/lib/disposable-detector';
 import { runBatch } from '@/lib/batch-runner';
@@ -516,6 +517,18 @@ function generateMockResponse(endpoint: Endpoint, parameters: Record<string, unk
         };
       }
       return { success: true, ...techno };
+    }
+
+    case 'funding-signals': {
+      // Deterministic funding & investment signals (single source of truth).
+      const funding = resolveFundingForDomain(String(parameters.domain || ''));
+      if (!funding) {
+        return {
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'No company could be resolved for that domain.' },
+        };
+      }
+      return { success: true, ...funding };
     }
 
     case 'email-verify': {
