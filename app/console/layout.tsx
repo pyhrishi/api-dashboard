@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -71,6 +71,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Idempotency', href: '/console/idempotency', icon: <Repeat2 className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Field Selection', href: '/console/field-selection', icon: <ListFilter className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Query Builder', href: '/console/query', icon: <Filter className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Compression', href: '/console/compression', icon: <Archive className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Match Rate', href: '/console/coverage', icon: <Target className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Match Thresholds', href: '/console/thresholds', icon: <SlidersHorizontal className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },

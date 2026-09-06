@@ -103,7 +103,9 @@ export type TelemetryEventName =
   | 'request_replayed'
   // querying — query filtering & sorting (F-078)
   | 'query_viewed'
-  | 'query_run';
+  | 'query_run'
+  // efficiency — payload compression (F-080)
+  | 'compression_viewed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

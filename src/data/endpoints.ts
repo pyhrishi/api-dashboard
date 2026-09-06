@@ -1785,6 +1785,26 @@ export const ENDPOINTS: Endpoint[] = [
         link: '/console/circuits',
       },
     ],
+  },
+
+  {
+    id: 'compression-stats',
+    name: 'Compression Savings',
+    description: "Read cumulative payload-compression savings (F-080): total bytes saved, overall ratio, and a per-encoding breakdown (Brotli / Gzip / uncompressed). To compress a response, send an `Accept-Encoding: br` (or `gzip`) header on any request — the gateway picks the best encoding you offered (Brotli preferred), sets Content-Encoding + Vary, and reports X-Uncompressed-Bytes / X-Compressed-Bytes / X-Compression-Ratio. Small payloads pass through uncompressed. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/compression',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'compression-to-console',
+        title: 'Open the Compression console',
+        description: 'See cumulative bandwidth saved and run a live sample.',
+        category: 'sdks',
+        link: '/console/compression',
+      },
+    ],
   }
 ];
 

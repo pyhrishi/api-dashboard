@@ -25,6 +25,7 @@ import { resolveStreamRow, normalizeStreamInputs, kindForEndpoint, MAX_STREAM_IN
 import { getAllPartners, getPartnerDashboard, lookupPartner, attributeReferral, recordRevenueEvent, processMonthEndPayouts } from '@/lib/gateway/partnerRevenue';
 import { generateForecastReport, forecastCapacity, getCurrentUsageSnapshot, type ForecastHorizon, type RegionId, type ResourceType } from '@/lib/gateway/capacityForecast';
 import { API_BASE_URL } from '@/lib/api-config';
+import { negotiateEncoding, compressPayload, recordCompression, getCompressionStats } from '@/lib/gateway/compression';
 
 async function handleRequest(request: NextRequest, { params }: { params: { route: string[] } }) {
   const startTime = Date.now();
@@ -570,6 +571,22 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     );
   }
 
+  // Payload compression stats (F-080) — cumulative bytes saved by Brotli/Gzip and a
+  // by-encoding breakdown. Free meta endpoint; handled before route resolution + billing.
+  if (path === '/v1/compression') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getCompressionStats(), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/compression. Send Accept-Encoding: br (or gzip) on any request to compress its response.' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
   // 1. Route resolution
   const endpoint = resolveEndpoint(path);
 
@@ -1027,27 +1044,26 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   // Helper function to send compressed or uncompressed response
   const sendResponse = (payloadObj: unknown, statusCode: number) => {
     const jsonString = JSON.stringify(payloadObj);
-    const acceptEncoding = request.headers.get('accept-encoding') || '';
-    
-    if (acceptEncoding.includes('gzip')) {
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode(jsonString));
-          controller.close();
-        }
-      });
-      const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
-      
-      responseHeaders['Content-Encoding'] = 'gzip';
+    // Payload compression (F-080): negotiate Brotli > Gzip and report the savings.
+    // A response can vary on Accept-Encoding, so always advertise it for caches.
+    responseHeaders['Vary'] = 'Accept-Encoding';
+    const encoding = negotiateEncoding(request.headers.get('accept-encoding'));
+    const compressed = compressPayload(jsonString, encoding);
+    recordCompression(compressed);
+    responseHeaders['X-Uncompressed-Bytes'] = String(compressed.originalBytes);
+    responseHeaders['X-Compressed-Bytes'] = String(compressed.compressedBytes);
+    responseHeaders['X-Compression-Ratio'] = String(compressed.ratio);
+
+    if (compressed.encoding !== 'identity') {
+      responseHeaders['Content-Encoding'] = compressed.encoding;
       responseHeaders['Content-Type'] = 'application/json';
-      
-      return new Response(compressedStream, {
+      return new Response(compressed.body as unknown as BodyInit, {
         status: statusCode,
         headers: responseHeaders as HeadersInit,
       });
     }
 
-    // Uncompressed fallback
+    // Uncompressed (client didn't offer br/gzip, or the payload was too small).
     return NextResponse.json(payloadObj, { status: statusCode, headers: responseHeaders as HeadersInit });
   };
 

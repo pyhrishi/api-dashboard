@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.52', date: 'September 2026', headline: 'Payload compression (Brotli / Gzip)',
+    changes: [
+      { kind: 'feature', text: 'Payload compression — send Accept-Encoding: br (or gzip) and the gateway compresses the JSON response, picking the best encoding you offered (Brotli preferred — it beats gzip on JSON). A typical 100-row list drops from ~13 KB to under 1 KB — around 93% smaller on the wire. Most HTTP clients set the header and decompress transparently, so it’s free bandwidth savings for existing integrations.' },
+      { kind: 'feature', text: 'Every compressed response reports exactly what it saved: X-Uncompressed-Bytes, X-Compressed-Bytes, and X-Compression-Ratio, plus Vary: Accept-Encoding so caches store each variant correctly. Small payloads pass through uncompressed (the framing overhead isn’t worth it). A new Compression console (/console/compression) shows cumulative bandwidth saved, an average ratio, a per-encoding breakdown, and a live sample you can run against the real gateway.' },
+      { kind: 'improvement', text: 'A free GET /v1/compression reads the savings registry. Compression composes with field selection (F-062) — trim the fields you don’t need, then compress the rest. Single-sourced in src/lib/gateway/compression.ts, deterministic, and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.51', date: 'September 2026', headline: 'Query filtering & sorting',
     changes: [
       { kind: 'feature', text: 'Query filtering & sorting — list endpoints now speak a universal query grammar. Add filter=field:op:value (comma-separated clauses are ANDed) with operators eq, ne, gt, gte, lt, lte, contains, startsWith, endsWith, and in (a pipe list) — e.g. filter=department:in:Sales|Engineering,name:contains:smith — plus sort=field or -field with multiple comma-separated keys. Comparisons are numeric when both sides are numbers, otherwise case-insensitive strings, and the response echoes the parsed filters/sorts, the unfiltered total, and any malformed-clause errors instead of silently ignoring them.' },
