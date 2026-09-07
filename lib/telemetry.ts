@@ -233,7 +233,12 @@ export type TelemetryEventName =
   | 'sessions_viewed'
   | 'session_revoked'
   | 'sessions_revoked_all'
-  | 'session_policy_updated';
+  | 'session_policy_updated'
+  // security — field-level PII masking (F-313)
+  | 'pii_masking_viewed'
+  | 'pii_masking_policy_updated'
+  | 'pii_masking_synced'
+  | 'pii_masking_probe_run';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

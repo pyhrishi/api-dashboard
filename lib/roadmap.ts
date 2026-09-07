@@ -1096,7 +1096,7 @@ export const BUILT_FEATURE_IDS: ReadonlySet<string> = new Set([
   'F-369', // Org context switcher — sidebar org switcher, state re-scopes
   'F-383', // First-call wizard — components/FirstCallWizard.tsx
   // Privacy, exports, design system (verified)
-  'F-313', // Field-level PII masking — src/lib/gateway/privacy.ts masks on live keys
+  'F-313', // Field-level PII masking — lib/pii-masking.ts SSOT (PII catalog + per-field strategy none|partial|hash|tokenize|redact with an un-relaxable minStrategy floor, deterministic maskValue/maskPayload, normalizeMaskingPatch, policyStrength, dedicated persisted useMaskingPolicy store) ENFORCED at the edge: src/lib/gateway/privacy.ts delegates to the engine + src/lib/gateway/piiMasking.ts holds the per-org policy synced from the console via PATCH /v1/masking → live-key responses masked by the CHOSEN policy (mask-by-default, not only geo-framework regions) + X-PII-Masked header (CORS-exposed) + GET /v1/masking (policy + masked sample) + catalog entry + /console/pii-masking (master switch, floor-gated per-field editor, live before/after preview via the same engine, live-enforcement sync + probe)
   'F-454', // CSV & Excel export — Bulk Jobs result export
   'F-455', // JSON / NDJSON export — Bulk Jobs result export
   'F-464', // Enriched-file download — Bulk Jobs enriched output

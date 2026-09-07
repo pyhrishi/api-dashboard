@@ -1,17 +1,19 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   EyeOff, ShieldCheck, Fingerprint, Lock, Hash, KeyRound, Eye, RotateCcw, ArrowRight,
-  Sparkles, FlaskConical, Info,
+  Sparkles, FlaskConical, Info, Radio, RefreshCw,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { authHeaderValue } from '@/lib/api-config';
+import { track } from '@/lib/telemetry';
 import RoleGuard from '@/components/RoleGuard';
 import { useToast } from '@/components/Toast';
 import {
-  PageHeader, KpiTile, GlassCard, StatusBadge, ConfirmAction, Select, SegmentedControl,
+  PageHeader, KpiTile, GlassCard, Button, StatusBadge, ConfirmAction, Select, SegmentedControl,
   type BadgeTone,
 } from '@/components/ui';
 import {
@@ -19,10 +21,6 @@ import {
   policyStrength, SAMPLE_RECORD, classifyKey,
   type MaskStrategy, type PiiFieldType, type MaskingPolicy,
 } from '@/lib/pii-masking';
-
-// TODO(F-313 phase 2): emit pii_masking_viewed / _policy_updated / _previewed via
-// track() once the telemetry union lands (telemetry.ts is another session's dirty
-// file right now — see the phase-2 wiring).
 
 const STRATEGY_META: Record<MaskStrategy, { label: string; icon: React.ReactNode; tone: BadgeTone; blurb: string }> = {
   none: { label: 'Visible', icon: <Eye className="w-3.5 h-3.5" />, tone: 'warning', blurb: 'Returned in the clear' },
@@ -46,14 +44,53 @@ function flatten(obj: unknown, prefix = ''): { key: string; value: string }[] {
 }
 
 function MaskingInner() {
-  const { user, environment } = useStore();
+  const { user, environment, activeKeys } = useStore();
   const { enabled, strategies, setEnabled, setStrategy, resetPolicy } = useMaskingPolicy();
   const toast = useToast();
   const isAdmin = user?.role === 'admin';
 
+  const apiKey = useMemo(
+    () => activeKeys.find((k) => k.environment === environment)?.key ?? activeKeys[0]?.key ?? '',
+    [activeKeys, environment],
+  );
+
   const policy: MaskingPolicy = useMemo(() => ({ enabled, strategies }), [enabled, strategies]);
   const strength = useMemo(() => policyStrength(policy), [policy]);
   const preview = useMemo(() => maskPayload(SAMPLE_RECORD, policy), [policy]);
+
+  const [synced, setSynced] = useState<'idle' | 'syncing' | 'ok' | 'error'>('idle');
+  const [probe, setProbe] = useState<string[] | null>(null);
+
+  useEffect(() => { track('pii_masking_viewed', { environment }); }, [environment]);
+
+  // Sync the org policy to the gateway so live-key responses honor the chosen policy
+  // (not just the default). Fires on mount and whenever the policy changes.
+  useEffect(() => {
+    if (!apiKey) return;
+    let cancelled = false;
+    setSynced('syncing');
+    fetch('/api/v1/masking', {
+      method: 'PATCH',
+      headers: { Authorization: authHeaderValue(apiKey), 'Content-Type': 'application/json' },
+      body: JSON.stringify(policy),
+    })
+      .then((r) => { if (!cancelled) setSynced(r.ok ? 'ok' : 'error'); })
+      .catch(() => { if (!cancelled) setSynced('error'); });
+    return () => { cancelled = true; };
+  }, [apiKey, policy]);
+
+  const runProbe = useCallback(async () => {
+    if (!apiKey) return;
+    try {
+      const res = await fetch('/api/v1/masking', { headers: { Authorization: authHeaderValue(apiKey) }, cache: 'no-store' });
+      const body = await res.json();
+      setProbe(body?.data?.maskedKeys ?? []);
+      track('pii_masking_probe_run', { environment, masked: (body?.data?.maskedKeys ?? []).length });
+      toast.success('Live policy fetched', 'This is the policy the gateway applies to your live-key responses.');
+    } catch {
+      toast.error('Probe failed', 'Could not reach the gateway.');
+    }
+  }, [apiKey, environment, toast]);
 
   const beforeRows = useMemo(() => flatten(SAMPLE_RECORD), []);
   const afterRows = useMemo(() => flatten(preview.masked), [preview]);
@@ -72,7 +109,7 @@ function MaskingInner() {
       return;
     }
     setStrategy(type, next);
-    // TODO(F-313 phase 2): track('pii_masking_policy_updated', { field: type, strategy: next, environment })
+    track('pii_masking_policy_updated', { field: type, strategy: next, environment });
   };
 
   return (
@@ -113,6 +150,32 @@ function MaskingInner() {
           ) : (
             <StatusBadge tone={enabled ? 'success' : 'warning'}>{enabled ? 'On' : 'Off'}</StatusBadge>
           )}
+        </div>
+      </GlassCard>
+
+      {/* Live enforcement */}
+      <GlassCard className="p-5 mt-5">
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <Radio className="w-4 h-4 text-teal" />
+              <h3 className="text-sm font-bold text-fg">Live enforcement</h3>
+              <StatusBadge tone={synced === 'ok' ? 'success' : synced === 'error' ? 'error' : 'info'}>
+                {synced === 'ok' ? 'Synced to gateway' : synced === 'syncing' ? 'Syncing…' : synced === 'error' ? 'Sync failed' : 'Not synced'}
+              </StatusBadge>
+            </div>
+            <p className="text-[12px] text-fg-muted mt-0.5">
+              {apiKey
+                ? 'This policy is pushed to the gateway; live-key responses are masked accordingly and carry an X-PII-Masked header naming the masked fields.'
+                : 'Create an API key to push this policy to the gateway and mask live traffic.'}
+            </p>
+            {probe && (
+              <p className="text-[11px] text-teal mt-1 font-mono">Gateway masks: {probe.length ? probe.join(', ') : '(nothing on the sample)'}</p>
+            )}
+          </div>
+          <Button variant="secondary" size="sm" onClick={runProbe} disabled={!apiKey}>
+            <RefreshCw className="w-4 h-4" /> Probe live policy
+          </Button>
         </div>
       </GlassCard>
 

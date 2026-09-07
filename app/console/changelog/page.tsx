@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.92', date: 'September 2026', headline: 'Field-level PII masking',
+    changes: [
+      { kind: 'feature', text: 'Live-key API responses are now masked field-by-field per a policy you control — each kind of personal data (email, phone, government ID, date of birth, address, IP, name, social URL) gets its own strategy: leave it, partially reveal it, hash it, tokenize it, or fully redact it. The most sensitive fields (government IDs, dates of birth) have a minimum that can’t be relaxed. Masking is on by default for live keys — not just in specific regions — and sandbox keys still return full synthetic data for testing. Every masked response carries an X-PII-Masked header listing exactly which fields were masked.' },
+      { kind: 'feature', text: 'A new PII Masking console lets an admin set the per-field policy and see a live before/after preview rendered by the very engine the gateway runs — what you see is what a live caller gets. The policy syncs to the edge over PATCH /v1/masking (GET returns the effective policy plus a masked sample), so tuning it here actually changes live traffic.' },
+    ],
+  },
+  {
     version: 'v4.91', date: 'September 2026', headline: 'Payload size & depth limits',
     changes: [
       { kind: 'feature', text: 'The gateway now measures every request before any handler parses it — body size, JSON nesting depth, array length, total keys, string length, and URL length — against limits sized to your plan. An oversized or over-nested request is refused with a 413, 414, or 422 whose body names the dimension, the measured value, the limit, and the fix (down to "send 3 requests of ≤400 items"), and every gateway response advertises X-Payload-Limit-Bytes and X-Payload-Limit-Depth. Async jobs keep their own ceiling (10,000 inputs / 4 MB on every plan), so "submit it as a job" is always a real way out.' },

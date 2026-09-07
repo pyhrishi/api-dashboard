@@ -1865,6 +1865,26 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'pii-masking-policy',
+    name: 'PII masking policy',
+    description: "Read or update the field-level PII masking policy applied to your live-key responses (F-313). GET returns the effective policy (per-field strategy — partial / hash / tokenize / redact), its strength score, and a masked sample so you can see exactly what a live caller receives; the most sensitive fields (government IDs, dates of birth) have an un-relaxable minimum. PATCH { enabled, strategies } syncs a policy from the console to the edge — invalid or below-floor choices are dropped. Live responses that mask anything carry an X-PII-Masked header listing the masked fields. Sandbox keys are never masked. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/masking',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'masking-to-console',
+        title: 'Open the PII Masking console',
+        description: 'Configure per-field masking and preview the before/after.',
+        category: 'sdks',
+        link: '/console/pii-masking',
+      },
+    ],
+  },
+
+  {
     id: 'encryption-posture',
     name: 'Encryption posture',
     description: "Pull a live, signed attestation of how your data is protected (F-312) — in transit (negotiated TLS 1.3 cipher, HSTS, forward secrecy, OCSP stapling) and at rest (AES-256-GCM envelope encryption, the customer-managed KMS keys that wrap each data store, their rotation schedule, and field-level PII encryption). Returns a posture score and a stable attestation digest, HMAC-SHA256-signed by the gateway (alg, kid, sig) so a security reviewer can verify it at GET /v1/encryption/verify?attestation=&sig=. PATCH syncs your org's settings ({ rotationDays: 30|60|90|180|365, fieldEncryption: { <deterministic field>: boolean } } — randomized PII fields are always on and can't be relaxed); POST rotates the primary data key (envelope re-wrap) and moves the schedule forward. Field-level PII encryption applies to sk_live_ traffic; sandbox keys return synthetic data. Every API response also carries X-Encryption-Transit and X-Encryption-Rest headers (CORS-exposed). Free, keyless-billed.",

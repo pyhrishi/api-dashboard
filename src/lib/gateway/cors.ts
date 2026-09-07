@@ -46,6 +46,7 @@ export const EXPOSED_RESPONSE_HEADERS = [
   'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'X-RateLimit-Tier',
   'X-Encryption-Transit', 'X-Encryption-Rest',
   'X-Payload-Limit-Bytes', 'X-Payload-Limit-Depth',
+  'X-PII-Masked', 'X-Privacy-Framework',
 ];
 
 const ORIGIN_RE = /^https?:\/\/[a-zA-Z0-9.-]+(:\d{1,5})?$/;

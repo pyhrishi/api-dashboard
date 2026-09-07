@@ -21,7 +21,9 @@ import { getDeliveryStats, replayDelivery } from '@/lib/gateway/webhookDelivery'
 import { buildDebugEcho } from '@/lib/gateway/debugEcho';
 import { planPartial, computePartial } from '@/lib/gateway/partialResult';
 import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
-import { detectPrivacyFramework, applyPrivacyMasking, enforceOptOutPropagation } from '@/lib/gateway/privacy';
+import { detectPrivacyFramework, enforceOptOutPropagation } from '@/lib/gateway/privacy';
+import { maskForKey, getMaskingPolicy, updateMaskingPolicy } from '@/lib/gateway/piiMasking';
+import { policyStrength, maskPayload, SAMPLE_RECORD } from '@/lib/pii-masking';
 import { enforceSOC2Controls, attachISO27001Headers, enforceDDoSProtection, enforceMSAControls, enforceDPAControls, enforceFraudDetection } from '@/lib/gateway/security';
 import { inspectPayload } from '@/lib/gateway/waf';
 import { Logger } from '@/lib/gateway/logger';
@@ -713,6 +715,34 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     return NextResponse.json(
       { success: true, data: verifyAttestation(apiKey || undefined, attestation, sig), metadata: { requestId, timestamp: Date.now() } },
       { status: 200, headers: responseHeaders },
+    );
+  }
+  // Field-level PII masking policy (F-313) — GET returns the org's effective masking
+  // policy + a masked sample (so a caller sees exactly what live responses redact);
+  // PATCH syncs a policy from the console so a custom policy reaches the edge. The
+  // X-PII-Masked header rides real live-key responses. Free meta endpoint.
+  if (path === '/v1/masking') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      const policy = getMaskingPolicy(apiKey || undefined);
+      const sample = maskPayload(SAMPLE_RECORD, policy);
+      return NextResponse.json(
+        { success: true, data: { policy, strength: policyStrength(policy), maskedKeys: sample.maskedKeys, sample: sample.masked }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'PATCH' || request.method === 'POST') {
+      let parsed: unknown;
+      try { parsed = await request.clone().json(); } catch { parsed = {}; }
+      const result = updateMaskingPolicy(apiKey || undefined, parsed);
+      return NextResponse.json(
+        { success: true, data: result, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/masking (policy + sample) or PATCH /v1/masking (sync policy).' } },
+      { status: 405, headers: responseHeaders },
     );
   }
   if (path === '/v1/encryption') {
@@ -1535,15 +1565,22 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   // opt-out propagation + PII masking.
   const isLiveKey = apiKey.startsWith('sk_live_');
   let optOutsRemoved = 0;
-  const redactionApplied = isLiveKey && privacyFramework !== 'NONE';
+  let redactionApplied = false;
   if (isLiveKey) {
     // Opt-out propagation (Drop Do-Not-Sell / Right-To-Be-Forgotten records completely)
     const optOutResult = enforceOptOutPropagation(payload);
     payload = optOutResult.sanitizedData;
     optOutsRemoved = optOutResult.optOutsRemoved;
 
-    // Mask remaining PII based on framework
-    payload = applyPrivacyMasking(payload, privacyFramework);
+    // Field-level PII masking (F-313): mask by default on live keys per the org's
+    // policy — not only in detected-framework regions. The gateway advertises which
+    // fields it masked; the geo framework still adds its own header when present.
+    const maskResult = maskForKey(payload, apiKey);
+    payload = maskResult.masked;
+    redactionApplied = maskResult.maskedKeys.length > 0;
+    if (maskResult.maskedKeys.length > 0) {
+      responseHeaders['X-PII-Masked'] = maskResult.maskedKeys.join(',');
+    }
     if (privacyFramework !== 'NONE') {
       responseHeaders['X-Privacy-Framework'] = privacyFramework;
     }
