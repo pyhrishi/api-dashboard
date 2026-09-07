@@ -7,7 +7,7 @@ the Zustand store (`@/lib/store`) and is rendered inside `app/console/layout.tsx
 
 1. **Route:** `app/console/<area>/page.tsx`, default-exported client component.
 2. **RBAC:** wrap in `<RoleGuard allowedRoles={['admin', ...]}>` when the page (or an action) is role-restricted. Mutations that must be blocked for some roles should also be guarded in the store action.
-3. **Nav:** add an entry to `allNavItems` in `app/console/layout.tsx` (name, `href`, a **verified** lucide icon, `roles`). Nav is role-filtered and there's an "Unauthorized Scope" screen for direct hits.
+3. **Nav:** add one `{ name, href, icon, roles }` entry to the relevant section's `items` array in `app/console/nav-config.tsx` (the SSOT for the grouped left nav — 12 collapsible modules + pinned Overview). Use a **verified** lucide icon as `<Icon className={cls} />`. Don't edit `layout.tsx` — it derives `allNavItems` from `nav-config`. Nav is role-filtered and there's an "Unauthorized Scope" screen for direct hits.
 4. **Design system:** semantic tokens only (`bg-surface-2`, `bg-glass`, `text-fg`, `text-fg-muted`, `border-border`, `text-teal`…). Framer Motion for entrances/interactions. Rounded-2xl cards, glass panels.
 5. **States:** always render beautiful **loading** (skeletons / `Loader2` spinner), **empty** (icon + copy), and **error** states — never a blank div or layout shift.
 6. **Env + tenant scoping:** filter data by the store's `environment` (`sandbox`/`live`) where relevant; billing/infra are disabled in sandbox; per-org data comes through the tenant model.
