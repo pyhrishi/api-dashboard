@@ -1,7 +1,8 @@
 'use client';
 
 import { useStore, ExportOptions } from '@/lib/store';
-import { Shield, Key, Smartphone, Laptop, LogOut, CheckCircle2, Copy, Eye, EyeOff, Loader2, Globe, Plus, Trash2, Database, AlertTriangle, Download, X, Check, RefreshCw, Sparkles, Map, ChevronDown, ShieldAlert, Activity, FileText, ArrowRight, Frown, DollarSign, Zap, Clock, FileJson, FileSpreadsheet, Calendar, Mail } from 'lucide-react';
+import Link from 'next/link';
+import { Shield, Key, Smartphone, Laptop, LogOut, CheckCircle2, Copy, Eye, EyeOff, Loader2, Globe, Plus, Trash2, Database, AlertTriangle, Download, X, Check, RefreshCw, Sparkles, Map, ChevronDown, ShieldAlert, Activity, FileText, ArrowRight, Frown, DollarSign, Zap, Clock, FileJson, FileSpreadsheet, Calendar, Mail, MonitorSmartphone } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { track } from '@/lib/telemetry';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -274,14 +275,19 @@ export default function SecuritySettingsPage() {
 
       {/* 3. Active Sessions */}
       <div className="glass-inner rounded-2xl border border-border shadow-xl overflow-hidden">
-        <div className="p-8 border-b border-border">
-          <h2 className="text-xl font-bold text-fg mb-2 flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-teal" />
-            Active Sessions
-          </h2>
-          <p className="text-fg-muted text-sm">
-            View and manage devices currently logged into your account.
-          </p>
+        <div className="p-8 border-b border-border flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-xl font-bold text-fg mb-2 flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-teal" />
+              Active Sessions
+            </h2>
+            <p className="text-fg-muted text-sm">
+              View and manage devices currently logged into your account.
+            </p>
+          </div>
+          <Link href="/console/sessions" className="text-sm text-teal hover:underline inline-flex items-center gap-1.5 shrink-0 mt-1">
+            <MonitorSmartphone className="w-4 h-4" /> Manage all sessions <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
         
         <div className="overflow-x-auto">

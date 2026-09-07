@@ -99,6 +99,18 @@ export interface ActiveSession {
   ip: string;
   lastActive: string;
   isCurrent: boolean;
+  /** When the session was established (ISO). Optional for back-compat with older persisted state. */
+  createdAt?: string;
+  /** Where the session originates: the browser console, a raw API key, or the CLI. */
+  type?: 'console' | 'api' | 'cli';
+}
+
+/** Org-level session security policy (admin-controlled). */
+export interface SessionPolicy {
+  /** Sessions idle beyond this are flagged stale and re-auth is expected. */
+  idleTimeoutMins: number;
+  /** Concurrent sessions allowed before the console warns. */
+  maxConcurrent: number;
 }
 
 export interface AuditLog {
@@ -730,6 +742,7 @@ interface AppState extends FirstCallState, TenantState {
   teamMembers: TeamMember[];
   is2faEnabled: boolean;
   activeSessions: ActiveSession[];
+  sessionPolicy: SessionPolicy;
   auditLogs: AuditLog[];
   auditAlertRules: AuditAlertRule[];
   createAuditAlertRule: (action: string, channels: ('email' | 'toast')[]) => void;
@@ -880,6 +893,12 @@ interface AppState extends FirstCallState, TenantState {
   enable2fa: () => void;
   disable2fa: () => void;
   revokeSession: (id: string) => void;
+  /** Revoke every session except the current one ("sign out everywhere else"). */
+  revokeAllOtherSessions: () => void;
+  /** Bulk-revoke a set of sessions (e.g. all stale); never touches the current session. */
+  revokeSessions: (ids: string[]) => void;
+  /** Update the org session policy (admin only). */
+  updateSessionPolicy: (patch: Partial<SessionPolicy>) => void;
 
   updateBillingDetails: (details: Partial<BillingDetails>) => void;
   addPOCContact: (contact: Omit<POCContact, 'id'>) => void;
@@ -981,10 +1000,12 @@ export const useStore = create<AppState>()(
       ],
       is2faEnabled: false,
       activeSessions: [
-        { id: 'sess_1', device: 'MacBook Pro', browser: 'Chrome', location: 'Bengaluru, IN', ip: '192.168.1.1', lastActive: new Date().toISOString(), isCurrent: true },
-        { id: 'sess_2', device: 'iPhone 14 Pro', browser: 'Safari', location: 'Bengaluru, IN', ip: '172.16.254.1', lastActive: new Date(Date.now() - 3600000).toISOString(), isCurrent: false },
-        { id: 'sess_3', device: 'Windows Desktop', browser: 'Firefox', location: 'Mumbai, IN', ip: '10.0.0.5', lastActive: new Date(Date.now() - 86400000).toISOString(), isCurrent: false }
+        { id: 'sess_1', device: 'MacBook Pro', browser: 'Chrome', location: 'Bengaluru, IN', ip: '192.168.1.1', lastActive: new Date().toISOString(), isCurrent: true, createdAt: new Date(Date.now() - 3 * 86400000).toISOString(), type: 'console' },
+        { id: 'sess_2', device: 'iPhone 14 Pro', browser: 'Safari', location: 'Bengaluru, IN', ip: '172.16.254.1', lastActive: new Date(Date.now() - 3600000).toISOString(), isCurrent: false, createdAt: new Date(Date.now() - 12 * 86400000).toISOString(), type: 'console' },
+        { id: 'sess_3', device: 'Windows Desktop', browser: 'Firefox', location: 'Mumbai, IN', ip: '10.0.0.5', lastActive: new Date(Date.now() - 26 * 3600000).toISOString(), isCurrent: false, createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), type: 'console' },
+        { id: 'sess_4', device: 'Linux Server', browser: 'zinbit-cli/2.1', location: 'Ashburn, US', ip: '52.204.19.77', lastActive: new Date(Date.now() - 15 * 60000).toISOString(), isCurrent: false, createdAt: new Date(Date.now() - 45 * 60000).toISOString(), type: 'cli' },
       ],
+      sessionPolicy: { idleTimeoutMins: 60, maxConcurrent: 5 },
       auditLogs: [
         generateAuditLog('key.created', 'Production Key', 'admin@zintlr.com', 'live', { changes: { after: { scopes: ['*'] } } }),
         generateAuditLog('webhook.created', 'https://api.zinbit.in/hooks', 'developer@zintlr.com', 'live')
@@ -2010,8 +2031,24 @@ export const useStore = create<AppState>()(
       enable2fa: () => set({ is2faEnabled: true }),
       disable2fa: () => set({ is2faEnabled: false }),
       revokeSession: (id) => set((state) => ({
-        activeSessions: state.activeSessions.filter(s => s.id !== id)
+        // Never revoke the session you're using now.
+        activeSessions: state.activeSessions.filter(s => s.id !== id || s.isCurrent)
       })),
+      revokeAllOtherSessions: () => set((state) => ({
+        activeSessions: state.activeSessions.filter(s => s.isCurrent)
+      })),
+      revokeSessions: (ids) => set((state) => {
+        const toRevoke = new Set(ids);
+        return { activeSessions: state.activeSessions.filter(s => s.isCurrent || !toRevoke.has(s.id)) };
+      }),
+      updateSessionPolicy: (patch) => set((state) => {
+        if (state.user?.role !== 'admin') throw new Error('Only admins can change the session policy');
+        const next = { ...state.sessionPolicy, ...patch };
+        // Clamp to sane bounds.
+        next.idleTimeoutMins = Math.max(5, Math.min(1440, Math.round(next.idleTimeoutMins)));
+        next.maxConcurrent = Math.max(1, Math.min(50, Math.round(next.maxConcurrent)));
+        return { sessionPolicy: next };
+      }),
 
       addUsageAlert: (alert) => set((state) => {
         if (state.user?.role !== 'admin' && state.user?.role !== 'billing') throw new Error('Unauthorized');
@@ -2593,6 +2630,7 @@ export const useStore = create<AppState>()(
           webhooks: [],
           apiLogs: [],
           activeSessions: [],
+          sessionPolicy: { idleTimeoutMins: 60, maxConcurrent: 5 },
           ipRules: [],
           geoRules: [],
           featureRequests: [],
@@ -3035,9 +3073,10 @@ export const useStore = create<AppState>()(
       // v4: repair legacy keys whose `key` was stored as a masked string with bullet chars
       // (non-Latin1) — those break the Authorization header. migrate() replaces them with a
       // real token in place, preserving the rest of the persisted state (no full re-seed).
-      version: 4,
+      // v5: F-310 — ensure a session policy exists on state persisted before session mgmt.
+      version: 5,
       migrate: (persisted: unknown, version: number) => {
-        const state = persisted as { activeKeys?: MockKey[] } & Record<string, unknown>;
+        const state = persisted as { activeKeys?: MockKey[]; sessionPolicy?: SessionPolicy } & Record<string, unknown>;
         if (version < 4 && state && Array.isArray(state.activeKeys)) {
           state.activeKeys = state.activeKeys.map((k) => {
             // A bullet (or any non-Latin1 char) means this is a legacy masked value.
@@ -3049,6 +3088,9 @@ export const useStore = create<AppState>()(
             }
             return k;
           });
+        }
+        if (version < 5 && state && !state.sessionPolicy) {
+          state.sessionPolicy = { idleTimeoutMins: 60, maxConcurrent: 5 };
         }
         return state;
       },
@@ -3068,6 +3110,7 @@ export const useStore = create<AppState>()(
         teamMembers: state.teamMembers,
         is2faEnabled: state.is2faEnabled,
         activeSessions: state.activeSessions,
+        sessionPolicy: state.sessionPolicy,
         auditLogs: state.auditLogs,
         apiLogs: state.apiLogs,
         usageAlerts: state.usageAlerts,
