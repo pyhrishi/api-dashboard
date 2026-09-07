@@ -1,7 +1,16 @@
 /**
  * Gateway Data Privacy & Compliance Engine
  * Handles real-time payload redaction for DPDP, GDPR, and CCPA compliance.
+ *
+ * Field-level PII masking (F-313) is applied here via the shared policy engine
+ * (`@/lib/pii-masking`): instead of the old email/phone-only redaction, live-key
+ * responses are masked field-by-field per a masking policy (per-field strategy —
+ * partial / hash / tokenize / redact), covering emails, phones, government IDs,
+ * dates of birth, addresses, IPs, names and social URLs. Sandbox (`sk_test_`) keys
+ * are never masked (mirrors the product-wide live-vs-sandbox split).
  */
+
+import { defaultPolicy, maskPayload, type MaskingPolicy } from '@/lib/pii-masking';
 
 type PrivacyFramework = 'GDPR' | 'CCPA' | 'DPDP' | 'NONE';
 
@@ -15,20 +24,6 @@ export function detectPrivacyFramework(countryCode: string | null): PrivacyFrame
   if (countryCode.toUpperCase() === 'IN') return 'DPDP';
   
   return 'NONE';
-}
-
-function maskEmail(email: string): string {
-  const parts = email.split('@');
-  if (parts.length !== 2) return email;
-  const name = parts[0];
-  const domain = parts[1];
-  if (name.length <= 2) return `***@${domain}`;
-  return `${name[0]}***${name[name.length - 1]}@${domain}`;
-}
-
-function maskPhone(phone: string): string {
-  if (phone.length < 4) return '***';
-  return `***-***-${phone.slice(-4)}`;
 }
 
 // Global Do-Not-Sell / Opt-Out Registry (Simulated Distributed Ledger)
@@ -85,33 +80,22 @@ export function enforceOptOutPropagation(data: unknown): { sanitizedData: unknow
   return { sanitizedData: data, optOutsRemoved: 0 };
 }
 
+/**
+ * Field-level PII masking (F-313). Masks every PII field in a payload per the given
+ * masking policy (defaults to the org default — mask-by-default). Pure; returns the
+ * masked clone plus the keys that were masked (used for the X-PII-Masked header).
+ */
+export function maskFieldLevelPii(payload: unknown, policy: MaskingPolicy = defaultPolicy()): { masked: unknown; maskedKeys: string[] } {
+  const { masked, maskedKeys } = maskPayload(payload, policy);
+  return { masked, maskedKeys };
+}
+
+/**
+ * Compliance masking applied to live-key responses. Any detected framework triggers
+ * full field-level masking under the default policy; NONE is a passthrough (the
+ * call site decides whether a live key with no detected framework is masked).
+ */
 export function applyPrivacyMasking(payload: unknown, framework: PrivacyFramework): unknown {
   if (framework === 'NONE' || !payload) return payload;
-
-  // Deep clone to avoid mutating original cache/memory references
-  const masked: unknown = JSON.parse(JSON.stringify(payload));
-
-  const maskObject = (obj: unknown) => {
-    if (!obj || typeof obj !== 'object') return;
-    const rec = obj as Record<string, unknown>;
-
-    for (const key in rec) {
-      const value = rec[key];
-      if (typeof value === 'string') {
-        // Redact PII based on framework strictness
-        if (framework === 'GDPR' || framework === 'DPDP') {
-          if (key.toLowerCase().includes('email')) rec[key] = maskEmail(value);
-          if (key.toLowerCase().includes('phone')) rec[key] = maskPhone(value);
-        } else if (framework === 'CCPA') {
-          // CCPA specific logic (e.g. opt-out flag masking)
-          if (key.toLowerCase().includes('email')) rec[key] = maskEmail(value);
-        }
-      } else if (typeof value === 'object' && value !== null) {
-        maskObject(value);
-      }
-    }
-  };
-
-  maskObject(masked);
-  return masked;
+  return maskFieldLevelPii(payload).masked;
 }
