@@ -8,6 +8,7 @@ import {
   Bug, Lock, RefreshCw, AlertTriangle, ScrollText,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { track } from '@/lib/telemetry';
 import RoleGuard from '@/components/RoleGuard';
 import { useToast } from '@/components/Toast';
 import {
@@ -18,10 +19,6 @@ import {
   CSP_DIRECTIVES, buildCspHeader, cspHeaderName, CSP_MODE_COOKIE, CSP_REPORT_PATH,
   type CspMode, type CspViolation,
 } from '@/lib/csp';
-
-// TODO(F-315 phase 2): emit csp_viewed / csp_mode_changed / csp_violation_reported /
-// csp_test_fired via track() once the telemetry union lands (telemetry.ts is another
-// session's dirty file right now — see the phase-2 wiring).
 
 interface ReportStats {
   total: number;
@@ -68,9 +65,10 @@ function CspInner() {
   }, []);
 
   useEffect(() => {
-    setMode(readModeCookie());
+    const m = readModeCookie();
+    setMode(m);
     load();
-    // TODO(F-315 phase 2): track('csp_viewed', { mode })
+    track('csp_viewed', { mode: m });
   }, [load]);
 
   const changeMode = (next: CspMode) => {
@@ -78,7 +76,7 @@ function CspInner() {
     // matching header — so the toggle genuinely changes what the browser enforces.
     document.cookie = `${CSP_MODE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
     setMode(next);
-    // TODO(F-315 phase 2): track('csp_mode_changed', { mode: next })
+    track('csp_mode_changed', { mode: next });
     toast.success(
       next === 'enforce' ? 'Enforcing CSP' : 'Report-only mode',
       next === 'enforce'
@@ -95,10 +93,12 @@ function CspInner() {
     img.referrerPolicy = 'no-referrer';
     img.src = `https://csp-violation.zinbit-demo.invalid/pixel.png?t=${Date.now()}`;
     img.onerror = () => {};
-    // TODO(F-315 phase 2): track('csp_test_fired', {})
+    track('csp_test_fired', { mode });
     toast.info('Test resource requested', 'If the CSP is active, the browser will report a violation.');
     setTimeout(load, 1200);
-  }, [load, toast]);
+  }, [load, toast, mode]);
+
+  const refreshFeed = useCallback(() => { track('csp_feed_refreshed', {}); load(); }, [load]);
 
   const modeTone: BadgeTone = mode === 'enforce' ? 'success' : 'info';
 
@@ -109,7 +109,7 @@ function CspInner() {
         title="Content Security Policy"
         description="A browser-enforced allowlist for what the console may load and execute — the front line against XSS and clickjacking. Roll it out safely in report-only mode, watch the violation feed, then switch to enforce when it’s clean."
         actions={
-          <Button variant="secondary" size="sm" onClick={load} disabled={phase === 'loading'}>
+          <Button variant="secondary" size="sm" onClick={refreshFeed} disabled={phase === 'loading'}>
             <RefreshCw className={`w-4 h-4 ${phase === 'loading' ? 'animate-spin' : ''}`} /> Refresh feed
           </Button>
         }

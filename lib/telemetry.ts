@@ -238,7 +238,12 @@ export type TelemetryEventName =
   | 'pii_masking_viewed'
   | 'pii_masking_policy_updated'
   | 'pii_masking_synced'
-  | 'pii_masking_probe_run';
+  | 'pii_masking_probe_run'
+  // security — content-security policy (F-315)
+  | 'csp_viewed'
+  | 'csp_mode_changed'
+  | 'csp_test_fired'
+  | 'csp_feed_refreshed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

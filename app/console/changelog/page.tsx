@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.93', date: 'September 2026', headline: 'Content-Security-Policy',
+    changes: [
+      { kind: 'feature', text: 'The console now ships a real Content-Security-Policy — a browser-enforced allowlist for what pages may load and run, the front line against XSS and clickjacking (frame-ancestors, object-src and base-uri are all locked down). It’s delivered by the edge on every page and rolled out the safe way: report-only by default, so nothing breaks while violations are collected.' },
+      { kind: 'feature', text: 'A new CSP console shows the active policy directive-by-directive, a live violation feed (aggregated by directive and blocked host), and a one-click “trigger test violation”. Admins can flip report-only → enforce with a single toggle that genuinely changes the header the edge serves, plus defense-in-depth headers (nosniff, Referrer-Policy, Permissions-Policy) on every page.' },
+    ],
+  },
+  {
     version: 'v4.92', date: 'September 2026', headline: 'Field-level PII masking',
     changes: [
       { kind: 'feature', text: 'Live-key API responses are now masked field-by-field per a policy you control — each kind of personal data (email, phone, government ID, date of birth, address, IP, name, social URL) gets its own strategy: leave it, partially reveal it, hash it, tokenize it, or fully redact it. The most sensitive fields (government IDs, dates of birth) have a minimum that can’t be relaxed. Masking is on by default for live keys — not just in specific regions — and sandbox keys still return full synthetic data for testing. Every masked response carries an X-PII-Masked header listing exactly which fields were masked.' },
