@@ -1838,6 +1838,26 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'encryption-posture',
+    name: 'Encryption posture',
+    description: "Pull a live, signed attestation of how your data is protected (F-312) — in transit (negotiated TLS 1.3 cipher, HSTS, forward secrecy, OCSP stapling) and at rest (AES-256-GCM envelope encryption, the customer-managed KMS keys that wrap each data store, their rotation schedule, and field-level PII encryption). Returns a posture score and a stable attestation digest you can hand to a security reviewer. POST rotates the primary data key (envelope re-wrap) and moves the schedule forward. Every API response also carries X-Encryption-Transit and X-Encryption-Rest headers. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/encryption',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'encryption-to-console',
+        title: 'Open the Encryption console',
+        description: 'Inspect the transit + at-rest posture, rotate KMS keys, and tune field-level PII encryption.',
+        category: 'sdks',
+        link: '/console/encryption',
+      },
+    ],
+  },
+
+  {
     id: 'bulk-export',
     name: 'Bulk export',
     description: "Stream a filtered slice of your enriched data out in one call (F-076). Pick an entity (companies or people), narrow it with the same filter/sort grammar as the Query endpoint, select just the columns you want, and choose a format: NDJSON streams row-by-row (memory-flat at any size), CSV for spreadsheets, JSON for a quick load. Add &preview=1 for a free summary + sample (row counts, cost, fields) before you pull the full dataset. Billed per 50-row block; Content-Disposition returns it as a download.",

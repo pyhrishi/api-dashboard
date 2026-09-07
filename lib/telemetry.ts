@@ -214,7 +214,12 @@ export type TelemetryEventName =
   // security — MFA enforcement (F-309)
   | 'mfa_viewed'
   | 'mfa_enrolled'
-  | 'mfa_policy_changed';
+  | 'mfa_policy_changed'
+  // security — encryption in transit & at rest (F-312)
+  | 'encryption_viewed'
+  | 'encryption_checked'
+  | 'encryption_key_rotated'
+  | 'encryption_field_toggled';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

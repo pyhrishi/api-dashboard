@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.89', date: 'September 2026', headline: 'Encryption in transit & at rest',
+    changes: [
+      { kind: 'feature', text: 'Encryption in transit & at rest is now inspectable, not just asserted. A new Encryption console shows the live transit posture (negotiated TLS 1.3 cipher, HSTS, forward secrecy, OCSP stapling) and the at-rest picture — AES-256-GCM envelope encryption, the customer-managed KMS keys that wrap each data store, their rotation schedule, and field-level PII encryption — with a posture score and a signed attestation you can hand to a security reviewer.' },
+      { kind: 'feature', text: 'A real /v1/encryption endpoint returns that signed attestation in one call and rotates the primary data key on demand (envelope re-wrap), and every API response now carries X-Encryption-Transit and X-Encryption-Rest headers — run a live check from the console to see them on the wire. Admins can set the KMS rotation cadence (30–365 days) and tune field-level PII encryption; everything is deterministic and unit-tested.' },
+    ],
+  },
+  {
     version: 'v4.88', date: 'September 2026', headline: 'MFA enforcement',
     changes: [
       { kind: 'feature', text: 'MFA enforcement — an admin can now require multi-factor authentication for the whole organization, not just leave it to each person. Turning on Required applies a 7-day grace period, then gates any member who hasn’t enrolled with a console-wide banner (and routes them to enrollment at sign-in) until they set up an authenticator app.' },

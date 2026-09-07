@@ -11,6 +11,7 @@ import { parseFields, projectFields, applySparseDiscount, sparseDiscountPct, pay
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
 import { getCoalescingStats, runCoalescingDrill } from '@/lib/gateway/coalescing';
+import { getEncryptionPosture, runRotationDrill, attachEncryptionHeaders } from '@/lib/gateway/encryption';
 import { planExport, serializeExport } from '@/lib/gateway/bulkExport';
 import { checkEndpointScope, registerKeyScopes, unregisterKeyScopes, getScopeRegistrySnapshot } from '@/lib/gateway/scopes';
 import { isKeyBlocked, blockKey, unblockKey, getBlock, getKillSwitchSnapshot, type RevocationReason } from '@/lib/gateway/keyBlock';
@@ -133,6 +134,10 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
 
   // ISO 27001 Security Headers
   attachISO27001Headers(responseHeaders);
+
+  // Encryption posture headers (F-312) — make the in-transit + at-rest guarantee
+  // visible on every response. Live keys additionally run field-level PII encryption.
+  attachEncryptionHeaders(responseHeaders, apiKey.startsWith('sk_live_') ? 'live' : 'test');
 
   // CORS (F-082): reflect the configured Access-Control-* headers for the request's
   // Origin, so browser front-ends on an allowed origin can call the API. A preflight
@@ -600,6 +605,32 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
     return NextResponse.json(
       { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/coalescing (stats) or POST /v1/coalescing (run a drill).' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
+  // Encryption posture (F-312) — GET returns a live, signed attestation of the
+  // transit + at-rest posture (TLS/cipher, KMS keys, encrypted stores, PII fields,
+  // score); POST rotates the primary data key (envelope re-wrap) and moves the
+  // schedule. Free meta endpoint; handled before route resolution + billing. The
+  // X-Encryption-* headers are already attached above.
+  if (path === '/v1/encryption') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getEncryptionPosture(apiKey || undefined), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'POST') {
+      const result = runRotationDrill(apiKey || undefined);
+      return NextResponse.json(
+        { success: true, data: { ...result, posture: getEncryptionPosture(apiKey || undefined) }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/encryption (posture) or POST /v1/encryption (rotate the primary key).' } },
       { status: 405, headers: responseHeaders },
     );
   }
