@@ -3,11 +3,46 @@ import type { NextRequest } from 'next/server';
 import { validateApiKey } from './src/lib/gateway/auth';
 import { checkRateLimit } from './src/lib/gateway/rateLimiter';
 import { buildRateLimitHeaders, buildRateLimitedHeaders } from './src/lib/gateway/rateLimitHeaders';
+import {
+  buildCspHeader, cspHeaderName, reportToHeader, hardeningHeaders, generateNonce,
+  CSP_MODE_COOKIE, type CspMode,
+} from './lib/csp';
+
+/**
+ * Attach the console Content-Security-Policy (F-315) to a page navigation. Defaults
+ * to report-only (never blocks); an admin opts into enforce via the CSP_MODE_COOKIE,
+ * which this Edge middleware reads so the toggle actually changes the served header.
+ * A per-request nonce is exposed as `x-nonce` for the dynamic-hardening path. Fully
+ * defensive — any failure falls back to an un-decorated response, never a 500.
+ */
+function applyConsoleCsp(request: NextRequest): NextResponse {
+  try {
+    const nonce = generateNonce();
+    const mode: CspMode = request.cookies.get(CSP_MODE_COOKIE)?.value === 'enforce' ? 'enforce' : 'report-only';
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-nonce', nonce);
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    // Prerendered pages carry inline scripts without a nonce, so the shipped policy
+    // relies on 'unsafe-inline' — don't pin the nonce into the enforced script-src.
+    response.headers.set(cspHeaderName(mode), buildCspHeader());
+    response.headers.set('Report-To', reportToHeader());
+    Object.entries(hardeningHeaders()).forEach(([k, v]) => response.headers.set(k, v));
+    return response;
+  } catch {
+    return NextResponse.next();
+  }
+}
 
 export function middleware(request: NextRequest) {
-  // Only apply to API routes
-  if (!request.nextUrl.pathname.startsWith('/api/v1')) {
-    return NextResponse.next();
+  const { pathname } = request.nextUrl;
+
+  // Non-API routes are page navigations — attach the console CSP (F-315). Other
+  // /api/* routes (the CSP report collector, docs, graphql, grpc) pass through.
+  if (!pathname.startsWith('/api/v1')) {
+    if (pathname.startsWith('/api')) {
+      return NextResponse.next();
+    }
+    return applyConsoleCsp(request);
   }
 
   // CORS preflight (F-082): a browser preflight (OPTIONS) carries no Authorization
@@ -79,5 +114,9 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/api/v1/:path*',
+  matcher: [
+    '/api/v1/:path*',
+    // Page routes only — exclude /api, Next internals, and any static file (has a dot).
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
+  ],
 };
