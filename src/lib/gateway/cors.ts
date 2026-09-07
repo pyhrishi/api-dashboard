@@ -10,6 +10,12 @@
  *
  * In-memory + seeded (like the other gateway registries). Pure/deterministic —
  * no I/O, no Math.random.
+ *
+ * Exposed response headers: a browser can only read CORS-safelisted headers
+ * unless the gateway lists the rest in `Access-Control-Expose-Headers`. Every
+ * `X-*`/`RateLimit-*` header the API advertises is listed here so JS clients on
+ * an allowed origin can actually read them (request id, credits, rate-limit,
+ * and the F-312 encryption guarantee).
  */
 
 export type CorsMode = 'allowlist' | 'wildcard' | 'disabled';
@@ -33,6 +39,14 @@ export interface CorsEvaluation {
 
 const DEFAULT_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'];
 const DEFAULT_HEADERS = ['Authorization', 'Content-Type', 'X-Request-Id', 'Idempotency-Key', 'X-Debug-Echo'];
+/** Response headers an allowed browser origin may read (see module doc). */
+export const EXPOSED_RESPONSE_HEADERS = [
+  'X-Request-Id', 'X-Credits-Cost', 'X-Region', 'X-Served-By',
+  'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'RateLimit-Policy',
+  'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'X-RateLimit-Tier',
+  'X-Encryption-Transit', 'X-Encryption-Rest',
+  'X-Payload-Limit-Bytes', 'X-Payload-Limit-Depth',
+];
 
 const ORIGIN_RE = /^https?:\/\/[a-zA-Z0-9.-]+(:\d{1,5})?$/;
 
@@ -140,6 +154,10 @@ export function evaluateCors(origin: string | null | undefined, requestMethod?: 
     'Access-Control-Allow-Methods': policy.allowedMethods.join(', '),
     'Access-Control-Allow-Headers': policy.allowedHeaders.join(', '),
     'Access-Control-Max-Age': String(policy.maxAgeSeconds),
+    // Let allowed browser origins read the gateway's advertised response headers
+    // (request id, credits, rate-limit, and the F-312 encryption guarantee) —
+    // without this, only the CORS-safelisted headers are visible to JS clients.
+    'Access-Control-Expose-Headers': EXPOSED_RESPONSE_HEADERS.join(', '),
   };
   if (policy.allowCredentials) headers['Access-Control-Allow-Credentials'] = 'true';
   if (allowOrigin !== '*') headers['Vary'] = 'Origin';

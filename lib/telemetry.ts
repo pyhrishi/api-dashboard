@@ -220,6 +220,15 @@ export type TelemetryEventName =
   | 'encryption_checked'
   | 'encryption_key_rotated'
   | 'encryption_field_toggled'
+  | 'encryption_cadence_changed'
+  // security — payload size & depth limits (F-314)
+  | 'payload_limits_viewed'
+  | 'payload_analyzed'
+  | 'payload_probe_sent'
+  | 'payload_limit_changed'
+  | 'payload_limits_reset'
+  | 'payload_upgrade_clicked'
+  | 'payload_upgrade_dismissed'
   // security — session management (F-310)
   | 'sessions_viewed'
   | 'session_revoked'

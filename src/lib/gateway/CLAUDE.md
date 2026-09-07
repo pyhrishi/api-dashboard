@@ -11,6 +11,8 @@ auth, rate-limiting, billing, caching, and compliance genuinely run.
    DDoS/blackhole → data-residency (`451`) → load-balancer region → ISO-27001 headers →
    **special sub-routers** for `data-shares/*`, `partner/*`, `infra/*` (these return early) →
    `resolveEndpoint` (router.ts strips `/api`, matches `endpoints.ts` `path`) →
+   **payload limits** (F-314 — `/v1/limits/payload*` meta routes first, then `guardPayload` on every
+   non-GET body from a cloned stream: `413`/`414`/`422` with `details.fix`; `X-Payload-Limit-*` on every gateway response) →
    WAF (`406`) → fraud/geo-velocity (`403`) → SOC2/MSA/DPA gating → idempotency →
    **billing** (`deductCredits`, `402`) → async `202` (`Prefer: respond-async`) →
    edge cache (`X-Cache: HIT/MISS/STALE`) → circuit breaker (serve-stale-on-error) →

@@ -50,7 +50,22 @@ function explainStatus(status: number): StatusExplanation {
     cause: 'This endpoint has been sunset and permanently removed.',
     action: 'migrate to the replacement endpoint referenced in the deprecation notice',
   };
-  if (status === 400 || status === 422) return {
+  if (status === 413) return {
+    label: 'Payload Too Large',
+    cause: 'Request bodies are exceeding a size cap — the plan\'s body-size limit (X-Payload-Limit-Bytes on every gateway response) or an endpoint\'s input cap (STREAM_TOO_LARGE / JOB_TOO_LARGE).',
+    action: 'split batches into smaller chunks or submit them as an async job (POST /v1/jobs accepts up to 10,000 inputs); the Payload Limits console shows the exact limit and a chunking plan',
+  };
+  if (status === 414) return {
+    label: 'URI Too Long',
+    cause: 'Identifier lists are being packed into the query string past the URL-length limit.',
+    action: 'move the parameters into a JSON body (POST) or send fewer identifiers per request',
+  };
+  if (status === 422) return {
+    label: 'Unprocessable Payload',
+    cause: 'Payloads are structurally over a limit — too deeply nested, an array too long, too many keys, or an oversized string.',
+    action: 'flatten the payload and chunk long arrays; the 422 body names the dimension, the measured value, the limit, and the fix',
+  };
+  if (status === 400) return {
     label: 'Bad Request',
     cause: 'Payloads are failing schema validation (missing or malformed parameters).',
     action: 'validate inputs against the endpoint parameter schema before sending',
@@ -494,7 +509,10 @@ export function explainMatch(log: MatchLog): MatchExplanation {
   }
 
   const s = log.status;
-  if (s === 400 || s === 422) {
+  if (s === 422 || s === 413 || s === 414) {
+    return { verdict: 'error', label: 'Payload over a limit', detail: 'Rejected before any lookup ran — the request was over a structural or size limit (depth, array length, keys, string or body size). Excluded from match rate.', identifier, endpointKind: kind, recovery: 'Follow the fix in the error body (chunk the array, flatten the payload, or use POST /v1/jobs) and retry.', counts: false };
+  }
+  if (s === 400) {
     return { verdict: 'error', label: 'Invalid input', detail: `The ${idLabel.toLowerCase()} failed validation, so no lookup ran. Excluded from match rate.`, identifier, endpointKind: kind, recovery: 'Fix the input format and retry.', counts: false };
   }
   if (s === 401 || s === 403) {

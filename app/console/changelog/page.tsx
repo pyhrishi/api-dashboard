@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.91', date: 'September 2026', headline: 'Payload size & depth limits',
+    changes: [
+      { kind: 'feature', text: 'The gateway now measures every request before any handler parses it — body size, JSON nesting depth, array length, total keys, string length, and URL length — against limits sized to your plan. An oversized or over-nested request is refused with a 413, 414, or 422 whose body names the dimension, the measured value, the limit, and the fix (down to "send 3 requests of ≤400 items"), and every gateway response advertises X-Payload-Limit-Bytes and X-Payload-Limit-Depth. Async jobs keep their own ceiling (10,000 inputs / 4 MB on every plan), so "submit it as a job" is always a real way out.' },
+      { kind: 'feature', text: 'A new Payload Limits console shows your effective limits, lets an admin tighten any of them for the org (the plan ceiling is the hard maximum), and includes a payload analyzer: paste or pick a payload, see each dimension metered against your limits with a chunking plan, dry-run it at the real gateway for free (POST /v1/limits/payload/check), or send it for real and watch the rejection land in the ledger. Root-cause analysis and ticket triage now explain 413/414/422 too.' },
+    ],
+  },
+  {
     version: 'v4.90', date: 'September 2026', headline: 'Session management',
     changes: [
       { kind: 'feature', text: 'A new Sessions console shows every device and client signed into your account — and scores each one against the session you’re using right now. A sign-in from a different country, an idle session past your policy, a client on an external network: each gets a risk rating with a plain-English “why this rating?”, so the session you don’t recognize stands out instead of hiding in a flat list.' },
@@ -29,6 +36,7 @@ const RELEASES: Release[] = [
     changes: [
       { kind: 'feature', text: 'Encryption in transit & at rest is now inspectable, not just asserted. A new Encryption console shows the live transit posture (negotiated TLS 1.3 cipher, HSTS, forward secrecy, OCSP stapling) and the at-rest picture — AES-256-GCM envelope encryption, the customer-managed KMS keys that wrap each data store, their rotation schedule, and field-level PII encryption — with a posture score and a signed attestation you can hand to a security reviewer.' },
       { kind: 'feature', text: 'A real /v1/encryption endpoint returns that signed attestation in one call and rotates the primary data key on demand (envelope re-wrap), and every API response now carries X-Encryption-Transit and X-Encryption-Rest headers — run a live check from the console to see them on the wire. Admins can set the KMS rotation cadence (30–365 days) and tune field-level PII encryption; everything is deterministic and unit-tested.' },
+      { kind: 'improvement', text: 'The attestation is now genuinely signed: the gateway HMAC-SHA256-signs the digest (with a key id) and GET /v1/encryption/verify checks a digest + signature pair. Console settings sync to the gateway over PATCH /v1/encryption so the live endpoint and the console always agree; randomized PII fields are enforced as always-on in the shared model; the X-Encryption-* headers are CORS-exposed for browser clients; and Reset Demo Data now clears the encryption, MFA, and login-lockout stores too. The Security Hub and Data & Privacy settings link into the Encryption console.' },
     ],
   },
   {

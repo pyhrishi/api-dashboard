@@ -1838,9 +1838,36 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'payload-limits',
+    name: 'Payload limits',
+    description: "Read the request-size and structure limits the gateway enforces on your plan (F-314) — maximum body bytes, JSON nesting depth, array length, total keys, string length, and URL length — plus your org's recent rejections. Every request is measured before any handler parses it; an oversized or over-nested body is refused with 413 PAYLOAD_TOO_LARGE, 414 URI_TOO_LONG, or 422 PAYLOAD_TOO_DEEP / PAYLOAD_ARRAY_TOO_LONG / PAYLOAD_TOO_MANY_KEYS / PAYLOAD_STRING_TOO_LONG, and the error body names the dimension, the measured value, the limit, and the fix (including a chunking plan). POST /v1/limits/payload/check is a free dry run: send the body you intend to send and get the verdict without executing anything. PATCH tightens a limit for your org ({ maxBodyBytes, maxDepth, maxArrayLength, maxKeys, maxStringLength, maxUrlLength }; null clears; the plan ceiling is the hard maximum). Ingest endpoints carry their own profile on every plan so the escape hatch stays open (POST /v1/jobs accepts up to 10,000 inputs / 4 MB; /v1/enrich/stream 500 inputs). Every gateway response carries X-Payload-Limit-Bytes and X-Payload-Limit-Depth. The gateway is the source of truth for overrides; the console mirrors it. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/limits/payload',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'payload-limits-to-console',
+        title: 'Open the Payload Limits console',
+        description: 'Analyze a payload against your limits, dry-run it at the gateway, and tune per-org limits.',
+        category: 'sdks',
+        link: '/console/payload-limits',
+      },
+      {
+        id: 'payload-limits-to-jobs',
+        title: 'Submit large sets as an async job',
+        description: 'Anything bigger than one request fits: POST /v1/jobs accepts the whole batch and streams results back.',
+        category: 'sdks',
+        link: '/console/jobs',
+      },
+    ],
+  },
+
+  {
     id: 'encryption-posture',
     name: 'Encryption posture',
-    description: "Pull a live, signed attestation of how your data is protected (F-312) — in transit (negotiated TLS 1.3 cipher, HSTS, forward secrecy, OCSP stapling) and at rest (AES-256-GCM envelope encryption, the customer-managed KMS keys that wrap each data store, their rotation schedule, and field-level PII encryption). Returns a posture score and a stable attestation digest you can hand to a security reviewer. POST rotates the primary data key (envelope re-wrap) and moves the schedule forward. Every API response also carries X-Encryption-Transit and X-Encryption-Rest headers. Free, keyless-billed.",
+    description: "Pull a live, signed attestation of how your data is protected (F-312) — in transit (negotiated TLS 1.3 cipher, HSTS, forward secrecy, OCSP stapling) and at rest (AES-256-GCM envelope encryption, the customer-managed KMS keys that wrap each data store, their rotation schedule, and field-level PII encryption). Returns a posture score and a stable attestation digest, HMAC-SHA256-signed by the gateway (alg, kid, sig) so a security reviewer can verify it at GET /v1/encryption/verify?attestation=&sig=. PATCH syncs your org's settings ({ rotationDays: 30|60|90|180|365, fieldEncryption: { <deterministic field>: boolean } } — randomized PII fields are always on and can't be relaxed); POST rotates the primary data key (envelope re-wrap) and moves the schedule forward. Field-level PII encryption applies to sk_live_ traffic; sandbox keys return synthetic data. Every API response also carries X-Encryption-Transit and X-Encryption-Rest headers (CORS-exposed). Free, keyless-billed.",
     method: 'GET',
     path: '/v1/encryption',
     creditCost: 0,

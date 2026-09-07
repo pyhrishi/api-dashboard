@@ -114,6 +114,15 @@ export function fingerprint(seed: string, len = 16): string {
 
 const DAY = 86_400_000;
 
+/**
+ * The org handle an API key maps to. Shared by the console and the gateway so both
+ * derive the same KMS inventory + attestation for a key (prototype: keys are
+ * org-scoped by a stable, non-secret suffix bucket). No key → the demo org.
+ */
+export function orgHandleForKey(apiKey: string | undefined | null): string {
+  return apiKey ? `org_${apiKey.slice(-8)}` : 'org_demo';
+}
+
 /** The transit posture — fixed to the strong modern default the gateway serves. */
 export const TLS_POSTURE: TlsPosture = {
   version: 'TLS 1.3',
@@ -124,6 +133,11 @@ export const TLS_POSTURE: TlsPosture = {
   ocspStapling: true,
   forwardSecrecy: true,
 };
+
+/** The Strict-Transport-Security value the gateway serves — derived from the posture so the two can't drift. */
+export function hstsHeaderValue(posture: TlsPosture = TLS_POSTURE): string {
+  return `max-age=${posture.hstsMaxAgeDays * 86_400}; includeSubDomains; preload`;
+}
 
 /**
  * Deterministic KMS key inventory for an org. `rotationDays` and `lastRotatedAt`
@@ -184,13 +198,47 @@ export const PII_FIELDS: { field: string; mode: FieldMode }[] = [
   { field: 'location', mode: 'randomized' },
 ];
 
+/** Randomized fields are a hard floor: always encrypted, never relaxable. */
+export function isFieldRelaxable(field: string): boolean {
+  return PII_FIELDS.find((f) => f.field === field)?.mode === 'deterministic';
+}
+
 export function deriveFields(overrides: Record<string, boolean>): FieldEncryption[] {
   return PII_FIELDS.map(({ field, mode }) => ({
     field,
     mode,
-    // Default on; an org can only relax deterministic (searchable) fields.
-    enabled: overrides[field] ?? true,
+    // Default on; an org can only relax deterministic (searchable) fields — the
+    // floor is enforced here (the SSOT), not just in the UI.
+    enabled: mode === 'randomized' ? true : (overrides[field] ?? true),
   }));
+}
+
+/** A validated settings patch (what `PATCH /v1/encryption` and the console may change). */
+export interface EncryptionSettingsPatch {
+  rotationDays?: number;
+  fieldEncryption?: Record<string, boolean>;
+}
+
+/**
+ * Narrow an untrusted body into a settings patch. Unknown fields, non-boolean
+ * toggles, unknown PII fields, non-relaxable (randomized) fields, and cadences
+ * outside the allowlist are dropped — never thrown — so a partial patch applies.
+ */
+export function normalizeSettingsPatch(input: unknown): EncryptionSettingsPatch {
+  const out: EncryptionSettingsPatch = {};
+  if (!input || typeof input !== 'object') return out;
+  const body = input as Record<string, unknown>;
+  if (typeof body.rotationDays === 'number' && (ALLOWED_ROTATION_DAYS as readonly number[]).includes(body.rotationDays)) {
+    out.rotationDays = body.rotationDays;
+  }
+  if (body.fieldEncryption && typeof body.fieldEncryption === 'object') {
+    const fe: Record<string, boolean> = {};
+    Object.entries(body.fieldEncryption as Record<string, unknown>).forEach(([field, enabled]) => {
+      if (typeof enabled === 'boolean' && isFieldRelaxable(field)) fe[field] = enabled;
+    });
+    out.fieldEncryption = fe;
+  }
+  return out;
 }
 
 // ── Scoring & attestation ────────────────────────────────────────────────────
@@ -279,7 +327,7 @@ export const useEncryptionSettings = create<EncryptionSettingsState>()(
         set({ rotationDays: (ALLOWED_ROTATION_DAYS as readonly number[]).includes(days) ? days : 90 }),
       rotatePrimaryKey: (now) => set({ lastRotatedAt: now ?? Date.now() }),
       setFieldEncryption: (field, enabled) =>
-        set((s) => ({ fieldEncryption: { ...s.fieldEncryption, [field]: enabled } })),
+        set((s) => (isFieldRelaxable(field) ? { fieldEncryption: { ...s.fieldEncryption, [field]: enabled } } : s)),
       reset: () => set({ rotationDays: 90, lastRotatedAt: null, fieldEncryption: {} }),
     }),
     { name: 'zinbit-encryption', storage: createJSONStorage(() => localStorage) },

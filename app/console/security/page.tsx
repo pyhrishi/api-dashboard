@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useStore, MockKey } from '@/lib/store';
-import { ShieldAlert, ShieldCheck, AlertTriangle, Key, Activity, Settings2, Trash2, Shield, Lock, Zap } from 'lucide-react';
+import { useEncryptionSettings, buildPosture, daysUntilRotation, orgHandleForKey } from '@/lib/encryption';
+import { ShieldAlert, ShieldCheck, AlertTriangle, Key, Activity, Settings2, Trash2, Shield, Lock, Zap, ArrowRight, FileKey } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
@@ -46,6 +48,14 @@ export default function SecurityHubPage() {
     revokeKey(id);
     success('Compromised key revoked permanently', 'Key Revoked');
   };
+
+  // 5. Encryption posture (F-312) — the same SSOT the Encryption console and the
+  // live /v1/encryption endpoint derive from, keyed by the active environment's key.
+  const { rotationDays, lastRotatedAt, fieldEncryption } = useEncryptionSettings();
+  const encKey = activeEnvKeys[0]?.key ?? activeKeys[0]?.key;
+  const encPosture = buildPosture(orgHandleForKey(encKey), { rotationDays, lastRotatedAt, fieldEncryption }, Date.now());
+  const nextKey = encPosture.keys.reduce((min, k) => (k.nextRotationAt < min.nextRotationAt ? k : min), encPosture.keys[0]);
+  const nextRotationDays = daysUntilRotation(nextKey, Date.now());
 
   const handleAutoRestrict = (key: MockKey) => {
     updateKey(key.id, { scopes: ['api.search.read'] });
@@ -198,8 +208,43 @@ export default function SecurityHubPage() {
 
         </div>
 
-        {/* Right Column: Gateway Log (1/3 width) */}
-        <div className="glass-inner rounded-2xl border border-border shadow-xl overflow-hidden flex flex-col h-[600px] lg:h-auto">
+        {/* Right Column: Encryption posture + Gateway Log (1/3 width) */}
+        <div className="space-y-6 flex flex-col">
+        <Link href="/console/encryption" className="group glass-inner rounded-2xl border border-border hover:border-teal/40 shadow-xl overflow-hidden block transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50">
+          <div className="p-6 border-b border-border flex items-center justify-between bg-surface/50">
+            <h2 className="text-lg font-bold text-fg flex items-center gap-2">
+              <FileKey className="w-5 h-5 text-teal" />
+              Encryption
+            </h2>
+            <span className={cn(
+              'text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full',
+              encPosture.score >= 90 ? 'bg-semantic-success/10 text-semantic-success' : encPosture.score >= 70 ? 'bg-semantic-warning/10 text-semantic-warning' : 'bg-semantic-error/10 text-semantic-error',
+            )}>
+              score {encPosture.score}
+            </span>
+          </div>
+          <div className="p-6 grid grid-cols-3 gap-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-fg-muted">In transit</div>
+              <div className="text-sm font-bold text-fg mt-1">{encPosture.transit.version}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-fg-muted">At rest</div>
+              <div className="text-sm font-bold text-fg mt-1">{encPosture.keys.length} KMS keys</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-fg-muted">Next rotation</div>
+              <div className={cn('text-sm font-bold mt-1', nextRotationDays < 0 ? 'text-semantic-error' : 'text-fg')}>
+                {nextRotationDays < 0 ? `${Math.abs(nextRotationDays)}d overdue` : `in ${nextRotationDays}d`}
+              </div>
+            </div>
+          </div>
+          <div className="px-6 pb-5 text-xs font-bold text-fg-muted group-hover:text-teal transition-colors inline-flex items-center gap-1">
+            Inspect posture, rotate keys, pull a signed attestation <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <div className="glass-inner rounded-2xl border border-border shadow-xl overflow-hidden flex flex-col h-[600px] lg:h-auto lg:flex-1">
           <div className="p-6 border-b border-border flex items-center justify-between bg-surface/50 shrink-0">
             <h2 className="text-lg font-bold text-fg flex items-center gap-2">
               <Lock className="w-5 h-5 text-teal" />
@@ -247,6 +292,7 @@ export default function SecurityHubPage() {
               })
             )}
           </div>
+        </div>
         </div>
 
       </div>

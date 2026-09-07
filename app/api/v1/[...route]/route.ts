@@ -11,7 +11,8 @@ import { parseFields, projectFields, applySparseDiscount, sparseDiscountPct, pay
 import { callSandboxAPI, isAPIError, type APIResponse, type APIError } from '@/lib/sandboxAPI';
 import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forceCircuit } from '@/lib/gateway/circuitBreaker';
 import { getCoalescingStats, runCoalescingDrill } from '@/lib/gateway/coalescing';
-import { getEncryptionPosture, runRotationDrill, attachEncryptionHeaders } from '@/lib/gateway/encryption';
+import { getEncryptionPosture, runRotationDrill, attachEncryptionHeaders, updateEncryptionSettings, verifyAttestation } from '@/lib/gateway/encryption';
+import { guardPayload, attachPayloadLimitHeaders, dryRunPayload, getPayloadLimitsSnapshot, updatePayloadOverrides } from '@/lib/gateway/payloadLimits';
 import { planExport, serializeExport } from '@/lib/gateway/bulkExport';
 import { checkEndpointScope, registerKeyScopes, unregisterKeyScopes, getScopeRegistrySnapshot } from '@/lib/gateway/scopes';
 import { isKeyBlocked, blockKey, unblockKey, getBlock, getKillSwitchSnapshot, type RevocationReason } from '@/lib/gateway/keyBlock';
@@ -29,7 +30,7 @@ import { createAsyncJob, getAsyncJob, listAsyncJobs, cancelAsyncJob } from '@/li
 import { resolveStreamRow, normalizeStreamInputs, kindForEndpoint, MAX_STREAM_INPUTS, STREAM_ROW_DELAY_MS } from '@/lib/gateway/streamEnrich';
 import { getAllPartners, getPartnerDashboard, lookupPartner, attributeReferral, recordRevenueEvent, processMonthEndPayouts } from '@/lib/gateway/partnerRevenue';
 import { generateForecastReport, forecastCapacity, getCurrentUsageSnapshot, type ForecastHorizon, type RegionId, type ResourceType } from '@/lib/gateway/capacityForecast';
-import { API_BASE_URL } from '@/lib/api-config';
+import { API_BASE_URL, CONSOLE_HOST } from '@/lib/api-config';
 import { negotiateEncoding, compressPayload, recordCompression, getCompressionStats } from '@/lib/gateway/compression';
 import { evaluateCors, getCorsStats, updateCorsPolicy } from '@/lib/gateway/cors';
 
@@ -147,6 +148,89 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   Object.assign(responseHeaders, cors.headers);
   if (request.method === 'OPTIONS') {
     return new NextResponse(null, { status: 204, headers: responseHeaders });
+  }
+
+  // Payload size & depth limits (F-314). The meta routes come first — the dry run
+  // must be able to *measure* an oversized body rather than be rejected by it.
+  //   GET  /v1/limits/payload        → effective limits (tier ceiling ⊓ org overrides) + rejection ledger
+  //   PATCH /v1/limits/payload       → admin overrides (tighten only; null clears)
+  //   POST /v1/limits/payload/check  → free dry run: measure + verdict, nothing executed or recorded
+  const limitsPath = request.nextUrl.pathname.replace(/^\/api/, '');
+  if (limitsPath === '/v1/limits/payload' || limitsPath === '/v1/limits/payload/check') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (limitsPath === '/v1/limits/payload/check') {
+      if (request.method !== 'POST') {
+        return NextResponse.json(
+          { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'POST the body you intend to send to /v1/limits/payload/check; add ?target=/v1/<path> to name the endpoint.' } },
+          { status: 405, headers: responseHeaders },
+        );
+      }
+      const raw = await request.text().catch(() => '');
+      const target = request.nextUrl.searchParams.get('target') || '/v1/batch/enrich';
+      const dry = dryRunPayload(apiKey || undefined, raw, target);
+      attachPayloadLimitHeaders(responseHeaders, dry.limits);
+      return NextResponse.json(
+        { success: true, data: dry, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'GET') {
+      const snap = getPayloadLimitsSnapshot(apiKey || undefined);
+      attachPayloadLimitHeaders(responseHeaders, snap.limits);
+      return NextResponse.json(
+        { success: true, data: snap, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'PATCH') {
+      const body: unknown = await request.json().catch(() => null);
+      if (!body || typeof body !== 'object') {
+        return NextResponse.json(
+          { success: false, error: { code: 'VALIDATION_ERROR', message: 'Send a JSON object of limit overrides, e.g. { "maxBodyBytes": 131072, "maxArrayLength": 250 }; use null to clear one. Overrides can only tighten the plan ceiling.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      const snap = updatePayloadOverrides(apiKey || undefined, body);
+      attachPayloadLimitHeaders(responseHeaders, snap.limits);
+      return NextResponse.json(
+        { success: true, data: snap, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET or PATCH /v1/limits/payload, or POST /v1/limits/payload/check.' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
+  // Enforce the limits on everything else — before any sub-router parses a body.
+  // The body is read from a clone so downstream `request.json()` calls still work.
+  const rawBodyForLimits = request.method === 'GET' || request.method === 'HEAD' ? '' : await request.clone().text().catch(() => '');
+  const payloadGuard = guardPayload(apiKey || undefined, request.method, request.url, rawBodyForLimits);
+  attachPayloadLimitHeaders(responseHeaders, payloadGuard.effective.limits);
+  if (!payloadGuard.ok) {
+    const v = payloadGuard.violation;
+    // Rejections are real gateway responses: log them like every other terminal
+    // status so RCA/triage see them. (The middleware already spent a rate-limit
+    // token on this request — same as a WAF 406.)
+    logRequest(requestId, request.method, limitsPath, v.status, Date.now() - startTime);
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: v.code,
+          message: `${v.message} ${v.fix}`,
+          details: {
+            dimension: v.dimension, measured: v.measured, limit: v.limit, tier: payloadGuard.effective.tier,
+            fix: v.fix,
+            violations: payloadGuard.verdict.violations.map((x) => ({ dimension: x.dimension, measured: x.measured, limit: x.limit, code: x.code })),
+            docs: `https://${CONSOLE_HOST}/console/payload-limits`,
+          },
+        },
+        metadata: { requestId, timestamp: Date.now() },
+      },
+      { status: v.status, headers: responseHeaders },
+    );
   }
 
   // Zero-Copy Data Share Route Handler
@@ -609,16 +693,47 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     );
   }
 
-  // Encryption posture (F-312) — GET returns a live, signed attestation of the
+  // Encryption posture (F-312) — GET returns a live, HMAC-signed attestation of the
   // transit + at-rest posture (TLS/cipher, KMS keys, encrypted stores, PII fields,
-  // score); POST rotates the primary data key (envelope re-wrap) and moves the
-  // schedule. Free meta endpoint; handled before route resolution + billing. The
-  // X-Encryption-* headers are already attached above.
+  // score); PATCH syncs the org's settings (rotation cadence, field-level PII
+  // toggles) so the console and this endpoint agree; POST rotates the primary data
+  // key (envelope re-wrap) and moves the schedule. GET /v1/encryption/verify checks
+  // a digest + signature pair. Free meta endpoint; handled before route resolution +
+  // billing. The X-Encryption-* headers are already attached above.
+  if (path === '/v1/encryption/verify') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    const attestation = request.nextUrl.searchParams.get('attestation') ?? '';
+    const sig = request.nextUrl.searchParams.get('sig') ?? '';
+    if (!attestation || !sig) {
+      return NextResponse.json(
+        { success: false, error: { code: 'VALIDATION_ERROR', message: 'Pass both ?attestation= (the att_ digest) and ?sig= (the hex HMAC signature from GET /v1/encryption).' } },
+        { status: 400, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: true, data: verifyAttestation(apiKey || undefined, attestation, sig), metadata: { requestId, timestamp: Date.now() } },
+      { status: 200, headers: responseHeaders },
+    );
+  }
   if (path === '/v1/encryption') {
     responseHeaders['X-Credits-Cost'] = '0';
     if (request.method === 'GET') {
       return NextResponse.json(
         { success: true, data: getEncryptionPosture(apiKey || undefined), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'PATCH') {
+      const body: unknown = await request.json().catch(() => null);
+      if (!body || typeof body !== 'object') {
+        return NextResponse.json(
+          { success: false, error: { code: 'VALIDATION_ERROR', message: 'Send a JSON object: { "rotationDays": 30|60|90|180|365, "fieldEncryption": { "<deterministic field>": boolean } }.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      const result = updateEncryptionSettings(apiKey || undefined, body);
+      return NextResponse.json(
+        { success: true, data: { ...result, posture: getEncryptionPosture(apiKey || undefined) }, metadata: { requestId, timestamp: Date.now() } },
         { status: 200, headers: responseHeaders },
       );
     }
@@ -630,7 +745,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       );
     }
     return NextResponse.json(
-      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/encryption (posture) or POST /v1/encryption (rotate the primary key).' } },
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/encryption (posture), PATCH /v1/encryption (settings), POST /v1/encryption (rotate the primary key), or GET /v1/encryption/verify.' } },
       { status: 405, headers: responseHeaders },
     );
   }

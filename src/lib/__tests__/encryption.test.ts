@@ -5,10 +5,14 @@
 import {
   fnv, fingerprint, TLS_POSTURE, deriveKeys, deriveStores, deriveFields,
   attest, buildPosture, daysUntilRotation, PII_FIELDS,
+  orgHandleForKey, hstsHeaderValue, isFieldRelaxable, normalizeSettingsPatch, useEncryptionSettings,
 } from '@/lib/encryption';
 import {
   getEncryptionPosture, runRotationDrill, attachEncryptionHeaders, __resetEncryption,
+  updateEncryptionSettings, signAttestation, verifyAttestation, ATTESTATION_KID, ENCRYPTION_EXPOSED_HEADERS,
 } from '@/lib/gateway/encryption';
+import { attachISO27001Headers } from '@/lib/gateway/security';
+import { EXPOSED_RESPONSE_HEADERS } from '@/lib/gateway/cors';
 
 const NOW = 1_760_000_000_000; // fixed reference "now"
 
@@ -137,5 +141,75 @@ describe('gateway meta module', () => {
     const after = getEncryptionPosture('sk_live_abcdef12', NOW + 86_400_000);
     const afterData = after.keys.find((k) => k.purpose === 'data')!;
     expect(afterData.rotatedAt).toBeGreaterThan(beforeData.rotatedAt);
+  });
+});
+
+describe('console ↔ gateway coherence (hardening pass)', () => {
+  beforeEach(() => __resetEncryption());
+
+  it('orgHandleForKey is the one handle both sides use', () => {
+    expect(orgHandleForKey('sk_live_abcdef12')).toBe('org_abcdef12');
+    expect(orgHandleForKey(undefined)).toBe('org_demo');
+    expect(orgHandleForKey('')).toBe('org_demo');
+    expect(getEncryptionPosture('sk_live_abcdef12', NOW).orgId).toBe(orgHandleForKey('sk_live_abcdef12'));
+  });
+
+  it('randomized PII fields are a floor in the SSOT, not just the UI', () => {
+    expect(isFieldRelaxable('email')).toBe(true);
+    expect(isFieldRelaxable('full_name')).toBe(false);
+    expect(isFieldRelaxable('nope')).toBe(false);
+    const fields = deriveFields({ full_name: false, email: false });
+    expect(fields.find((f) => f.field === 'full_name')!.enabled).toBe(true);
+    expect(fields.find((f) => f.field === 'email')!.enabled).toBe(false);
+    useEncryptionSettings.getState().setFieldEncryption('full_name', false);
+    expect(useEncryptionSettings.getState().fieldEncryption.full_name).toBeUndefined();
+    useEncryptionSettings.getState().reset();
+  });
+
+  it('normalizeSettingsPatch drops anything invalid instead of throwing', () => {
+    expect(normalizeSettingsPatch(null)).toEqual({});
+    expect(normalizeSettingsPatch('x')).toEqual({});
+    expect(normalizeSettingsPatch({ rotationDays: 45 })).toEqual({});
+    expect(normalizeSettingsPatch({ rotationDays: 30, fieldEncryption: { email: false, full_name: false, bogus: true, phone: 'no' } }))
+      .toEqual({ rotationDays: 30, fieldEncryption: { email: false } });
+  });
+
+  it('PATCH sync makes the gateway posture match the console posture', () => {
+    const key = 'sk_live_sync0001';
+    const settings = { rotationDays: 30, lastRotatedAt: null, fieldEncryption: { email: false, phone: false } };
+    const console_ = buildPosture(orgHandleForKey(key), settings, NOW);
+    const before = getEncryptionPosture(key, NOW);
+    expect(before.attestation).not.toBe(console_.attestation);
+    const r = updateEncryptionSettings(key, { rotationDays: 30, fieldEncryption: { email: false, phone: false } });
+    expect(r.rotationDays).toBe(30);
+    const after = getEncryptionPosture(key, NOW);
+    expect(after.attestation).toBe(console_.attestation);
+    expect(after.score).toBe(console_.score);
+  });
+
+  it('attestation is HMAC-signed and verifiable; tampering fails', () => {
+    const snap = getEncryptionPosture('sk_live_abcdef12', NOW);
+    expect(snap.signature.alg).toBe('HMAC-SHA256');
+    expect(snap.signature.kid).toBe(ATTESTATION_KID);
+    expect(snap.signature.sig).toMatch(/^[0-9a-f]{64}$/);
+    expect(signAttestation(snap.orgId, snap.attestation, NOW).sig).toBe(snap.signature.sig);
+    expect(verifyAttestation('sk_live_abcdef12', snap.attestation, snap.signature.sig).valid).toBe(true);
+    expect(verifyAttestation('sk_live_abcdef12', snap.attestation, snap.signature.sig.toUpperCase()).valid).toBe(true);
+    expect(verifyAttestation('sk_live_abcdef12', snap.attestation, '0'.repeat(64)).valid).toBe(false);
+    expect(verifyAttestation('sk_live_otherorg', snap.attestation, snap.signature.sig).valid).toBe(false);
+  });
+
+  it('HSTS on the wire is derived from the posture SSOT', () => {
+    const h: Record<string, string> = {};
+    attachISO27001Headers(h);
+    expect(h['Strict-Transport-Security']).toBe(hstsHeaderValue());
+    expect(h['Strict-Transport-Security']).toContain(`max-age=${TLS_POSTURE.hstsMaxAgeDays * 86_400}`);
+  });
+
+  it('the encryption headers are CORS-exposed and name the key exchange', () => {
+    ENCRYPTION_EXPOSED_HEADERS.forEach((name) => expect(EXPOSED_RESPONSE_HEADERS).toContain(name));
+    const h: Record<string, string> = {};
+    attachEncryptionHeaders(h, 'live');
+    expect(h['X-Encryption-Transit']).toContain(`kx=${TLS_POSTURE.keyExchange}`);
   });
 });

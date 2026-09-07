@@ -1,6 +1,10 @@
 'use client';
 
 import { useStore } from '@/lib/store';
+import { useEncryptionSettings } from '@/lib/encryption';
+import { usePayloadLimits } from '@/lib/payload-limits';
+import { useMfaPolicy } from '@/lib/mfa';
+import { useLoginGuard } from '@/lib/brute-force';
 import { User, Building2, Mail, Save, Fingerprint, FlaskConical, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
@@ -18,6 +22,12 @@ export default function ProfileSettingsPage() {
     // Clear persisted state and reload — the store re-initializes from its seeded
     // demo data (fresh keys, metrics, logs, billing) for a clean repeat run.
     try { useStore.persist.clearStorage(); } catch { /* storage unavailable */ }
+    // The cross-cutting security stores persist under their own keys — clear them
+    // too, or a rotated KMS key / MFA policy / login lockout survives the "reset".
+    try { useEncryptionSettings.persist.clearStorage(); } catch { /* storage unavailable */ }
+    try { usePayloadLimits.persist.clearStorage(); } catch { /* storage unavailable */ }
+    try { useMfaPolicy.persist.clearStorage(); } catch { /* storage unavailable */ }
+    try { useLoginGuard.persist.clearStorage(); } catch { /* storage unavailable */ }
     window.location.href = '/console';
   };
 

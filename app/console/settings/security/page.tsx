@@ -2,7 +2,7 @@
 
 import { useStore, ExportOptions } from '@/lib/store';
 import Link from 'next/link';
-import { Shield, Key, Smartphone, Laptop, LogOut, CheckCircle2, Copy, Eye, EyeOff, Loader2, Globe, Plus, Trash2, Database, AlertTriangle, Download, X, Check, RefreshCw, Sparkles, Map, ChevronDown, ShieldAlert, Activity, FileText, ArrowRight, Frown, DollarSign, Zap, Clock, FileJson, FileSpreadsheet, Calendar, Mail, MonitorSmartphone } from 'lucide-react';
+import { Shield, Key, Smartphone, Laptop, LogOut, CheckCircle2, Copy, Eye, EyeOff, Loader2, Globe, Plus, Trash2, Database, AlertTriangle, Download, X, Check, RefreshCw, Sparkles, Map, ChevronDown, ShieldAlert, Activity, FileText, ArrowRight, Frown, DollarSign, Zap, Clock, FileJson, FileSpreadsheet, Calendar, Mail, MonitorSmartphone, Lock } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { track } from '@/lib/telemetry';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -803,6 +803,12 @@ export default function SecuritySettingsPage() {
             </h2>
             <p className="text-fg-muted text-sm">
               Manage your personal data retention, request granular exports, or schedule your organization for deletion.
+            </p>
+            <p className="text-fg-muted text-sm mt-2">
+              All of this data is encrypted at rest under customer-managed KMS keys.{' '}
+              <Link href="/console/encryption" className="text-teal hover:underline inline-flex items-center gap-1 font-bold">
+                <Lock className="w-3.5 h-3.5" /> Inspect the encryption posture <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </p>
           </div>
           

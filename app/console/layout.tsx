@@ -7,7 +7,7 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces, Merge, Navigation, Download, Cable, FlaskConical, KeyRound, Fingerprint, LineChart, Siren, UserCheck, Timer, Rocket, RotateCw, LockKeyhole, Lock, MonitorSmartphone } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces, Merge, Navigation, Download, Cable, FlaskConical, KeyRound, Fingerprint, LineChart, Siren, UserCheck, Timer, Rocket, RotateCw, LockKeyhole, Lock, MonitorSmartphone, Ruler } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -112,6 +112,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Request Inspector', href: '/console/debug', icon: <Bug className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Security Hub', href: '/console/security', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Firewall (WAF)', href: '/console/waf', icon: <ShieldAlert className="w-5 h-5" />, roles: ['admin', 'developer'] },
+    { name: 'Payload Limits', href: '/console/payload-limits', icon: <Ruler className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Login Security', href: '/console/login-security', icon: <LockKeyhole className="w-5 h-5" />, roles: ['admin'] },
     { name: 'MFA Enforcement', href: '/console/mfa', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Encryption', href: '/console/encryption', icon: <Lock className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },

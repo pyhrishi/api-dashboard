@@ -18,6 +18,7 @@ const ipAllowlist = new Map<string, string[]>([
 
 // Helper to hash key again if we only have the plaintext one at this stage
 import { createHash } from 'crypto';
+import { hstsHeaderValue } from '@/lib/encryption';
 function hashKey(key: string): string {
   if (key.length === 64) return key; // already hashed roughly
   return createHash('sha256').update(key).digest('hex');
@@ -26,7 +27,9 @@ function hashKey(key: string): string {
 export function attachISO27001Headers(headers: HeadersInit) {
   // ISO 27001 Information Security Policies (ISMS)
   const h = headers as Record<string, string>;
-  h['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload';
+  // Derived from the encryption posture SSOT (F-312) so the advertised HSTS age
+  // and the header the wire carries can never drift apart.
+  h['Strict-Transport-Security'] = hstsHeaderValue();
   h['X-Content-Type-Options'] = 'nosniff';
   h['X-Frame-Options'] = 'DENY';
   h['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'none'";
