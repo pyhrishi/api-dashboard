@@ -79,6 +79,29 @@ describe('gateway inspectPayload — mirrors the catalog + safe harbor', () => {
     expect(raw.threatLevel).toBe('CRITICAL');
   });
 
+  it('catches a percent-encoded SQLi in the URL (evasion defence)', () => {
+    // DROP%20TABLE would slip past raw matching — the WAF decodes first.
+    const encoded = "/api/v1/people/phone?email=%27%3B%20DROP%20TABLE%20users%3B%20--";
+    const res = inspectPayload(encoded, hdrs());
+    expect(res.blocked).toBe(true);
+    expect(res.reason).toBe('WAF_SQLI_DETECTED');
+  });
+
+  it('catches a form-encoded (+ as space) SQLi in the URL (evasion defence)', () => {
+    // Query strings encode a space as `+`; decodeURIComponent leaves it, so DROP+TABLE
+    // would slip past DROP\s+TABLE. The WAF normalizes `+`→space first.
+    const formEncoded = "/api/v1/people/phone?email=';+DROP+TABLE+users;+--";
+    const res = inspectPayload(formEncoded, hdrs());
+    expect(res.blocked).toBe(true);
+    expect(res.reason).toBe('WAF_SQLI_DETECTED');
+  });
+
+  it('labels a form-encoded command injection as CMDI, not path traversal', () => {
+    const res = inspectPayload('/api/v1/people/phone?email=x;+cat+/etc/passwd', hdrs());
+    expect(res.blocked).toBe(true);
+    expect(res.reason).toBe('WAF_CMDI_DETECTED');
+  });
+
   it('honours the bug-bounty safe-harbor bypass', () => {
     const res = inspectPayload("/x?q='; DROP TABLE t; --", hdrs({ 'x-bug-bounty-token': 'bb_test_safespace' }));
     expect(res.blocked).toBe(false);

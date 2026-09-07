@@ -135,6 +135,27 @@ export const WAF_RULES: readonly WafRule[] = [
 ];
 
 /**
+ * Normalize a raw URL for signature inspection. Query strings encode a space as `+`
+ * (form-encoding) which `decodeURIComponent` leaves untouched — so `DROP+TABLE` would
+ * slip past a `DROP\s+TABLE` signature. Convert `+`→space, then percent-decode up to
+ * twice to defeat double-encoding. Genuine `+` characters arrive as `%2B` and survive.
+ * This is the SSOT decode both the edge WAF and the console share.
+ */
+export function decodeForInspection(raw: string): string {
+  let out = raw.replace(/\+/g, ' ');
+  for (let i = 0; i < 2; i++) {
+    try {
+      const next = decodeURIComponent(out);
+      if (next === out) break;
+      out = next;
+    } catch {
+      break; // malformed sequence — inspect what we have
+    }
+  }
+  return out;
+}
+
+/**
  * Inspect a composed payload string against the catalog, returning the first
  * (most-severe) match. This is the client-side mirror of the gateway's
  * `inspectPayload`; feed it the same URL + headers + body the edge would see.
@@ -166,9 +187,11 @@ export function inspectRequest(
   headers: Record<string, string> = {},
   body?: unknown,
 ): WafVerdict {
-  let payload = url;
+  // Decode the URL the same way the edge does (SSOT), so a console verdict predicts the 406.
+  const decodedUrl = decodeForInspection(url);
+  let payload = decodedUrl;
   try {
-    payload = `${url} ${JSON.stringify(headers)} ${body ? JSON.stringify(body) : ''}`;
+    payload = `${decodedUrl} ${JSON.stringify(headers)} ${body ? JSON.stringify(body) : ''}`;
   } catch {
     // fall back to the URL alone if body isn't serializable
   }

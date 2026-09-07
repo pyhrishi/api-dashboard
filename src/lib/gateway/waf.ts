@@ -9,7 +9,7 @@
  * safe-harbor bypass; the catalog owns the detection.
  */
 
-import { WAF_RULES } from '@/lib/waf-rules';
+import { WAF_RULES, decodeForInspection } from '@/lib/waf-rules';
 
 export interface WafResult {
   blocked: boolean;
@@ -28,6 +28,10 @@ export function inspectPayload(url: string, headers: Headers, body?: unknown): W
 
   let payloadString = url;
   try {
+    // Decode the URL first — attackers percent-/form-encode payloads (DROP%20TABLE,
+    // DROP+TABLE) precisely to slip past naive signature matching. Shared SSOT decode.
+    const decodedUrl = decodeForInspection(url);
+
     // Convert headers to a plain object for inspection
     const headersObj: Record<string, string> = {};
     if (headers && typeof headers.forEach === 'function') {
@@ -36,8 +40,8 @@ export function inspectPayload(url: string, headers: Headers, body?: unknown): W
       });
     }
 
-    // Combine URL, headers, and stringified body for deep inspection
-    payloadString = `${url} ${JSON.stringify(headersObj)} ${body ? JSON.stringify(body) : ''}`;
+    // Combine decoded URL, headers, and stringified body for deep inspection
+    payloadString = `${decodedUrl} ${JSON.stringify(headersObj)} ${body ? JSON.stringify(body) : ''}`;
   } catch {
     // Fallback if parsing fails
   }
