@@ -7,7 +7,8 @@ import { CreditHealthBar } from '@/components/CreditHealthBar';
 import { Omnibar, OmnibarHeaderButton } from '@/components/Omnibar';
 import { Logo } from '@/components/Logo';
 import { useStore } from '@/lib/store';
-import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSquare, Compass, Activity, BookOpen, Menu, X, LifeBuoy, Users, ChevronDown, Check, Plus, Building2, Server, Scale, ShieldAlert, ShieldCheck, Handshake, Database, GitBranch, TrendingUp, Map, Sparkles, ListChecks, Lightbulb, Radar, Target, Boxes, Globe, Radio, GitMerge, SlidersHorizontal, ScrollText, RefreshCw, MessageSquareWarning, Gauge, Repeat2, ListFilter, Zap, Bug, Filter, Archive, Network, Combine, Route, Waypoints, AlarmClock, Award, History, Braces, Merge, Navigation, Download, Cable, FlaskConical, KeyRound, Fingerprint, LineChart, Siren, UserCheck, Timer, Rocket, RotateCw, LockKeyhole, Lock, MonitorSmartphone, Ruler, EyeOff } from 'lucide-react';
+import { LogOut, MessageSquare, Menu, X, ChevronDown, Check, Plus, Building2, ShieldAlert } from 'lucide-react';
+import { NAV_SECTIONS, navPinnedTop, allNavItems, type NavItem, type ConsoleRole } from './nav-config';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -30,6 +31,21 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
   const [isSwitchingTenant, setIsSwitchingTenant] = useState(false);
   const [newOrgName, setNewOrgName] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Collapsible nav-module open/closed state, persisted per-user in localStorage.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [navStateLoaded, setNavStateLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('zinbit-nav-open');
+      if (raw) setOpenSections(JSON.parse(raw) as Record<string, boolean>);
+    } catch { /* first visit / storage blocked — defaults apply */ }
+    setNavStateLoaded(true);
+  }, []);
+  useEffect(() => {
+    if (!navStateLoaded) return;
+    try { localStorage.setItem('zinbit-nav-open', JSON.stringify(openSections)); } catch { /* ignore */ }
+  }, [openSections, navStateLoaded]);
 
   // Close mobile menu on path change + record feature adoption centrally
   // (one place covers every console route, current and future).
@@ -59,81 +75,39 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     }
   }, [isAuthenticated, router]);
 
-  const allNavItems = [
-    { name: 'Overview', href: '/console/overview', icon: <LayoutDashboard className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'API Keys', href: '/console/keys', icon: <Key className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Key Scopes', href: '/console/scopes', icon: <KeyRound className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Key Pairs', href: '/console/key-pairs', icon: <Fingerprint className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Key Usage', href: '/console/key-usage', icon: <LineChart className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Key Ownership', href: '/console/key-ownership', icon: <UserCheck className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Kill Switch', href: '/console/kill-switch', icon: <Siren className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Endpoint Explorer', href: '/console/explorer', icon: <Compass className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'GraphQL', href: '/console/graphql', icon: <Braces className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'gRPC Channel', href: '/console/grpc', icon: <Cable className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Preview Program', href: '/console/preview', icon: <FlaskConical className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Enrichment Studio', href: '/console/studio', icon: <Sparkles className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Identity Resolution', href: '/console/identity', icon: <GitMerge className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Identity History', href: '/console/identity-history', icon: <Route className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'ID Map', href: '/console/xref', icon: <Waypoints className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Company Hierarchy', href: '/console/hierarchy', icon: <Network className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Account Grouping', href: '/console/accounts', icon: <Users className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Bulk Jobs', href: '/console/jobs', icon: <ListChecks className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Bulk Export', href: '/console/export', icon: <Download className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Async Jobs', href: '/console/async-jobs', icon: <Boxes className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Result Delivery', href: '/console/webhook-deliveries', icon: <Webhook className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Streaming', href: '/console/stream', icon: <Radio className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Idempotency', href: '/console/idempotency', icon: <Repeat2 className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Request Coalescing', href: '/console/coalescing', icon: <Merge className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Field Selection', href: '/console/field-selection', icon: <ListFilter className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Query Builder', href: '/console/query', icon: <Filter className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Compression', href: '/console/compression', icon: <Archive className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Rate Limits', href: '/console/rate-limits', icon: <Timer className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Rate-Limit Headers', href: '/console/rate-limit-headers', icon: <Gauge className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Throughput Tiers', href: '/console/throughput-tiers', icon: <Rocket className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Retry Strategy', href: '/console/retry-strategy', icon: <RotateCw className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Match Rate', href: '/console/coverage', icon: <Target className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Coverage Gaps', href: '/console/coverage-gaps', icon: <Radar className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Match Thresholds', href: '/console/thresholds', icon: <SlidersHorizontal className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Match Audit Trail', href: '/console/match-audit', icon: <ScrollText className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Quality SLA', href: '/console/quality-sla', icon: <Gauge className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Accuracy Benchmarks', href: '/console/benchmarks', icon: <Award className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Re-verification', href: '/console/re-verification', icon: <RefreshCw className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Data Decay', href: '/console/data-decay', icon: <AlarmClock className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Corrections', href: '/console/corrections', icon: <MessageSquareWarning className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Reconciliation', href: '/console/reconciliation', icon: <Combine className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Golden Records', href: '/console/golden-records', icon: <History className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Regional Coverage', href: '/console/regions', icon: <Globe className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'API Regions', href: '/console/api-regions', icon: <Navigation className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Growth', href: '/console/growth', icon: <TrendingUp className="w-5 h-5" />, roles: ['admin', 'billing'] },
-    { name: 'Circuit Breakers', href: '/console/circuits', icon: <Zap className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Infrastructure', href: '/console/infrastructure', icon: <Server className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Logs', href: '/console/logs', icon: <FileText className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Request Inspector', href: '/console/debug', icon: <Bug className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Security Hub', href: '/console/security', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Firewall (WAF)', href: '/console/waf', icon: <ShieldAlert className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Payload Limits', href: '/console/payload-limits', icon: <Ruler className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Login Security', href: '/console/login-security', icon: <LockKeyhole className="w-5 h-5" />, roles: ['admin'] },
-    { name: 'MFA Enforcement', href: '/console/mfa', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Encryption', href: '/console/encryption', icon: <Lock className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'PII Masking', href: '/console/pii-masking', icon: <EyeOff className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Sessions', href: '/console/sessions', icon: <MonitorSmartphone className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'CORS Policy', href: '/console/cors', icon: <Globe className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Billing', href: '/console/billing', icon: <CreditCard className="w-5 h-5" />, roles: ['admin', 'billing'] },
-    { name: 'Partners', href: '/console/partners', icon: <Handshake className="w-5 h-5" />, roles: ['admin'] },
-    { name: 'Data Sharing', href: '/console/data-sharing', icon: <Database className="w-5 h-5" />, roles: ['admin'] },
-    { name: 'Webhooks', href: '/console/webhooks', icon: <Webhook className="w-5 h-5" />, roles: ['admin', 'developer'] },
-    { name: 'Features', href: '/console/features', icon: <Lightbulb className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Signals', href: '/console/signals', icon: <Radar className="w-5 h-5" />, roles: ['admin'] },
-    { name: 'Docs', href: '/docs', icon: <BookOpen className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Changelog', href: '/console/changelog', icon: <GitBranch className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Roadmap', href: '/console/roadmap', icon: <Map className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Support', href: '/console/support', icon: <LifeBuoy className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Legal', href: '/console/legal', icon: <Scale className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-    { name: 'Settings', href: '/console/settings', icon: <Users className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
-  ];
+  const role = (user?.role || 'admin') as ConsoleRole;
+  const navItems = allNavItems.filter((item) => item.roles.includes(role));
+  const pinnedTop = navPinnedTop.filter((item) => item.roles.includes(role));
+  const visibleSections = NAV_SECTIONS
+    .map((s) => ({ ...s, items: s.items.filter((i) => i.roles.includes(role)) }))
+    .filter((s) => s.items.length > 0);
+  const navExpanded = isSidebarHovered || isMobileMenuOpen;
+  const activeSectionId = visibleSections.find((s) =>
+    s.items.some((i) => pathname === i.href || (pathname.startsWith(i.href + '/') && i.href !== '/console/overview')),
+  )?.id ?? null;
+  const isSectionOpen = (id: string) => openSections[id] ?? (id === activeSectionId);
+  const toggleSection = (id: string) =>
+    setOpenSections((prev) => ({ ...prev, [id]: !(prev[id] ?? (id === activeSectionId)) }));
 
-  const navItems = allNavItems.filter(item => item.roles.includes(user?.role || 'admin'));
+  const renderNavLink = (item: NavItem, indented = false) => {
+    const isActive = pathname === item.href;
+    return (
+      <Link
+        href={item.href}
+        className={cn(
+          "flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
+          navExpanded ? "w-full" : "w-[48px] overflow-hidden",
+          indented && navExpanded ? "ml-2" : "",
+          isActive
+            ? "bg-teal/10 text-teal shadow-[0_0_15px_rgba(70,189,198,0.15)] border border-teal/20"
+            : "hover:bg-glass hover:text-fg border border-transparent"
+        )}
+      >
+        <span className={cn("flex-shrink-0 transition-colors ml-1", isActive ? "text-teal" : "text-fg-muted")}>{item.icon}</span>
+        <span className={cn("ml-4 transition-opacity duration-300 whitespace-nowrap", navExpanded ? "opacity-100" : "opacity-0 pointer-events-none")}>{item.name}</span>
+      </Link>
+    );
+  };
 
   if (!isAuthenticated) {
     return null; // Don't render anything while redirecting
@@ -404,27 +378,64 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
           </div>
 
           <nav className="flex-1 overflow-y-auto py-4 relative z-10">
-            <ul className="space-y-1.5 px-4">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <li key={item.name}>
-                    <Link 
-                      href={item.href}
-                      className={cn(
-                        "flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
-                        (isSidebarHovered || isMobileMenuOpen) ? "w-full" : "w-[48px] overflow-hidden",
-                        isActive 
-                          ? "bg-teal/10 text-teal shadow-[0_0_15px_rgba(70,189,198,0.15)] border border-teal/20" 
-                          : "hover:bg-glass hover:text-fg border border-transparent"
-                      )}
-                    >
-                      <span className={cn("flex-shrink-0 transition-colors ml-1", isActive ? "text-teal" : "text-fg-muted")}>{item.icon}</span>
-                      <span className={cn("ml-4 transition-opacity duration-300 whitespace-nowrap", (isSidebarHovered || isMobileMenuOpen) ? "opacity-100" : "opacity-0 pointer-events-none")}>{item.name}</span>
-                    </Link>
+            <ul className="space-y-1 px-4">
+              {/* Pinned (Overview) — always visible, ungrouped */}
+              {pinnedTop.map((item) => (
+                <li key={item.name}>{renderNavLink(item)}</li>
+              ))}
+
+              {navExpanded ? (
+                /* Expanded: collapsible modules */
+                visibleSections.map((section) => {
+                  const open = isSectionOpen(section.id);
+                  const hasActive = section.id === activeSectionId;
+                  return (
+                    <li key={section.id} className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection(section.id)}
+                        aria-expanded={open}
+                        className={cn(
+                          "w-full flex items-center px-3 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/40",
+                          hasActive ? "text-fg" : "text-fg-subtle hover:text-fg"
+                        )}
+                      >
+                        <span className="flex-shrink-0 ml-1 [&>svg]:w-4 [&>svg]:h-4">{section.icon}</span>
+                        <span className="ml-4 flex-1 text-left whitespace-nowrap">{section.label}</span>
+                        {hasActive && !open && <span className="w-1.5 h-1.5 rounded-full bg-teal mr-1.5 flex-shrink-0" aria-hidden />}
+                        <ChevronDown className={cn("w-4 h-4 flex-shrink-0 transition-transform duration-200", open ? "rotate-180" : "")} />
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {open && (
+                          <motion.ul
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden mt-1 space-y-1"
+                          >
+                            {section.items.map((item) => (
+                              <li key={item.name}>{renderNavLink(item, true)}</li>
+                            ))}
+                          </motion.ul>
+                        )}
+                      </AnimatePresence>
+                    </li>
+                  );
+                })
+              ) : (
+                /* Collapsed icon rail: flat icons, a faint divider between modules */
+                visibleSections.map((section, i) => (
+                  <li key={section.id}>
+                    {i > 0 && <div className="mx-auto my-1.5 w-6 border-t border-border-subtle" aria-hidden />}
+                    <ul className="space-y-1">
+                      {section.items.map((item) => (
+                        <li key={item.name}>{renderNavLink(item)}</li>
+                      ))}
+                    </ul>
                   </li>
-                );
-              })}
+                ))
+              )}
             </ul>
           </nav>
           <div className="p-4 border-t border-border flex-shrink-0 relative z-10 flex flex-col gap-2">
