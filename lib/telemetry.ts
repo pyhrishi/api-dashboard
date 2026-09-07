@@ -219,7 +219,12 @@ export type TelemetryEventName =
   | 'encryption_viewed'
   | 'encryption_checked'
   | 'encryption_key_rotated'
-  | 'encryption_field_toggled';
+  | 'encryption_field_toggled'
+  // security — session management (F-310)
+  | 'sessions_viewed'
+  | 'session_revoked'
+  | 'sessions_revoked_all'
+  | 'session_policy_updated';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

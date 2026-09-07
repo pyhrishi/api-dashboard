@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.90', date: 'September 2026', headline: 'Session management',
+    changes: [
+      { kind: 'feature', text: 'A new Sessions console shows every device and client signed into your account — and scores each one against the session you’re using right now. A sign-in from a different country, an idle session past your policy, a client on an external network: each gets a risk rating with a plain-English “why this rating?”, so the session you don’t recognize stands out instead of hiding in a flat list.' },
+      { kind: 'feature', text: 'One click signs you out everywhere but this device, and “revoke all stale” clears sessions idle past your policy. Admins get an org session policy — idle timeout and max concurrent sessions — that really drives what’s flagged. The current device is never revoked by any bulk action.' },
+    ],
+  },
+  {
     version: 'v4.89', date: 'September 2026', headline: 'Encryption in transit & at rest',
     changes: [
       { kind: 'feature', text: 'Encryption in transit & at rest is now inspectable, not just asserted. A new Encryption console shows the live transit posture (negotiated TLS 1.3 cipher, HSTS, forward secrecy, OCSP stapling) and the at-rest picture — AES-256-GCM envelope encryption, the customer-managed KMS keys that wrap each data store, their rotation schedule, and field-level PII encryption — with a posture score and a signed attestation you can hand to a security reviewer.' },

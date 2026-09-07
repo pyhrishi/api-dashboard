@@ -9,8 +9,7 @@ import {
   AlertTriangle, CircleCheck,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
-// TODO(F-310 telemetry): re-enable after shared telemetry.ts append
-// import { track } from '@/lib/telemetry';
+import { track } from '@/lib/telemetry';
 import { useToast } from '@/components/Toast';
 import RoleGuard from '@/components/RoleGuard';
 import {
@@ -41,7 +40,7 @@ function SessionsInner() {
 
   useEffect(() => {
     setNow(Date.now());
-    // TODO(F-310 telemetry): track('sessions_viewed', { count: activeSessions.length });
+    track('sessions_viewed', { count: activeSessions.length });
     const t = setTimeout(() => setPhase('ready'), 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,21 +65,21 @@ function SessionsInner() {
 
   const doRevoke = (s: ActiveSession) => {
     revokeSession(s.id);
-    // TODO(F-310 telemetry): track('session_revoked', { risk, type });
+    track('session_revoked', { risk: scoreSession(s, activeSessions, sessionPolicy, now || Date.now()).level, type: s.type ?? 'console' });
     toast.success('Session revoked', `${s.device} · ${s.location} was signed out.`);
   };
 
   const doRevokeAll = () => {
     const n = others.length;
     revokeAllOtherSessions();
-    // TODO(F-310 telemetry): track('sessions_revoked_all', { count: n });
+    track('sessions_revoked_all', { count: n });
     toast.success('Signed out everywhere else', `${n} other ${n === 1 ? 'session' : 'sessions'} ended. This device stays signed in.`);
   };
 
   const doRevokeStale = () => {
     const n = staleIds.length;
     revokeSessions(staleIds);
-    // TODO(F-310 telemetry): track('sessions_revoked_all', { count: n, scope: 'stale' });
+    track('sessions_revoked_all', { count: n, scope: 'stale' });
     toast.success('Stale sessions cleared', `${n} idle ${n === 1 ? 'session' : 'sessions'} past the ${sessionPolicy.idleTimeoutMins}-minute policy signed out.`);
   };
 
@@ -235,7 +234,7 @@ function SessionPolicyPanel() {
 
   const save = () => {
     updateSessionPolicy({ idleTimeoutMins: idle, maxConcurrent: maxc });
-    // TODO(F-310 telemetry): track('session_policy_updated', { idleTimeoutMins: idle, maxConcurrent: maxc });
+    track('session_policy_updated', { idleTimeoutMins: idle, maxConcurrent: maxc });
     toast.success('Session policy updated', `Idle timeout ${idle}m · max ${maxc} concurrent sessions.`);
   };
 
