@@ -56,6 +56,10 @@ test.describe('Golden path', () => {
     const sandbox = await (await request.get('/api/v1/people/phone?email=ceo@example.com', { headers: headers('sk_test_e2e_mask') })).json();
     const live = await (await request.get('/api/v1/people/phone?email=ceo@example.com', { headers: headers('sk_live_e2e_mask') })).json();
     expect(sandbox.data.email).toBe('ceo@example.com');
-    expect(live.data.email).toContain('***');
+    // F-313 field-level masking: live keys get a partial reveal (bullets), keeping the
+    // domain but obscuring the local part — no longer the old '***' redaction.
+    expect(live.data.email).not.toBe('ceo@example.com');
+    expect(live.data.email).toContain('@example.com');
+    expect(live.data.email).toContain('•');
   });
 });

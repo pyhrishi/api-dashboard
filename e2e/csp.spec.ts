@@ -22,7 +22,7 @@ test.describe('CSP — smoke', () => {
     await page.goto('/console/csp');
     await expect(page.getByRole('heading', { name: /Content Security Policy/i })).toBeVisible();
     await expect(page.getByText(/Active policy/i)).toBeVisible();
-    await expect(page.getByText(/Violation feed/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Violation feed/i })).toBeVisible();
     expect(errors, `runtime errors: ${errors.join('\n')}`).toEqual([]);
   });
 
