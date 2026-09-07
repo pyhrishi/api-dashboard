@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.88', date: 'September 2026', headline: 'MFA enforcement',
+    changes: [
+      { kind: 'feature', text: 'MFA enforcement — an admin can now require multi-factor authentication for the whole organization, not just leave it to each person. Turning on Required applies a 7-day grace period, then gates any member who hasn’t enrolled with a console-wide banner (and routes them to enrollment at sign-in) until they set up an authenticator app.' },
+      { kind: 'feature', text: 'A new MFA Enforcement console shows org-wide compliance (who’s enrolled and who isn’t), a one-switch Required/Optional policy, and a TOTP enrollment flow with a secret and downloadable recovery codes. Everything is deterministic and unit-tested; enrollment keeps the existing personal 2FA setting in sync.' },
+    ],
+  },
+  {
     version: 'v4.87', date: 'September 2026', headline: 'Brute-force login protection',
     changes: [
       { kind: 'feature', text: 'Brute-force login protection — the account sign-in now locks out credential-stuffing. After 5 consecutive failed attempts an account is locked with a cooldown that escalates on each repeat (30s → 2m → 15m → 1h), so an attacker is throttled to uselessness while a legitimate mistyped password just waits a moment; a successful sign-in clears the counter. The login screen shows attempts remaining and a live lock countdown.' },

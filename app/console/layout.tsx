@@ -11,6 +11,7 @@ import { LayoutDashboard, Key, CreditCard, Webhook, LogOut, FileText, MessageSqu
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { MfaEnforcementBanner } from '@/components/MfaEnforcementBanner';
 import { Portal } from '@/components/Portal';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { track } from '@/lib/telemetry';
@@ -112,6 +113,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
     { name: 'Security Hub', href: '/console/security', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Firewall (WAF)', href: '/console/waf', icon: <ShieldAlert className="w-5 h-5" />, roles: ['admin', 'developer'] },
     { name: 'Login Security', href: '/console/login-security', icon: <LockKeyhole className="w-5 h-5" />, roles: ['admin'] },
+    { name: 'MFA Enforcement', href: '/console/mfa', icon: <ShieldCheck className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'CORS Policy', href: '/console/cors', icon: <Globe className="w-5 h-5" />, roles: ['admin', 'developer', 'billing'] },
     { name: 'Billing', href: '/console/billing', icon: <CreditCard className="w-5 h-5" />, roles: ['admin', 'billing'] },
     { name: 'Partners', href: '/console/partners', icon: <Handshake className="w-5 h-5" />, roles: ['admin'] },
@@ -517,6 +519,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
             </div>
           ) : (
             <ProtectedRoute allowedRoles={allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/console')?.roles as ('admin' | 'developer' | 'billing')[] | undefined || ['admin', 'developer', 'billing']}>
+              <MfaEnforcementBanner />
               {children}
             </ProtectedRoute>
           )}

@@ -210,7 +210,11 @@ export type TelemetryEventName =
   | 'login_security_viewed'
   | 'login_blocked'
   | 'login_lockout_simulated'
-  | 'login_guard_unlocked';
+  | 'login_guard_unlocked'
+  // security — MFA enforcement (F-309)
+  | 'mfa_viewed'
+  | 'mfa_enrolled'
+  | 'mfa_policy_changed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

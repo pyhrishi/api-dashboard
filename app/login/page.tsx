@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Loader2, ShieldAlert } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useLoginGuard, isLocked, lockRemainingMs, attemptsRemaining } from '@/lib/brute-force';
+import { useMfaPolicy, enrollmentRequired } from '@/lib/mfa';
 import { track } from '@/lib/telemetry';
 import Link from 'next/link';
 
@@ -99,7 +100,12 @@ export default function LoginPage() {
     // Successful sign-in clears the brute-force counter.
     recordSuccess(key, 'password');
     login(email);
-    router.push('/console');
+
+    // MFA enforcement (F-309): if the org requires MFA and this account isn't
+    // enrolled, land on the enrollment gate instead of the console.
+    const mfa = useMfaPolicy.getState();
+    const gate = enrollmentRequired(mfa.policy, { email: key, is2faEnabled: useStore.getState().is2faEnabled }, mfa.enrollments, mfa.graceUntil, Date.now());
+    router.push(gate ? '/console/mfa' : '/console');
   };
 
   return (
