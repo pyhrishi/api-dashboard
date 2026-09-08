@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Planned · **Steps 0–4 done — green** (2026-09-08) |
+| **Status** | Planned · **Steps 0–5 done — green** (2026-09-08) |
 | **Owner** | Product (Zintlr) |
 | **Last updated** | 2026-09-08 |
 | **Prototype route(s)** | `/console/journey` (cockpit, Step 5 — /console/lifecycle is a1's CSM cockpit) · nudge surfaces console-wide · landing/signup (Step 6) |
@@ -70,7 +70,7 @@ The four open questions were resolved as follows (chosen for depth + coherence w
 - **Step 2 — Activation journey (C1-a…C3-f). ✅ DONE.** `detectTransitions` wires the one-shot celebrations that never fired before (C2-a granted, C3-a first-fire w/ confetti, C5-b/c upgrade, C7-a re-up) + emits the two un-emitted activation milestones (trial_granted, first_key_created); role/use-case capture modal (C1-b, skippable, safe defaults); consumption cascade already live from Step 1. Green: tsc/lint, 32 unit + 4 e2e, 1037 tests.
 - **Step 3 — Conversion & wallet health (C4-a…C7-b). ✅ DONE.** Authoritative persisted trial window (in the nudge store, store.ts untouched); data-driven nudge copy (`context`/`resolveNudge`) — C4-a shows used%+days-left, C6-d shows projected runway; `detectStateMilestones` emits decision_window_entered / wallet_low / wallet_zero / dunning_started once per crossing. Green: tsc/lint, 36 unit + 5 e2e.
 - **Step 4 — Trigger evaluator + channels. ✅ DONE.** `components/nudges/NudgeWatcher.tsx` (layout-mounted, cadence + simulated-time clock) fires the time/threshold milestone events the orchestrator doesn't (usage_threshold_hit, key_expiry_warned, key_expired, inactivity_detected), baselined so load doesn't burst; `lib/nudge-delivery.ts` re-engagement email/webhook over an Alert-Center-style ledger — capped multi-touch, unsubscribe-honouring, honest delivered/failed/skipped; nudge store gains the delivery ledger + touch counters + simulated offset. Verified live: a 30h simulated advance dispatched a delivered re-engagement email. Green: tsc/lint, 42 unit + 6 e2e.
-- **Step 5 — Lead classification & sales routing.** Lead score, Sales owner, `/console/journey` cockpit (renamed — /console/lifecycle is a1's CSM cockpit).
+- **Step 5 — Lead classification & sales routing. ✅ DONE.** Lead-class events (sales_qualified / sales_ready / hot_lead / dead_lead / lead_score_changed) emitted from NudgeWatcher on class change; `/console/journey` cockpit — journey board (C0→C7 by phase, funnel-tagged, your position + seeded-cohort distribution via accountFromDeveloper), lead & sales-routing panel, nudge-activity + re-engagement ledger, and a simulated clock to age the trial and fire triggers; nav row in Operations & Monitoring. Step 6 (pre-auth TOFU) handed to api-dashboard-ea. Green: tsc/lint, 43 unit + 7 e2e.
 - **Step 6 — Pre-auth TOFU (C0-a, C0-b, C1-a).** Landing pop-ups, SSO, exit-intent, verification.
 - **Step 7 — Instrumentation close-out.** Growth/Alert integration, PRD, roadmap/changelog, coverage-audit test.
 

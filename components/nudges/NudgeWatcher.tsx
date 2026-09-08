@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/lib/store';
 import { track } from '@/lib/telemetry';
-import { activeTriggers, triggerEvent, type TriggerId } from '@/lib/lifecycle';
+import { activeTriggers, triggerEvent, leadScoreOf, LEAD_CLASS_EVENT, type TriggerId } from '@/lib/lifecycle';
 import { useNudgeState, eligibleNudges } from '@/lib/nudges';
 import { reengagementDue, planReengagement, type NudgeDelivery } from '@/lib/nudge-delivery';
 import { useLifecycleAccount } from '@/components/nudges/useLifecycleAccount';
@@ -77,6 +77,18 @@ export function NudgeWatcher() {
       });
     });
     if (dispatched.length > 0) useNudgeState.getState().recordReengagement(dispatched);
+
+    // Lead classification & sales signals (Step 5): emit on class change, once per class.
+    const lead = leadScoreOf(account, effNow);
+    if (lead.class !== state.leadClass) {
+      const evt = LEAD_CLASS_EVENT[lead.class];
+      if (evt && !firedRef.current.has(`lead:${lead.class}`)) {
+        firedRef.current.add(`lead:${lead.class}`);
+        track(evt, { score: lead.score, prevClass: state.leadClass, salesRoutable: lead.salesRoutable });
+      }
+      track('lead_score_changed', { score: lead.score, class: lead.class });
+    }
+    if (lead.score !== state.leadScore || lead.class !== state.leadClass) state.setLead(lead.score, lead.class);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run when the effective clock or account changes
   }, [effNow, account]);
 

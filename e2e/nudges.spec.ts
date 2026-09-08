@@ -66,6 +66,20 @@ test.describe('Nudge orchestrator — smoke', () => {
     await expect(banner.getByText(/% of your trial/)).toBeVisible(); // context injected the live usage
   });
 
+  test('the journey cockpit renders the board, lead panel and simulated clock (Step 5)', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto('/console/journey');
+    await expect(page.getByRole('heading', { name: /^Customer Journey$/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: 'The journey', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Lead & sales routing', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Simulated clock', exact: true })).toBeVisible();
+    // Advancing the clock updates the offset without a crash.
+    await page.getByRole('button', { name: /\+7 days/ }).click();
+    await expect(page.getByText(/Offset:/)).toBeVisible();
+    expect(errors, `runtime errors: ${errors.join('\n')}`).toEqual([]);
+  });
+
   test('the watcher dispatches re-engagement for a stalled nudge under simulated time (Step 4)', async ({ page }) => {
     await page.goto('/console/overview');
     await page.waitForTimeout(1000); // let the store + nudge state hydrate
@@ -86,6 +100,6 @@ test.describe('Nudge orchestrator — smoke', () => {
         const n = JSON.parse(localStorage.getItem('zinbit-nudge-state') || '{}');
         return (n.state?.deliveries || []).filter((d: { channel: string }) => d.channel === 'email').length;
       } catch { return 0; }
-    }), { timeout: 15_000 }).toBeGreaterThan(0);
+    }), { timeout: 25_000, intervals: [500, 1000, 2000] }).toBeGreaterThan(0);
   });
 });

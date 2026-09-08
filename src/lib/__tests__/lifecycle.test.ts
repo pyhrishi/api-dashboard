@@ -1,6 +1,6 @@
 import {
   primaryStage, activeTriggers, triggerEvent, leadScoreOf, trialCreditsUsedPct, daysToExpiry, isTrialExpired,
-  soonestKeyExpiryDays, detectTransitions, detectStateMilestones, inDecisionWindow, walletRunwayDays,
+  soonestKeyExpiryDays, detectTransitions, detectStateMilestones, inDecisionWindow, walletRunwayDays, accountFromDeveloper,
   STAGE_META, ALL_STAGES, TRIAL_DURATION_DAYS,
   type LifecycleAccount, type LifecycleStage,
 } from '@/lib/lifecycle';
@@ -166,6 +166,20 @@ describe('conversion & wallet milestones (Step 3)', () => {
     expect(empty.map((m) => m.name).sort()).toEqual(['dunning_started', 'wallet_zero']);
     // no double-fire when already in the state
     expect(detectStateMilestones(acct({ creditBalance: balanceForPct(85) }), acct({ creditBalance: balanceForPct(90) }), NOW)).toEqual([]);
+  });
+});
+
+describe('accountFromDeveloper (cockpit population view)', () => {
+  it('maps a developer record onto a lifecycle account and back to a plausible stage', () => {
+    const paid = accountFromDeveloper({ signupAt: NOW - 20 * DAY, firstKeyAt: NOW - 19 * DAY, firstCallAt: NOW - 19 * DAY, calls7d: 60, trialCreditsUsedPct: 100, paidAt: NOW - 5 * DAY, walletBalanceCredits: 8000, revenueUsd: 199, plan: 'Starter' }, NOW);
+    expect(paid.paidAt).not.toBeNull();
+    expect(['C6-a', 'C6-b', 'C6-c', 'C6-d', 'C7-b']).toContain(primaryStage(paid, NOW));
+    const trial = accountFromDeveloper({ signupAt: NOW - 2 * DAY, firstKeyAt: NOW - DAY, firstCallAt: NOW - DAY, calls7d: 5, trialCreditsUsedPct: 30, paidAt: null, walletBalanceCredits: 0, revenueUsd: 0, plan: 'Trial' }, NOW);
+    expect(trial.creditBalance).toBe(Math.round(TRIAL_CREDITS * 0.7));
+    expect(primaryStage(trial, NOW)).toBe('C3-c'); // 30% used
+    const noKey = accountFromDeveloper({ signupAt: NOW - DAY, firstKeyAt: null, firstCallAt: null, calls7d: 0, trialCreditsUsedPct: 0, paidAt: null, walletBalanceCredits: 0, revenueUsd: 0, plan: 'Trial' }, NOW);
+    expect(noKey.onboardingComplete).toBe(false);
+    expect(primaryStage(noKey, NOW)).toBe('C1-b'); // no key → still onboarding
   });
 });
 

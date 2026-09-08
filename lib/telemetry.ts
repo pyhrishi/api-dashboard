@@ -377,6 +377,8 @@ export type TelemetryEventName =
   | 'hot_lead'
   | 'dead_lead'
   | 'lead_score_changed'
+  | 'journey_viewed'
+  | 'journey_simulated_advanced'
   // — Phase 6/7 paid wallet health & churn signals
   | 'wallet_health_evaluated'
   | 'wallet_low'

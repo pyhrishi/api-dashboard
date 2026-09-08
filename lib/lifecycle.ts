@@ -412,6 +412,39 @@ export function leadScoreOf(a: LifecycleAccount, now: number): LeadAssessment {
   return { score: Math.max(0, Math.min(100, Math.round(score))), class: klass, salesRoutable, everActivated: everActivated(a) };
 }
 
+// ── Cohort → lifecycle (for the journey cockpit population view) ─────────────────
+
+/** Minimal shape of a growth-kpis `DeveloperRecord` the cockpit maps onto a `LifecycleAccount`. */
+export interface DeveloperLike {
+  signupAt: number; firstKeyAt: number | null; firstCallAt: number | null;
+  calls7d: number; trialCreditsUsedPct: number; paidAt: number | null;
+  walletBalanceCredits: number; revenueUsd: number; plan: DeveloperPlan;
+}
+
+/**
+ * Derive a `LifecycleAccount` from a seeded developer record so the cockpit can place
+ * the whole cohort on the C0→C7 journey. Approximate (no per-key expiry data), which is
+ * fine for a population distribution.
+ */
+export function accountFromDeveloper(dev: DeveloperLike, now: number): LifecycleAccount {
+  const creditBalance = dev.paidAt !== null ? dev.walletBalanceCredits : Math.round(TRIAL_CREDITS * (1 - dev.trialCreditsUsedPct / 100));
+  return {
+    signupAt: dev.signupAt, signupStarted: true, emailVerified: true, onboardingComplete: dev.firstKeyAt !== null,
+    trialDecision: 'allow', otpVerified: true, trialGranted: true, trialStartedAt: dev.signupAt,
+    trialCreditsTotal: TRIAL_CREDITS, creditBalance,
+    firstKeyAt: dev.firstKeyAt, firstCallAt: dev.firstCallAt,
+    lastCallAt: dev.calls7d > 0 ? now - DAY : dev.firstCallAt,
+    paidAt: dev.paidAt, upgradedBeforeExhaustion: dev.paidAt !== null && dev.trialCreditsUsedPct < 100,
+    plan: dev.plan, walletBalanceCredits: dev.walletBalanceCredits, revenueUsd: dev.revenueUsd,
+    calls7d: dev.calls7d, keys: [],
+  };
+}
+
+/** Class → sales-signal telemetry event (Step 5). */
+export const LEAD_CLASS_EVENT: Partial<Record<LeadClass, TelemetryEventName>> = {
+  sql: 'sales_qualified', sales_ready: 'sales_ready', hot: 'hot_lead', dead: 'dead_lead',
+};
+
 // ── Convenience lookups ──────────────────────────────────────────────────────────
 
 export const funnelTagOf = (s: LifecycleStage): FunnelTag => STAGE_META[s].funnel;
