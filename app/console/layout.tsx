@@ -13,6 +13,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { MfaEnforcementBanner } from '@/components/MfaEnforcementBanner';
+import { NotificationBell } from '@/components/NotificationBell';
+import { GrowthAlertsWatcher } from '@/components/GrowthAlertsWatcher';
+import { useAlertCenter, openIncidents } from '@/lib/growth-alerts';
+import { TrialActivationGate } from '@/components/TrialActivationGate';
+import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { Portal } from '@/components/Portal';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { track } from '@/lib/telemetry';
@@ -77,6 +82,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
 
   const role = (user?.role || 'admin') as ConsoleRole;
   const navItems = allNavItems.filter((item) => item.roles.includes(role));
+  const openAlertCount = useAlertCenter((s) => openIncidents(s.incidents).length);
   const pinnedTop = navPinnedTop.filter((item) => item.roles.includes(role));
   const visibleSections = NAV_SECTIONS
     .map((s) => ({ ...s, items: s.items.filter((i) => i.roles.includes(role)) }))
@@ -105,6 +111,14 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
       >
         <span className={cn("flex-shrink-0 transition-colors ml-1", isActive ? "text-teal" : "text-fg-muted")}>{item.icon}</span>
         <span className={cn("ml-4 transition-opacity duration-300 whitespace-nowrap", navExpanded ? "opacity-100" : "opacity-0 pointer-events-none")}>{item.name}</span>
+        {item.badge === 'open-alerts' && openAlertCount > 0 && (
+          <span
+            aria-label={`${openAlertCount} open alert${openAlertCount === 1 ? '' : 's'}`}
+            className={cn("ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-semantic-error/15 text-semantic-error text-[10px] font-black flex items-center justify-center tabular-nums transition-opacity duration-300", navExpanded ? "opacity-100" : "opacity-0 pointer-events-none")}
+          >
+            {openAlertCount}
+          </span>
+        )}
       </Link>
     );
   };
@@ -494,6 +508,9 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
             
             <OmnibarHeaderButton />
 
+            {/* In-app delivery channel for Growth alerts */}
+            <NotificationBell />
+
             {/* Toggle Switch */}
             <div className="flex items-center space-x-1 bg-glass rounded-full p-1 border border-border shadow-inner">
               <button 
@@ -534,7 +551,10 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
             </div>
           ) : (
             <ProtectedRoute allowedRoles={allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/console')?.roles as ('admin' | 'developer' | 'billing')[] | undefined || ['admin', 'developer', 'billing']}>
+              <GrowthAlertsWatcher />
               <MfaEnforcementBanner />
+              <TrialActivationGate />
+              <ImpersonationBanner />
               {children}
             </ProtectedRoute>
           )}

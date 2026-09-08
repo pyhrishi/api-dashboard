@@ -46,3 +46,8 @@ next-env.d.ts
 # verification build output (kept separate from dev .next)
 /.next-verify/
 /.next-dev/
+
+# per-session dev/build output dirs (NEXT_DIST_DIR=.next-*) and tooling scratch
+/.next-*/
+/.playwright-mcp/
+/.claude/worktrees/

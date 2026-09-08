@@ -7,7 +7,7 @@ import {
   Award, RefreshCw, AlarmClock, MessageSquareWarning, Combine, History, Globe, Navigation,
   TrendingUp, Zap, Server, FileText, Bug, ShieldCheck, ShieldAlert, Ruler, LockKeyhole, Lock,
   EyeOff, MonitorSmartphone, CreditCard, Handshake, Database, Lightbulb, BookOpen, GitBranch,
-  Map, LifeBuoy, Scale,
+  Map, LifeBuoy, Scale, FileLock2, ShieldQuestion,
 } from 'lucide-react';
 
 /**
@@ -30,6 +30,8 @@ export interface NavItem {
   href: string;
   icon: ReactNode;
   roles: ConsoleRole[];
+  /** Live count rendered beside the label — `layout.tsx` resolves the key against store state. */
+  badge?: 'open-alerts';
 }
 
 export interface NavSection {
@@ -58,6 +60,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { name: 'Key Usage', href: '/console/key-usage', icon: <LineChart className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Key Ownership', href: '/console/key-ownership', icon: <UserCheck className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Kill Switch', href: '/console/kill-switch', icon: <Siren className={cls} />, roles: ['admin', 'developer'] },
+      { name: 'Key Hashing', href: '/console/key-hashing', icon: <Fingerprint className={cls} />, roles: ['admin', 'developer'] },
     ],
   },
   {
@@ -143,6 +146,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { name: 'MFA Enforcement', href: '/console/mfa', icon: <ShieldCheck className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Encryption', href: '/console/encryption', icon: <Lock className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'PII Masking', href: '/console/pii-masking', icon: <EyeOff className={cls} />, roles: ['admin', 'developer', 'billing'] },
+      { name: 'Log Redaction', href: '/console/log-redaction', icon: <FileLock2 className={cls} />, roles: ['admin', 'developer', 'billing'] },
+      { name: 'Trial Gate', href: '/console/trial-gate', icon: <ShieldQuestion className={cls} />, roles: ['admin'] },
       { name: 'Sessions', href: '/console/sessions', icon: <MonitorSmartphone className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'CORS Policy', href: '/console/cors', icon: <Globe className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'API Regions', href: '/console/api-regions', icon: <Navigation className={cls} />, roles: ['admin', 'developer', 'billing'] },
@@ -153,6 +158,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Growth', href: '/console/growth', icon: <TrendingUp className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Alert Center', href: '/console/alerts', icon: <Siren className={cls} />, roles: ['admin', 'developer', 'billing'], badge: 'open-alerts' },
       { name: 'Logs', href: '/console/logs', icon: <FileText className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Request Inspector', href: '/console/debug', icon: <Bug className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Circuit Breakers', href: '/console/circuits', icon: <Zap className={cls} />, roles: ['admin', 'developer'] },
