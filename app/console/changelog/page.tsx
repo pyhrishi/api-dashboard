@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.96', date: 'September 2026', headline: 'PLG growth funnel — foundation & landing (TOFU)',
+    changes: [
+      { kind: 'feature', text: 'A new Growth Funnel board (Operations → Funnel) visualizes the full product-led lifecycle — 8 phases from anonymous landing visitor through trial, activation, conversion, wallet health, and churn — with cohort counts per phase, your account’s live position, and lead classification (Sales Qualified / Sales Ready / Funnel-Driven / Hot / Dead). Every stage is derived from real product signals by a single funnel model, so the board, the in-product nudges, and billing stay in lock-step.' },
+      { kind: 'feature', text: 'The API landing page becomes a conversion engine: a live catalogue of all 48 enrichment endpoints (purpose, request schema, sample response, per-call price), a mock sandbox whose “Fire” serves no data pre-auth and raises the sign-up gate, and tailored intent/dwell pop-ups. A new Instrumentation console shows the day-one analytics sinks (Clarity, GA, Mixpanel, RB2B), event routing, and the de-anonymized visitor feed — with EU/India consent gating via a privacy banner.' },
+    ],
+  },
+  {
     version: 'v4.93', date: 'September 2026', headline: 'Content-Security-Policy',
     changes: [
       { kind: 'feature', text: 'The console now ships a real Content-Security-Policy — a browser-enforced allowlist for what pages may load and run, the front line against XSS and clickjacking (frame-ancestors, object-src and base-uri are all locked down). It’s delivered by the edge on every page and rolled out the safe way: report-only by default, so nothing breaks while violations are collected.' },
