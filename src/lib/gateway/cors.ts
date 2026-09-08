@@ -47,6 +47,7 @@ export const EXPOSED_RESPONSE_HEADERS = [
   'X-Encryption-Transit', 'X-Encryption-Rest',
   'X-Payload-Limit-Bytes', 'X-Payload-Limit-Depth',
   'X-PII-Masked', 'X-Privacy-Framework',
+  'X-Credits-Bucket', 'X-Free-Credits-Remaining',
   'X-Key-Fingerprint',
   'X-Log-Redaction',
 ];

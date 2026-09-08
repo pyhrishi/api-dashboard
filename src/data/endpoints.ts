@@ -1919,6 +1919,26 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'credits-ledger',
+    name: 'Trial credit ledger',
+    description: "Read your credit balance (F-M3): free trial credits and paid balance as two buckets, plus how much of the trial you've used. Free trial credits apply to Public APIs only and are spent before any paid balance; premium endpoints (bulk, streaming, export, AI search) require paid credits. Every billed response also carries X-Credits-Bucket (free/paid/mixed) and X-Free-Credits-Remaining. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/credits',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'credits-to-activate',
+        title: 'Open Trial & Credits',
+        description: 'See your free vs paid balance and which endpoints your trial covers.',
+        category: 'sdks',
+        link: '/console/trial-credits',
+      },
+    ],
+  },
+
+  {
     id: 'pii-masking-policy',
     name: 'PII masking policy',
     description: "Read or update the field-level PII masking policy applied to your live-key responses (F-313). GET returns the effective policy (per-field strategy — partial / hash / tokenize / redact), its strength score, and a masked sample so you can see exactly what a live caller receives; the most sensitive fields (government IDs, dates of birth) have an un-relaxable minimum. PATCH { enabled, strategies } syncs a policy from the console to the edge — invalid or below-floor choices are dropped. Live responses that mask anything carry an X-PII-Masked header listing the masked fields. Sandbox keys are never masked. Free, keyless-billed.",

@@ -1,5 +1,6 @@
 // Mocked in-memory billing store (Hashes Only)
 import { hashApiKey, type RegistryDescriptor } from '@/lib/key-hashing';
+import { chargeTrial, TRIAL_FREE_CREDITS } from '@/lib/trial-credits';
 
 export type BillingPlan = 'prepaid' | 'postpaid' | 'metered';
 export type MsaStatus = 'ACTIVE' | 'EXPIRED' | 'PENDING_SIGNATURE';
@@ -8,8 +9,10 @@ export type DpaStatus = 'ACTIVE' | 'REQUIRED' | 'NOT_APPLICABLE';
 export interface ApiKeyRecord {
   hash: string;
   plan: BillingPlan;
-  credits: number; // for prepaid
+  credits: number; // paid pre-paid balance
   usage: number;   // for metered/postpaid
+  /** Trial free credits (F-M3) — spendable on Public APIs only, before paid. */
+  freeCredits?: number;
   dataResidency?: string; // e.g. 'EU', 'US'
   status?: 'ACTIVE' | 'REVOKED';
   msaStatus: MsaStatus;
@@ -52,7 +55,8 @@ export function hasBillingRecordFor(hash: string): boolean {
  */
 function provisionRecord(key: string, hash: string): ApiKeyRecord | undefined {
   if (key.startsWith('sk_live_')) {
-    return { hash, plan: 'prepaid', credits: 1000, usage: 0, status: 'ACTIVE', msaStatus: 'ACTIVE', dpaStatus: 'ACTIVE' };
+    // Trial provisioning (F-M3): free credits (Public-only) spent before the paid balance.
+    return { hash, plan: 'prepaid', credits: 1000, freeCredits: TRIAL_FREE_CREDITS, usage: 0, status: 'ACTIVE', msaStatus: 'ACTIVE', dpaStatus: 'ACTIVE' };
   }
   if (key.startsWith('sk_test_')) {
     return { hash, plan: 'metered', credits: 0, usage: 0, monthlyLimit: 100000, status: 'ACTIVE', msaStatus: 'ACTIVE', dpaStatus: 'NOT_APPLICABLE' };
@@ -97,7 +101,29 @@ export function calculateVolumeDiscount(key: string, baseCost: number): { cost: 
   return { cost: baseCost, discountPct: 0 };
 }
 
-export function deductCredits(key: string, cost: number): { success: boolean, remaining: number, error?: string } {
+export interface DeductResult {
+  success: boolean;
+  remaining: number;
+  error?: string;
+  /** Which balance the charge came from (F-M3 trial provisioning). */
+  bucket?: 'free' | 'paid' | 'mixed' | null;
+  freeRemaining?: number;
+  paidRemaining?: number;
+}
+
+/** Read the two-bucket ledger for a key (free trial + paid). */
+export function getLedger(key: string | undefined): { free: number; paid: number } | undefined {
+  const record = getApiKeyRecord(key ?? '');
+  if (!record) return undefined;
+  return { free: record.freeCredits ?? 0, paid: record.credits ?? 0 };
+}
+
+/**
+ * Deduct `cost` credits. For pre-paid (trial) keys this enforces the F-M3 rules:
+ * free trial credits are spent first and only on Public APIs (`opts.isPublic`),
+ * then the paid balance. `isPublic` defaults to true for callers that don't classify.
+ */
+export function deductCredits(key: string, cost: number, opts?: { isPublic?: boolean }): DeductResult {
   const record = getApiKeyRecord(key);
 
   if (!record) {
@@ -105,19 +131,14 @@ export function deductCredits(key: string, cost: number): { success: boolean, re
   }
 
   if (record.plan === 'prepaid') {
-    if ((record.credits || 0) < cost) {
-      return { 
-        success: false, 
-        remaining: record.credits || 0, 
-        error: 'Insufficient pre-paid credits. Please top up your ledger at console.zinbit.zintlr.com/billing to continue using the API.' 
-      };
+    const isPublic = opts?.isPublic ?? true;
+    const result = chargeTrial({ free: record.freeCredits ?? 0, paid: record.credits ?? 0 }, cost, isPublic);
+    if (!result.ok) {
+      return { success: false, remaining: (record.freeCredits ?? 0) + (record.credits ?? 0), error: result.error, bucket: null, freeRemaining: record.freeCredits ?? 0, paidRemaining: record.credits ?? 0 };
     }
-    
-    record.credits = (record.credits || 0) - cost;
-    return { 
-      success: true, 
-      remaining: record.credits 
-    };
+    record.freeCredits = result.free;
+    record.credits = result.paid;
+    return { success: true, remaining: result.free + result.paid, bucket: result.bucket, freeRemaining: result.free, paidRemaining: result.paid };
   } else if (record.plan === 'postpaid') {
     // Enterprise Post-Paid Logic (No hard limits, bill at end of month)
     record.usage = (record.usage || 0) + cost;

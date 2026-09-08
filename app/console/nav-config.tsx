@@ -7,7 +7,7 @@ import {
   Award, RefreshCw, AlarmClock, MessageSquareWarning, Combine, History, Globe, Navigation,
   TrendingUp, Zap, Server, FileText, Bug, ShieldCheck, ShieldAlert, Ruler, LockKeyhole, Lock,
   EyeOff, MonitorSmartphone, CreditCard, Handshake, Database, Lightbulb, BookOpen, GitBranch,
-  Map, LifeBuoy, Scale, FileLock2, ShieldQuestion,
+  Map, LifeBuoy, Scale, Funnel, Wallet, HeartHandshake, RotateCcw, FileLock2, ShieldQuestion,
 } from 'lucide-react';
 
 /**
@@ -158,7 +158,15 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Growth', href: '/console/growth', icon: <TrendingUp className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Funnel', href: '/console/funnel', icon: <Funnel className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Instrumentation', href: '/console/instrumentation', icon: <Radar className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Trial Activation', href: '/console/activate', icon: <Rocket className={cls} />, roles: ['admin', 'developer', 'billing'] },
+      { name: 'Trial & Credits', href: '/console/trial-credits', icon: <Wallet className={cls} />, roles: ['admin', 'developer', 'billing'] },
+      { name: 'Lifecycle (CSM)', href: '/console/lifecycle', icon: <HeartHandshake className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Wallet Health', href: '/console/wallet-health', icon: <Gauge className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Re-up & Churn', href: '/console/churn', icon: <RotateCcw className={cls} />, roles: ['admin', 'billing'] },
       { name: 'Alert Center', href: '/console/alerts', icon: <Siren className={cls} />, roles: ['admin', 'developer', 'billing'], badge: 'open-alerts' },
+
       { name: 'Logs', href: '/console/logs', icon: <FileText className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Request Inspector', href: '/console/debug', icon: <Bug className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Circuit Breakers', href: '/console/circuits', icon: <Zap className={cls} />, roles: ['admin', 'developer'] },

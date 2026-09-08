@@ -18,6 +18,55 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v5.6', date: 'September 2026', headline: 'Re-up & churn — dunning desk',
+    changes: [
+      { kind: 'feature', text: 'A new Re-up & Churn console closes the lifecycle: top-ups are surfaced as the healthy retention/LTV signal, and accounts stuck at a zero balance enter a dunning sequence — a 48-hour payment retry, then a key-revocation warning, then suspension — computed from days since depletion.' },
+      { kind: 'feature', text: 'Each dunning account shows a stage-appropriate action (retry payment / send warning / revoke access), and previously high-value accounts are flagged for sales outreach instead of a silent lapse. Actions persist for the session.' },
+    ],
+  },
+  {
+    version: 'v5.5', date: 'September 2026', headline: 'Wallet health — burn buckets & auto-reload',
+    changes: [
+      { kind: 'feature', text: 'A new Wallet Health console watches how paying accounts burn their balance against time and sorts them into balanced (healthy — monitor), slow (feature-discovery nudge — happy vs. stalling), and fast (heavy user — low-balance alerts + auto-reload). Your own wallet card shows the live paid balance, a low-balance alert, and an auto-reload setting (when balance ≤ X, add N credits).' },
+      { kind: 'feature', text: 'Fast-burn accounts get a one-click "alert + offer auto-reload" so heavy users never deplete mid-production; slow-burn accounts get a feature-discovery nudge. Runway (days left at the current burn) is shown per account.' },
+    ],
+  },
+  {
+    version: 'v5.4', date: 'September 2026', headline: 'Lifecycle CSM cockpit — conversion window & win-back',
+    changes: [
+      { kind: 'feature', text: 'A new Lifecycle (CSM) console is the daily conversion desk: a "monitor daily" watchlist of accounts in the decision window (≥80% of trial used, or ≤2 days from expiry) with a one-click upgrade prompt, a lead board classifying every account (Hot / Sales Ready / Funnel-Driven / SQL / Prospect / Dead), and a win-back queue for lapsed trials. High-spend Hot leads are auto-routed to an AE.' },
+      { kind: 'feature', text: 'Leads are classified from real funnel signals by the shared model, so the cockpit, the funnel board, and billing agree. Conversion-window membership correctly excludes already-lapsed trials (those move to win-back), and CSM actions (prompt sent, win-back started) persist for the session.' },
+    ],
+  },
+  {
+    version: 'v5.3', date: 'September 2026', headline: 'Activation & trial-consumption milestones',
+    changes: [
+      { kind: 'feature', text: 'Trial & Credits now tracks activation: the time from your first key to your first successful call against a <10-minute target (your first call makes you Sales Qualified), plus a consumption ladder with milestones at 10 / 25 / 50 / 75 / 100 percent of your free trial — 50% is the Sales-Ready signal.' },
+      { kind: 'feature', text: 'Each milestone raises an intensifying, contextual upgrade nudge (halfway → "upgrade to keep momentum"; 75% → "top up before you run out"; 100% → "add a paid balance to continue"), driven by the real gateway ledger. A preview control lets you see each milestone’s nudge.' },
+    ],
+  },
+  {
+    version: 'v5.2', date: 'September 2026', headline: 'Trial provisioning — free credits for Public APIs',
+    changes: [
+      { kind: 'feature', text: 'Trial credits are now real and enforced at the gateway: every account gets free credits that apply to Public APIs only and are spent before any paid balance. Premium endpoints (bulk enrichment, streaming, bulk export, AI search) draw on your paid balance instead. Billed responses carry X-Credits-Bucket (free/paid/mixed) and X-Free-Credits-Remaining, and GET /v1/credits returns your two-bucket ledger.' },
+      { kind: 'feature', text: 'A new Trial & Credits console shows your free vs paid balance, how much of the trial you’ve used, exactly which endpoints your free credits cover, and a live "fire a call" demo that shows which bucket each call draws from — the same ledger the gateway bills against.' },
+    ],
+  },
+  {
+    version: 'v5.1', date: 'September 2026', headline: 'Trial activation — onboarding, risk gate & OTP',
+    changes: [
+      { kind: 'feature', text: 'A new Trial Activation flow (Operations → Trial Activation) walks a new account from profile to first key: pick your role and use-case (Product Managers get a one-click key; everyone gets a catalogue tuned to their use-case), then claim your free trial. Low-risk signups get 5,000 credits instantly; flagged ones verify a phone with a 6-digit code over an SMS → WhatsApp → call fallback (with a skip option). Public-API credits are spent before any paid balance.' },
+      { kind: 'feature', text: 'Product Managers have their first API key generated automatically on activation; everyone else is one click away, then routed straight to their first call. The whole gate is deterministic and unit-tested; the risk criteria are provisional pending the final trust policy.' },
+    ],
+  },
+  {
+    version: 'v5.0', date: 'September 2026', headline: 'PLG growth funnel — foundation & landing (TOFU)',
+    changes: [
+      { kind: 'feature', text: 'A new Growth Funnel board (Operations → Funnel) visualizes the full product-led lifecycle — 8 phases from anonymous landing visitor through trial, activation, conversion, wallet health, and churn — with cohort counts per phase, your account’s live position, and lead classification (Sales Qualified / Sales Ready / Funnel-Driven / Hot / Dead). Every stage is derived from real product signals by a single funnel model, so the board, the in-product nudges, and billing stay in lock-step.' },
+      { kind: 'feature', text: 'The API landing page becomes a conversion engine: a live catalogue of all 48 enrichment endpoints (purpose, request schema, sample response, per-call price), a mock sandbox whose “Fire” serves no data pre-auth and raises the sign-up gate, and tailored intent/dwell pop-ups. A new Instrumentation console shows the day-one analytics sinks (Clarity, GA, Mixpanel, RB2B), event routing, and the de-anonymized visitor feed — with EU/India consent gating via a privacy banner.' },
+    ],
+  },
+  {
     version: 'v4.99', date: 'September 2026', headline: 'Alert Center, multi-channel delivery and the weekly PM digest',
     changes: [
       { kind: 'feature', text: 'Growth alerts now reach people. A rule that trips opens an incident for its owner — one per rule, per week, per organization — and routes it through the owner’s channels: in-app (the header bell and the new Alert Center), email, Slack and webhook. Every attempt is recorded in a delivery ledger with an honest outcome, so a missing recipient shows up as a failed delivery rather than a silent success. Incidents are acknowledged with a note, resolved by hand, or auto-resolved when the number recovers; the median time to acknowledge is a KPI in its own right. Scenario rehearsals on the Growth dashboard walk the same path with clearly tagged incidents.' },

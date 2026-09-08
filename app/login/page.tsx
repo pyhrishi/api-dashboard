@@ -23,7 +23,9 @@ function fmtDuration(ms: number): string {
 export default function LoginPage() {
   const router = useRouter();
   const login = useStore(state => state.login);
-  
+
+  useEffect(() => { track('login_page_viewed', {}); }, []);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

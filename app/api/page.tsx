@@ -1,7 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HeroLiveDemo } from '@/components/HeroLiveDemo';
+import { ApiSandboxSection } from '@/components/landing/ApiSandboxSection';
+import { IntentPopups, emitLandingIntent } from '@/components/landing/IntentPopups';
+import { ConsentBanner } from '@/components/landing/ConsentBanner';
+import { track } from '@/lib/telemetry';
 import { IntegrationTerminal } from '@/components/IntegrationTerminal';
 import { CapabilitiesShowcase } from '@/components/CapabilitiesShowcase';
 import { ShieldCheck, Users, Building2, SearchCheck, Check, ArrowRight, Zap, Network, Database, Cloud, FileCode, Workflow, ArrowRightLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -16,6 +20,8 @@ export default function ApiLandingPage() {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const router = useRouter();
   const { isAuthenticated, user } = useStore();
+
+  useEffect(() => { track('lp_viewed', {}); }, []);
 
   const pricingTiers = [
     { name: "Starter", limit: "10,000", price: "99" },
@@ -39,7 +45,7 @@ export default function ApiLandingPage() {
   return (
     <>
       <div className="bg-mist dark:bg-ink min-h-screen text-ink dark:text-white font-sans overflow-hidden selection:bg-teal selection:text-ink">
-      <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
+      <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => { emitLandingIntent('pricing'); setIsPricingModalOpen(false); }} />
       
       {/* Background Grids & Ambient Blurs */}
       <div className="grid-light dark:grid-dark absolute inset-0 opacity-40 pointer-events-none" />
@@ -144,6 +150,9 @@ export default function ApiLandingPage() {
             </div>
           </div>
         </section>
+
+        {/* PHASE-0 TOFU: mock-sandbox conversion gate (M1) */}
+        <ApiSandboxSection />
 
         {/* STORYTELLING: BEFORE VS AFTER USE CASE */}
         <section className="py-48 relative overflow-hidden">
@@ -493,7 +502,9 @@ export default function ApiLandingPage() {
         </div>
       </footer>
       
-      <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
+      <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => { emitLandingIntent('pricing'); setIsPricingModalOpen(false); }} />
+      <IntentPopups />
+      <ConsentBanner />
     </div>
     </>
   );
