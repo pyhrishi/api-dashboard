@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Planned · **Steps 0–5 done — green** (2026-09-08) |
+| **Status** | **BUILT — all 7 steps done, green** (2026-09-08) |
 | **Owner** | Product (Zintlr) |
 | **Last updated** | 2026-09-08 |
 | **Prototype route(s)** | `/console/journey` (cockpit, Step 5 — /console/lifecycle is a1's CSM cockpit) · nudge surfaces console-wide · landing/signup (Step 6) |
@@ -72,7 +72,7 @@ The four open questions were resolved as follows (chosen for depth + coherence w
 - **Step 4 — Trigger evaluator + channels. ✅ DONE.** `components/nudges/NudgeWatcher.tsx` (layout-mounted, cadence + simulated-time clock) fires the time/threshold milestone events the orchestrator doesn't (usage_threshold_hit, key_expiry_warned, key_expired, inactivity_detected), baselined so load doesn't burst; `lib/nudge-delivery.ts` re-engagement email/webhook over an Alert-Center-style ledger — capped multi-touch, unsubscribe-honouring, honest delivered/failed/skipped; nudge store gains the delivery ledger + touch counters + simulated offset. Verified live: a 30h simulated advance dispatched a delivered re-engagement email. Green: tsc/lint, 42 unit + 6 e2e.
 - **Step 5 — Lead classification & sales routing. ✅ DONE.** Lead-class events (sales_qualified / sales_ready / hot_lead / dead_lead / lead_score_changed) emitted from NudgeWatcher on class change; `/console/journey` cockpit — journey board (C0→C7 by phase, funnel-tagged, your position + seeded-cohort distribution via accountFromDeveloper), lead & sales-routing panel, nudge-activity + re-engagement ledger, and a simulated clock to age the trial and fire triggers; nav row in Operations & Monitoring. Step 6 (pre-auth TOFU) handed to api-dashboard-ea. Green: tsc/lint, 43 unit + 7 e2e.
 - **Step 6 — Pre-auth TOFU (C0-a, C0-b, C1-a). ✅ DONE.** C0-a landing mock-sandbox gate + intent pop-ups already shipped by the funnel engine (components/landing/ApiSandboxSection + IntentPopups) — reused, not rebuilt. Gap filled: functional signup SSO (GitHub + Google, was a dead affordance) emitting signup_started/signup_completed{method}, and a C0-b exit-intent value-reminder capture (components/preauth/SignupExitIntent). Verification (C1-a) handled by the activate flow. Green: tsc/lint, 3 e2e (e2e/preauth.spec.ts).
-- **Step 7 — Instrumentation close-out.** Growth/Alert integration, PRD, roadmap/changelog, coverage-audit test.
+- **Step 7 — Instrumentation close-out. ✅ DONE.** Nudge-engagement panel on /console/growth (shown/converted/dismissed/conversion + top nudges, links to cockpit); Reset Demo Data clears useNudgeState; coverage-audit test (src/lib/__tests__/lifecycle-coverage.test.ts) locks every C-stage + trigger + transition to a catalog entry & event; PRD README row; changelog v5.8; roadmap F-387 marked built/superseded.
 
 ## Coverage matrix (every row → step + Mixpanel event)
 

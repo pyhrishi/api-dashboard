@@ -18,6 +18,14 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v5.8', date: 'September 2026', headline: 'Lifecycle nudges — the right prompt at the right moment',
+    changes: [
+      { kind: 'feature', text: 'The console now guides you through the whole journey — from your first key to your first call, through trial consumption, the upgrade decision, and paid wallet health. Contextual nudges appear as banners, one-at-a-time modals, celebrations (confetti on your first successful call) and quiet progress toasts, each tied to where you actually are; they can be dismissed or snoozed and never nag once you have acted. Milestones like hitting 50% of your trial or a key nearing expiry surface exactly when they matter.' },
+      { kind: 'feature', text: 'A new Customer Journey cockpit (/console/journey) shows where an account sits on the C0 → C7 lifecycle, its lead score and sales signal, every nudge it has seen, and the re-engagement it has been sent — with a simulated clock to fast-forward the trial and watch the triggers fire. When a nudge stalls, a capped, unsubscribe-honouring email/webhook sequence re-engages, all recorded in a delivery ledger; the Growth dashboard now reports nudge conversion.' },
+      { kind: 'improvement', text: 'Signup SSO (GitHub + Google) is now functional and a pre-auth exit-intent reminder was added; the full event taxonomy forwards to Mixpanel when a token is configured. Reset Demo Data now clears nudge state too.' },
+    ],
+  },
+  {
     version: 'v5.7', date: 'September 2026', headline: 'Cost Calculator — model your spend before you ship',
     changes: [
       { kind: 'feature', text: 'A new Cost Calculator (Business & Billing → Cost Calculator) models your monthly spend against a real call-mix — pick endpoints from the live catalogue, set calls/month, and see credits, the volume discount reached, effective $/call, and the exact total the gateway would bill. It pre-fills from your recent live usage, recommends the cheapest plan for your mix (with the savings called out), warns when a hard cap would refuse calls (402), and projects 12-month spend at a growth rate you set.' },

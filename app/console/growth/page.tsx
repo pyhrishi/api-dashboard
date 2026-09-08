@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   TrendingUp, Zap, Key, Play, Users, CreditCard, Sparkles, Radio, Copy, Check, ChevronDown,
-  Activity, Flame, Gauge, AlertTriangle, ShieldCheck, Clock, BarChart3, LifeBuoy,
+  Activity, Flame, Gauge, AlertTriangle, ShieldCheck, Clock, BarChart3, LifeBuoy, ArrowRight,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { useNudgeState, nudgeStats, nudgeById } from '@/lib/nudges';
 import RoleGuard from '@/components/RoleGuard';
 import { useToast } from '@/components/Toast';
 import { track, isPostHogEnabled, type TelemetryEventRecord, type TelemetryEventName } from '@/lib/telemetry';
@@ -150,6 +151,9 @@ export default function GrowthPage() {
     telemetryEvents, apiLogs, user, organizations, activeOrganizationId, isFirstCallMade, firstCallTimestamp,
     activeKeys, creditBalance, billingDetails, teamMembers, supportTickets, clearTelemetryEvents,
   } = useStore();
+  const nudgeRecords = useNudgeState((s) => s.records);
+  const nudgeStatsData = useMemo(() => nudgeStats({ records: nudgeRecords } as Parameters<typeof nudgeStats>[0]), [nudgeRecords]);
+  const topNudges = useMemo(() => Object.keys(nudgeRecords).map((id) => nudgeRecords[id]).filter((r) => r.seenCount > 0).sort((a, b) => b.seenCount - a.seenCount).slice(0, 6), [nudgeRecords]);
 
   const [scope, setScope] = useState<KpiScope>('population');
   const [scenario, setScenario] = useState<KpiScenario>('current');
@@ -593,6 +597,42 @@ export default function GrowthPage() {
             </motion.div>
           </>
         )}
+
+        {/* 10.5 · Nudge engagement (Section F lifecycle nudges) */}
+        <motion.div {...SECTION} transition={{ delay: 0.48 }}>
+          <GlassCard>
+            <SectionTitle icon={<Sparkles />} title="Nudge engagement" note="How the lifecycle nudges land — shown, acted on, dismissed. Full journey view on the Customer Journey cockpit."
+              badge={<Link href="/console/journey" className="text-[12px] font-bold text-teal hover:underline inline-flex items-center gap-1 whitespace-nowrap">Customer Journey <ArrowRight className="w-3.5 h-3.5" /></Link>} />
+            {nudgeStatsData.shown === 0 ? (
+              <p className="text-sm text-fg-muted">No nudges shown yet — they surface as the account moves through the C0 → C7 journey.</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                  {[
+                    { label: 'Shown', value: nudgeStatsData.shown },
+                    { label: 'Converted', value: nudgeStatsData.converted },
+                    { label: 'Dismissed', value: nudgeStatsData.dismissed },
+                    { label: 'Conversion', value: `${nudgeStatsData.conversionPct}%` },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-xl border border-border bg-glass px-3 py-2">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-fg-muted">{s.label}</div>
+                      <div className="text-xl font-black text-fg tabular-nums mt-0.5">{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <ul className="space-y-1.5">
+                  {topNudges.map((r) => (
+                    <li key={r.id} className="flex items-center gap-3 text-[12px]">
+                      <StatusBadge tone={r.status === 'converted' ? 'success' : r.status === 'dismissed' ? 'neutral' : r.status === 'snoozed' ? 'warning' : 'teal'}>{r.status}</StatusBadge>
+                      <span className="text-fg min-w-0 truncate flex-1">{nudgeById(r.id)?.title ?? r.id}</span>
+                      <span className="text-fg-muted whitespace-nowrap tabular-nums">seen {r.seenCount}×</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </GlassCard>
+        </motion.div>
 
         {/* 11 · Event stream */}
         <motion.div {...SECTION} transition={{ delay: 0.5 }} className="space-y-3">

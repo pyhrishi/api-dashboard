@@ -6,6 +6,7 @@ import { usePayloadLimits } from '@/lib/payload-limits';
 import { useMfaPolicy } from '@/lib/mfa';
 import { useLoginGuard } from '@/lib/brute-force';
 import { useLogRedactionPolicy } from '@/lib/log-redaction';
+import { useNudgeState } from '@/lib/nudges';
 import { User, Building2, Mail, Save, Fingerprint, FlaskConical, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
@@ -30,6 +31,7 @@ export default function ProfileSettingsPage() {
     try { useMfaPolicy.persist.clearStorage(); } catch { /* storage unavailable */ }
     try { useLoginGuard.persist.clearStorage(); } catch { /* storage unavailable */ }
     try { useLogRedactionPolicy.persist.clearStorage(); } catch { /* storage unavailable */ }
+    try { useNudgeState.persist.clearStorage(); } catch { /* storage unavailable */ }
     window.location.href = '/console';
   };
 
