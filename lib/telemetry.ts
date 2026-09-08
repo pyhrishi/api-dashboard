@@ -257,7 +257,10 @@ export type TelemetryEventName =
   | 'dwell_popup_shown'
   | 'exit_intent_popup_shown'
   | 'intent_popup_cta_clicked'
-  | 'intent_popup_dismissed';
+  | 'intent_popup_dismissed'
+  // growth — instrumentation & de-anon (Phase 0)
+  | 'instrumentation_viewed'
+  | 'deanon_visitor_inspected';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

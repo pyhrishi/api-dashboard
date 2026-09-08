@@ -154,6 +154,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { name: 'Usage & Analytics', href: '/console/analytics', icon: <Activity className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Growth', href: '/console/growth', icon: <TrendingUp className={cls} />, roles: ['admin', 'billing'] },
       { name: 'Funnel', href: '/console/funnel', icon: <Funnel className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Instrumentation', href: '/console/instrumentation', icon: <Radar className={cls} />, roles: ['admin', 'billing'] },
       { name: 'Logs', href: '/console/logs', icon: <FileText className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Request Inspector', href: '/console/debug', icon: <Bug className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Circuit Breakers', href: '/console/circuits', icon: <Zap className={cls} />, roles: ['admin', 'developer'] },
