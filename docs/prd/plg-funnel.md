@@ -64,7 +64,10 @@ Console pages: loading skeletons, coherent empty/populated states, Framer Motion
 ## 10d. Built since — M5 (Phase 4–5: CSM lifecycle cockpit)
 `/console/lifecycle` + `lib/lifecycle-ops.ts` (persisted prompt/win-back ops). Cohort enriched (`inWindow`/`daysToExpiry`/`spendPerDay`/`aeAssigned`, `AE_SPEND_THRESHOLD`); `conversionWindowOpen` excludes already-expired trials (dead → win-back). Cockpit: conversion-window daily watchlist (send upgrade prompt), lead board by class (AE-badged Hot), win-back queue (start win-back). Telemetry lifecycle_viewed / conversion_prompt_sent / winback_started. Also fixed a signed-shift index bug (`h>>n`→`h>>>n`) that produced "@ undefined" names.
 
+## 10e. Built since — M6 (Phase 6: paid wallet health)
+`/console/wallet-health` + `lib/wallet.ts` (BUCKET_ACTION per burn bucket, runwayDays/isLowBalance, persisted `useWallet` auto-reload config) + CohortAccount `burnBucket`/`runwayDays`. Balanced = monitor, slow = feature-discovery nudge, fast = low-balance alert + auto-reload. Your-wallet card reads the live paid ledger + low-balance alert + auto-reload (≤threshold → add N). Telemetry wallet_health_viewed / auto_reload_configured / low_balance_alert_actioned / feature_discovery_nudged.
+
 ## 10. Deferred — the rest of the program
-- **M5 (Phase 4–5): DONE (see 10d).** conversion window, lead classification (Dead/Funnel-Driven/Hot), win-back — the CSM cockpit.
+- **M5 (Phase 4–5): DONE (see 10d).** **M6 (Phase 6): DONE (see 10e).** conversion window, lead classification (Dead/Funnel-Driven/Hot), win-back — the CSM cockpit.
 - **M6–M7 (Phase 6–7):** wallet-health burn buckets + auto-reload; re-up + dunning (48h retry → revocation warning).
 - **M8:** merge to `main` (reconcile telemetry/roadmap/changelog/nav with concurrent sessions; consume session 66's `growth-kpis` where it fits), coherence + ship-check, deploy.

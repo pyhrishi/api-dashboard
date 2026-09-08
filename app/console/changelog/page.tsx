@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v5.1', date: 'September 2026', headline: 'Wallet health — burn buckets & auto-reload',
+    changes: [
+      { kind: 'feature', text: 'A new Wallet Health console watches how paying accounts burn their balance against time and sorts them into balanced (healthy — monitor), slow (feature-discovery nudge — happy vs. stalling), and fast (heavy user — low-balance alerts + auto-reload). Your own wallet card shows the live paid balance, a low-balance alert, and an auto-reload setting (when balance ≤ X, add N credits).' },
+      { kind: 'feature', text: 'Fast-burn accounts get a one-click "alert + offer auto-reload" so heavy users never deplete mid-production; slow-burn accounts get a feature-discovery nudge. Runway (days left at the current burn) is shown per account.' },
+    ],
+  },
+  {
     version: 'v5.0', date: 'September 2026', headline: 'Lifecycle CSM cockpit — conversion window & win-back',
     changes: [
       { kind: 'feature', text: 'A new Lifecycle (CSM) console is the daily conversion desk: a "monitor daily" watchlist of accounts in the decision window (≥80% of trial used, or ≤2 days from expiry) with a one-click upgrade prompt, a lead board classifying every account (Hot / Sales Ready / Funnel-Driven / SQL / Prospect / Dead), and a win-back queue for lapsed trials. High-spend Hot leads are auto-routed to an AE.' },
