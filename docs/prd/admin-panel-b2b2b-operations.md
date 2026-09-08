@@ -128,9 +128,24 @@ Preview-mode sandbox call success rate = 100 % · median time for support to fix
 ## 13. Out of Scope
 Customer-facing changes; invoicing; custom alert rules (F-194); notification delivery infra (reuse F-250 Slack app when built).
 
+## 14. Deep features (built) — operator workflow layer
+
+Five deep features were built on top of the base admin app to turn its passive dashboards into an operator workflow. All live in `/Users/admin/Desktop/zinbit-admin` (routes under `app/(admin)/*`, engines in `lib/admin/*`, backend in `lib/admin/service.ts`, API in `app/api/admin/[...route]/route.ts`), each with its own pure engine, RBAC, audit, telemetry, unit tests and a Playwright spec.
+
+- **DF-1 Operational alerting & routing** (`lib/admin/alerts.ts`, `/alerts`) — the wallet/ledger/key signals the panel already computes, raised as routed alerts (7 rules: wallet-at-zero, wallet<10%, trial-near-exhaustion, error-rate spike, latency spike, spend spike, key-near-expiry-in-use), each with severity, an owning team and a channel (PagerDuty/Slack/email), dedup + cooldown, and ack/snooze/resolve + a one-click "extend key". Editable rules. Ties to F-236, F-194.
+- **DF-2 Cross-customer anomaly & abuse** (`lib/admin/anomaly.ts`, `/abuse`) — behavioural detectors a threshold misses: credential sharing (one key across ≥3 regions), impossible travel, call burst, 404 enumeration; a per-customer risk score; suspend-key and dismiss (audited). Deterministic abuse patterns were injected into the seed so the detectors have real data.
+- **DF-3 Account health scoring** (`lib/admin/health.ts`, `/health`) — one score per customer from usage trend, wallet runway, error rate, dormancy and trial burn; derives a churn risk and an expansion score; a portfolio board splits churn-watch from expansion-ready with factor breakdowns; "Flag for CSM" creates a handoff. Ties to F-509.
+- **DF-4 Maker-checker approvals** (`lib/admin/approvals.ts`, `/approvals`) — the highest-risk changes (grant credits, raise limit, delete key) require a second, different approver (four-eyes); a maker submits with a reason, a checker approves/rejects, approval runs the underlying action; every step role-gated and audited. Ties to F-351.
+- **DF-5 Customer communication loop** (`lib/admin/messaging.ts`, `/messages`) — notify a customer (email/in-app) about a near-expiry key, low wallet or exhaustion from a small template catalog; the panel *suggests* the right message from the current signals, with a live preview and an outbox. Ties to F-250.
+
+**Verification (whole app):** `tsc` clean · lint 0/0 · jest **47** tests across 6 suites · Playwright specs for each feature (alerts, abuse, health, approvals, messages) plus the base admin smoke · isolated `next build` green (all routes present). Reached from the customer console via the header **Admin** button.
+
+**Deferred:** real PagerDuty/Slack/email/CRM delivery (channels are labels); per-org tunable anomaly thresholds; ML/NER detectors; wallet top-up/refund beyond the approved grant; message scheduling and per-customer suppression windows; audit-log entries surfaced inline on each feature (they land in the shared audit already).
+
 ---
 
 ## Changelog
 - **2026-09-08** — Authored from section E. Admin Panel of the product requirements (funnel & KPIs via Advanced Analytics, sales triggers, broken B2B2B preview mode, token management, near-expiry-in-use insight, metadata-only API ledger with status/cost views, wallet trends and insights, access-request one-pager). (dev7@zintlr.com)
 - **2026-09-08** — Decision: the admin panel is a **separate app**, not a console mode. Added Deployment row, FR-15/16, standalone prototype plan; removed the open question. (dev7@zintlr.com)
 - **2026-09-08** — Built the complete prototype as the standalone `zinbit-admin` app (sibling repo) plus the console-side preview consumer. Status → Built. Deviations from the draft: trigger rules are the five seeded rules with editable thresholds/enable/channel (no free-form rule builder yet); ledger export is the first 200 rows of the frame; wallet 10 % is measured against the *last top-up* (open question resolved by default). (dev7@zintlr.com)
+- **2026-09-08** — Built five deep features on the admin app (DF-1 alerting & routing, DF-2 anomaly/abuse detection, DF-3 account health scoring, DF-4 maker-checker approvals, DF-5 customer comms loop), each with a pure engine, RBAC, audit, tests and an e2e; whole app green (tsc/lint, 47 unit tests, Playwright, isolated build). (dev7@zintlr.com)
