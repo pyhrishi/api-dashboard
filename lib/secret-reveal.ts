@@ -16,27 +16,23 @@
  * same secret always fingerprints the same — no Math.random.
  */
 
+import { hashApiKey } from '@/lib/key-hashing';
+
 /** A minimal shape — anything with the full secret and the one-time raw token. */
 export interface Revealable {
   key: string;
   rawToken?: string;
 }
 
-function fnv1a(input: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) { h ^= input.charCodeAt(i); h = Math.imul(h, 0x01000193); }
-  return h >>> 0;
-}
-
 /**
  * A deterministic 8-hex-char fingerprint of a secret — stable per secret, safe
- * to persist and display. Two rounds so it doesn't trivially invert.
+ * to persist and display. Since F-321 it is the first 8 hex chars of the same
+ * SHA-256 digest the gateway keys every registry by, so the label the console
+ * shows and the identity the gateway stores are one and the same.
  */
 export function fingerprint(secret: string): string {
   if (!secret) return '00000000';
-  const a = fnv1a(secret);
-  const b = fnv1a(`${a}:${secret.length}:${secret.slice(0, 8)}`);
-  return (a ^ b).toString(16).padStart(8, '0').slice(0, 8);
+  return hashApiKey(secret).slice(0, 8);
 }
 
 /** The last `n` characters of a secret (default 4) — the recognizable tail. */

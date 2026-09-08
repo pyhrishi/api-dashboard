@@ -22,6 +22,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { hashApiKey } from '@/lib/key-hashing';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,10 +118,12 @@ const DAY = 86_400_000;
 /**
  * The org handle an API key maps to. Shared by the console and the gateway so both
  * derive the same KMS inventory + attestation for a key (prototype: keys are
- * org-scoped by a stable, non-secret suffix bucket). No key → the demo org.
+ * org-scoped by a stable bucket). Derived from the key's SHA-256 digest (F-321) —
+ * never a fragment of the plaintext — so a handle at rest reveals nothing about
+ * the secret. No key → the demo org.
  */
 export function orgHandleForKey(apiKey: string | undefined | null): string {
-  return apiKey ? `org_${apiKey.slice(-8)}` : 'org_demo';
+  return apiKey ? `org_${hashApiKey(apiKey).slice(0, 8)}` : 'org_demo';
 }
 
 /** The transit posture — fixed to the strong modern default the gateway serves. */

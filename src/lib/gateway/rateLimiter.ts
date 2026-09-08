@@ -8,14 +8,26 @@
  */
 
 import { tierLimitForKey, type ThroughputTier } from '@/lib/throughput-tiers';
+import { hashApiKey, type RegistryDescriptor } from '@/lib/key-hashing';
 
 interface RateLimitData {
   tokens: number;
   lastRefillTime: number;
 }
 
-// Store rate limits by API Key
+// Buckets are keyed by the SHA-256 digest of the key (F-321) — the Edge isolate
+// never holds a plaintext key at rest. The SSOT digest is pure JS, so it runs here.
 const store = new Map<string, RateLimitData>();
+
+/** For the key-hashing audit: what this registry holds and how it is keyed. */
+export function rateLimitStorageDescriptor(): RegistryDescriptor {
+  return { id: 'rate-limiter', label: 'Rate-limit buckets', holds: 'token count + last refill per key', keyedBy: 'sha256', entries: store.size, runtime: 'edge' };
+}
+
+/** True when a bucket exists for this digest. */
+export function hasRateBucketFor(hash: string): boolean {
+  return store.has(hash);
+}
 
 export interface RateLimitResult {
   success: boolean;
@@ -38,7 +50,8 @@ export function checkRateLimit(apiKey: string): RateLimitResult {
   const refillRatePerMinute = tierLimit.refillPerMinute;
   const refillRatePerMs = refillRatePerMinute / 60000;
 
-  let currentData = store.get(apiKey);
+  const bucketId = hashApiKey(apiKey);
+  let currentData = store.get(bucketId);
 
   if (!currentData) {
     // Initial request: bucket is full
@@ -63,7 +76,7 @@ export function checkRateLimit(apiKey: string): RateLimitResult {
   if (currentData.tokens >= 1) {
     // Consume a token
     currentData.tokens -= 1;
-    store.set(apiKey, currentData);
+    store.set(bucketId, currentData);
 
     return {
       success: true,
@@ -74,7 +87,7 @@ export function checkRateLimit(apiKey: string): RateLimitResult {
     };
   } else {
     // Rate limited
-    store.set(apiKey, currentData); // Update lastRefillTime but don't consume
+    store.set(bucketId, currentData); // Update lastRefillTime but don't consume
 
     // If rate limited, 'reset' is time until we get at least 1 token
     const msUntilNextToken = (1 - currentData.tokens) / refillRatePerMs;

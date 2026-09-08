@@ -11,6 +11,7 @@ import { Portal } from '@/components/Portal';
 import { track } from '@/lib/telemetry';
 import { SCOPE_CATALOG } from '@/lib/scopes';
 import { authHeaderValue } from '@/lib/api-config';
+import { keyFingerprint } from '@/lib/key-hashing';
 
 // Scope catalog is the shared SSOT (lib/scopes) — the same set the gateway enforces.
 const AVAILABLE_SCOPES = SCOPE_CATALOG.map((s) => ({ id: s.id, label: s.label, desc: s.description }));
@@ -401,8 +402,17 @@ export default function ApiKeysPage() {
                                 <span className="ml-1 text-[10px] bg-purple-500/20 text-purple-400 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Ephemeral</span>
                               )}
                             </div>
-                            <div className={cn("font-mono text-xs mt-1 bg-surface/5 px-2 py-0.5 rounded-md inline-block border border-border tracking-wider", ['revoked', 'compromised', 'expired'].includes(k.status || 'active') ? 'text-fg-subtle' : 'text-fg-muted')}>
-                              {maskKey(k.key)}
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <div className={cn("font-mono text-xs bg-surface/5 px-2 py-0.5 rounded-md inline-block border border-border tracking-wider", ['revoked', 'compromised', 'expired'].includes(k.status || 'active') ? 'text-fg-subtle' : 'text-fg-muted')}>
+                                {maskKey(k.key)}
+                              </div>
+                              <Link
+                                href="/console/key-hashing"
+                                title="The SHA-256 fingerprint — the only identity the gateway stores for this key. Click to inspect."
+                                className="font-mono text-[10px] text-fg-muted hover:text-teal border border-border-subtle rounded-md px-1.5 py-0.5 transition-colors"
+                              >
+                                {keyFingerprint(k.key)}
+                              </Link>
                             </div>
                           </div>
                         </div>
