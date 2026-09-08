@@ -386,7 +386,15 @@ export type TelemetryEventName =
   | 'inactivity_detected'
   // — missing-triggers table (key lifecycle)
   | 'key_expiry_warned'
-  | 'key_expired';
+  | 'key_expired'
+  // monetization — Pricing & Cost Calculator (radical usage transparency)
+  | 'pricing_calculator_viewed'
+  | 'pricing_mix_edited'
+  | 'pricing_prefilled_from_usage'
+  | 'pricing_tier_compared'
+  | 'pricing_cycle_changed'
+  | 'pricing_forecast_run'
+  | 'pricing_plan_applied';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

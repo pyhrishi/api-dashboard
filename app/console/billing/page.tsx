@@ -9,12 +9,16 @@ import { useToast } from '@/components/Toast';
 import { track } from '@/lib/telemetry';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { PRICING_TIERS, formatUsd } from '@/lib/pricing';
 
-const pricingTiers = [
-  { name: "Starter", limit: "10,000", price: "$99", current: false },
-  { name: "Growth", limit: "100,000", price: "$499", current: false },
-  { name: "Enterprise", limit: "5,000,000", price: "$2,999", current: true },
-];
+// Derived from the pricing SSOT (`@/lib/pricing`) so the billing page, the Cost
+// Calculator, and what the gateway bills can never drift apart.
+const pricingTiers = PRICING_TIERS.map((t) => ({
+  name: t.name,
+  limit: t.includedCredits.toLocaleString(),
+  price: formatUsd(t.monthlyPrice),
+  current: false,
+}));
 
 export default function BillingPage() {
   const { environment, creditBalance, usageAlerts, addUsageAlert, toggleUsageAlert, deleteUsageAlert, invoices, activeKeys, dailyMetrics, currentQuota, apiQuota, simulateTrafficSpike, user, dismissTriggeredAlert, billingDetails, updateBillingDetails } = useStore();
@@ -161,9 +165,14 @@ export default function BillingPage() {
             <CreditCard className="w-5 h-5 text-teal" />
             Transparent Pricing Tiers
           </h2>
-          <span className="text-xs font-bold text-teal bg-teal/10 px-3 py-1 rounded-full uppercase tracking-wider border border-teal/20">
-            No Hidden Fees
-          </span>
+          <div className="flex items-center gap-3">
+            <Link href="/console/pricing" className="text-xs font-bold text-teal hover:text-teal-ice inline-flex items-center gap-1 transition-colors">
+              Model your exact cost <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <span className="text-xs font-bold text-teal bg-teal/10 px-3 py-1 rounded-full uppercase tracking-wider border border-teal/20">
+              No Hidden Fees
+            </span>
+          </div>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
           {pricingTiers.map((tier, i) => {

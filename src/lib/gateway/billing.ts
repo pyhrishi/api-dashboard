@@ -1,6 +1,7 @@
 // Mocked in-memory billing store (Hashes Only)
 import { hashApiKey, type RegistryDescriptor } from '@/lib/key-hashing';
 import { chargeTrial, TRIAL_FREE_CREDITS } from '@/lib/trial-credits';
+import { volumeDiscountPct, discountedCallCredits } from '@/lib/pricing';
 
 export type BillingPlan = 'prepaid' | 'postpaid' | 'metered';
 export type MsaStatus = 'ACTIVE' | 'EXPIRED' | 'PENDING_SIGNATURE';
@@ -84,21 +85,12 @@ export function calculateVolumeDiscount(key: string, baseCost: number): { cost: 
   const record = getApiKeyRecord(key);
   if (!record) return { cost: baseCost, discountPct: 0 };
 
-  // Volume discounts are based on cumulative usage in the current billing cycle
+  // Volume discounts are based on cumulative usage in the current billing cycle.
+  // The bands and the per-call rounding live in the pricing SSOT (`@/lib/pricing`),
+  // so the console Cost Calculator shows exactly what this bills.
   const cumulativeUsage = record.usage || 0;
-  
-  if (cumulativeUsage > 500000) {
-    // 50% Volume Discount (Enterprise Scale)
-    return { cost: Math.max(1, Math.ceil(baseCost * 0.5)), discountPct: 50 };
-  } else if (cumulativeUsage > 100000) {
-    // 25% Volume Discount (Startup Scale)
-    return { cost: Math.max(1, Math.ceil(baseCost * 0.75)), discountPct: 25 };
-  } else if (cumulativeUsage > 20000) {
-    // 10% Volume Discount
-    return { cost: Math.max(1, Math.ceil(baseCost * 0.90)), discountPct: 10 };
-  }
-
-  return { cost: baseCost, discountPct: 0 };
+  const discountPct = volumeDiscountPct(cumulativeUsage);
+  return { cost: discountedCallCredits(baseCost, discountPct), discountPct };
 }
 
 export interface DeductResult {

@@ -516,7 +516,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
             {/* Stitch to the separate Zinbit Admin app (internal B2B2B ops) — admin-only, opens in a new tab. */}
             {role === 'admin' && (
               <a
-                href={process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3200'}
+                href={process.env.NEXT_PUBLIC_ADMIN_URL || (process.env.NODE_ENV === 'production' ? 'https://zinbit-admin.vercel.app' : 'http://localhost:3200')}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Open Zinbit Admin — internal B2B2B operations (separate app)"
