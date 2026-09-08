@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Portal } from '@/components/Portal';
 
 export default function ExplorerPage() {
-  const { deductCredits, incrementKeyUsage, environment, activeKeys, v2DarkLaunchEnabled, sunsetSimulatorEnabled } = useStore();
+  const { deductCredits, incrementKeyUsage, environment, activeKeys, v2DarkLaunchEnabled, sunsetSimulatorEnabled, isFirstCallMade, markFirstCallMade } = useStore();
   const [selectedId, setSelectedId] = useState(ENDPOINTS[0].id);
 
   // Deep link: /console/explorer?endpoint=<id> — used by the command palette and docs.
@@ -257,6 +257,13 @@ export default function ExplorerPage() {
         setResponse(payload as Record<string, unknown>);
         deductCredits(activeEndpoint.creditCost);
         incrementKeyUsage(selectedKeyId, activeEndpoint.creditCost);
+        // Activation = the first successful API call, wherever it happens. The
+        // wizard already counts its own; a developer who skips it and runs here
+        // must count too, or the activation funnel under-reports.
+        if (!isFirstCallMade) {
+          markFirstCallMade({ endpoint: activeEndpoint.id, method: activeEndpoint.method, statusCode: res.status, responseTime: duration, response: payload });
+          track('first_call_made', { endpoint: activeEndpoint.id, status: res.status, responseTimeMs: duration, source: 'explorer' });
+        }
       } else {
         setResponse(body as Record<string, unknown>);
       }

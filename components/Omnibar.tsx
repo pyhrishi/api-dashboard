@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback, type ReactNode } from 'react';
-import { Search, Command, ArrowRight, FileText, Play, CreditCard, Key, Users, Building2, ArrowLeftRight, BookOpen, Clock, CornerDownLeft, Zap, Layers } from 'lucide-react';
+import { Search, Command, ArrowRight, FileText, Play, CreditCard, Key, Users, Building2, ArrowLeftRight, BookOpen, Clock, CornerDownLeft, Zap, Layers, Siren, Send } from 'lucide-react';
+import { useAlertCenter, openIncidents } from '@/lib/growth-alerts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Portal } from './Portal';
@@ -103,6 +104,7 @@ export function Omnibar({ navItems }: { navItems: OmnibarNavItem[] }) {
   const previousFocus = useRef<HTMLElement | null>(null);
   const router = useRouter();
   const { apiLogs, environment, toggleEnvironment, organizations, activeOrganizationId, switchOrganization } = useStore();
+  const openAlertCount = useAlertCenter((s) => openIncidents(s.incidents).length);
 
   const close = useCallback(() => setIsOpen(false), []);
 
@@ -152,6 +154,8 @@ export function Omnibar({ navItems }: { navItems: OmnibarNavItem[] }) {
     list.push({ id: 'act-bulk', group: 'Actions', featured: true, icon: <Layers className="w-4 h-4 text-teal" />, title: 'New bulk enrichment job', subtitle: 'Bulk Jobs · upload a CSV, see the cost, run it through the gateway', keywords: 'csv upload batch import enrich file', run: () => go('/console/jobs?new=1') });
     list.push({ id: 'act-invite', group: 'Actions', featured: true, icon: <Users className="w-4 h-4 text-teal" />, title: 'Invite a teammate', subtitle: 'Team · the fastest way to grow usage', keywords: 'member user add', run: () => go('/console/settings/team') });
     list.push({ id: 'act-credits', group: 'Actions', featured: true, icon: <CreditCard className="w-4 h-4 text-teal" />, title: 'Recharge credits', subtitle: 'Billing · packs, auto-recharge, invoices', keywords: 'top up pay plan upgrade', run: () => go('/console/billing') });
+    list.push({ id: 'act-alerts', group: 'Actions', featured: openAlertCount > 0, icon: <Siren className={cn('w-4 h-4', openAlertCount > 0 ? 'text-semantic-error' : 'text-teal')} />, title: openAlertCount > 0 ? `Alert Center · ${openAlertCount} open alert${openAlertCount === 1 ? '' : 's'}` : 'Alert Center', subtitle: 'Growth KPI alerts · acknowledge, routing, thresholds', keywords: 'alerts incidents growth kpi acknowledge routing threshold pagerduty slack', run: () => go('/console/alerts') });
+    list.push({ id: 'act-digest', group: 'Actions', icon: <Send className="w-4 h-4 text-teal" />, title: 'Weekly PM digest', subtitle: 'Alert Center · schedule, recipients, send now', keywords: 'digest report weekly pm kpi email slack schedule', run: () => go('/console/alerts#digest') });
     organizations.filter(o => o.id !== activeOrganizationId).forEach(o => {
       list.push({ id: `act-org-${o.id}`, group: 'Actions', icon: <Building2 className="w-4 h-4 text-fg-muted" />, title: `Switch to ${o.name}`, subtitle: `Organization · you are ${o.role}`, keywords: 'workspace tenant org', run: () => { switchOrganization(o.id); close(); } });
     });
@@ -191,7 +195,7 @@ export function Omnibar({ navItems }: { navItems: OmnibarNavItem[] }) {
     });
 
     return list;
-  }, [apiLogs, environment, organizations, activeOrganizationId, navItems, go, close, toggleEnvironment, switchOrganization]);
+  }, [apiLogs, environment, organizations, activeOrganizationId, navItems, go, close, toggleEnvironment, switchOrganization, openAlertCount]);
 
   const results = useMemo(() => {
     const q = query.trim();

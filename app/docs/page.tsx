@@ -7,6 +7,7 @@ import { ENDPOINTS } from '@/src/data/endpoints';
 import RequestBuilder from '@/src/components/RequestBuilder';
 import { ArrowLeft, BookOpen, ChevronRight, Server, Terminal, Download, Cloud, Database, ArrowRight } from 'lucide-react';
 import { CodeBlock } from '@/components/CodeBlock';
+import { DocsSearch } from '@/components/DocsSearch';
 import { cn } from '@/lib/utils';
 
 export default function PremiumDocsPage() {
@@ -59,6 +60,9 @@ export default function PremiumDocsPage() {
             <BookOpen className="w-5 h-5 text-teal" />
             <h1 className="text-xl font-extrabold text-white tracking-tight">API Reference</h1>
           </div>
+        </div>
+        <div className="hidden md:flex flex-1 justify-center px-6">
+          <DocsSearch onNavigate={(anchor) => { if (ENDPOINTS.some((e) => e.id === anchor)) setActiveEndpoint(anchor); }} />
         </div>
         <div className="flex items-center gap-3">
           <a 

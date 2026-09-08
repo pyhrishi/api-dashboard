@@ -1,13 +1,62 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useStore, extractTenantState } from '@/lib/store';
 import { motion } from 'framer-motion';
-import { Building2, Activity, Key, CreditCard, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Building2, Activity, Key, CreditCard, ArrowRight, ShieldAlert, TrendingUp, Clock, Siren, Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { buildSnapshot, formatDuration } from '@/lib/growth-kpis';
+import { useAlertCenter, effectiveRules, openIncidents } from '@/lib/growth-alerts';
+import { useGrowthLiveInputs } from '@/components/GrowthAlertsWatcher';
+import { StatusBadge } from '@/components/ui';
+
+/** This week's PLG scorecard for the active organization — the same numbers the Growth dashboard and Alert Center show. */
+function GrowthPulse() {
+  const { live, liveAlerts } = useGrowthLiveInputs();
+  const thresholds = useAlertCenter((s) => s.thresholds);
+  const incidents = useAlertCenter((s) => s.incidents);
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => { setNow(Date.now()); }, []);
+  const snapshot = useMemo(() => (now === null ? null : buildSnapshot({ scope: 'population', scenario: 'current', now, live, liveAlerts, rules: effectiveRules(thresholds) })), [now, live, liveAlerts, thresholds]);
+  const open = openIncidents(incidents).filter((i) => i.source === 'live');
+  const wow = snapshot?.activationRateWoW.deltaPp ?? null;
+
+  const tiles = [
+    { href: '/console/growth', icon: <TrendingUp className="w-4 h-4" />, label: 'Activation this week', value: snapshot ? `${snapshot.activationRatePct}%` : '—', hint: wow === null ? 'signup → first call' : `${wow > 0 ? '+' : ''}${wow} pp vs last week`, tone: wow !== null && wow < -10 ? 'error' : 'neutral' },
+    { href: '/console/growth', icon: <Clock className="w-4 h-4" />, label: 'Median time-to-activate', value: snapshot?.timeToActivate ? formatDuration(snapshot.timeToActivate.median) : '—', hint: snapshot?.timeToActivate ? `${snapshot.timeToActivate.withinTargetPct}% within 10 min` : 'no activations yet', tone: snapshot?.timeToActivate && snapshot.timeToActivate.median > 600_000 ? 'warning' : 'neutral' },
+    { href: '/console/alerts', icon: <Siren className="w-4 h-4" />, label: 'Open growth alerts', value: String(open.length), hint: open.length ? open.map((i) => i.owner).filter((o, idx, arr) => arr.indexOf(o) === idx).map((o) => `→ ${o}`).join(' · ') : 'every rule within threshold', tone: open.length ? 'error' : 'success' },
+  ] as const;
+
+  return (
+    <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} aria-label="Growth pulse" className="rounded-3xl border border-border bg-overlay backdrop-blur-md p-5">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <div className="flex items-center gap-2">
+          <Bell className="w-4 h-4 text-teal" />
+          <h2 className="text-xs font-black uppercase tracking-widest text-fg-muted">Growth pulse · active organization</h2>
+        </div>
+        <StatusBadge tone={open.length ? 'error' : 'success'} dot pulse={open.length > 0}>{open.length ? `${open.length} alert${open.length === 1 ? '' : 's'} need an owner` : 'all clear'}</StatusBadge>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {tiles.map((t) => (
+          <Link key={t.label} href={t.href} className={`group rounded-2xl border p-4 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50 ${t.tone === 'error' ? 'border-semantic-error/30 bg-semantic-error/5' : t.tone === 'warning' ? 'border-semantic-warning/30 bg-semantic-warning/5' : t.tone === 'success' ? 'border-semantic-success/20 bg-glass' : 'border-border-subtle bg-glass hover:border-teal/40'}`}>
+            <div className="flex items-center justify-between text-fg-muted mb-2">
+              <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider">{t.icon}{t.label}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:text-teal transition-all" />
+            </div>
+            <div className={`text-2xl font-black tabular-nums ${t.tone === 'error' ? 'text-semantic-error' : 'text-fg'}`}>{t.value}</div>
+            <div className="text-[11px] text-fg-muted mt-1 truncate">{t.hint}</div>
+          </Link>
+        ))}
+      </div>
+    </motion.section>
+  );
+}
 
 export default function GlobalCommandCenter() {
   const { tenants, organizations, activeOrganizationId, switchOrganization } = useStore();
   const router = useRouter();
+  const incidents = useAlertCenter((s) => s.incidents);
 
   const handleSwitch = (orgId: string) => {
     if (orgId !== activeOrganizationId) {
@@ -27,6 +76,8 @@ export default function GlobalCommandCenter() {
         </p>
       </div>
 
+      <GrowthPulse />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {organizations.map((org, i) => {
           // If the org is the active one, its current data is in the root state.
@@ -38,6 +89,7 @@ export default function GlobalCommandCenter() {
 
           const totalVolume = tenantData.dailyMetrics?.reduce((acc: number, cur) => acc + Object.values(cur.endpoints).reduce((s, em) => s + em.volume, 0), 0) || 0;
           const activeAnomalies = tenantData.anomalyAlerts?.filter((a) => a.isActive).length || 0;
+          const orgOpenAlerts = openIncidents(incidents).filter((inc) => inc.source === 'live' && inc.orgId === org.id).length;
 
           return (
             <motion.div
@@ -101,6 +153,14 @@ export default function GlobalCommandCenter() {
                     <span className="text-xs font-bold uppercase">Anomalies</span>
                   </div>
                   <div className={`text-xl font-black ${activeAnomalies > 0 ? 'text-semantic-error' : 'text-fg'}`}>{activeAnomalies}</div>
+                </div>
+
+                <div className={`col-span-2 rounded-xl p-4 border flex items-center justify-between ${orgOpenAlerts > 0 ? 'bg-semantic-error/10 border-semantic-error/20' : 'bg-glass border-border-subtle'}`}>
+                  <div className={`flex items-center gap-2 ${orgOpenAlerts > 0 ? 'text-semantic-error' : 'text-fg-muted'}`}>
+                    <Siren className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase">Growth alerts</span>
+                  </div>
+                  <div className={`text-xl font-black ${orgOpenAlerts > 0 ? 'text-semantic-error' : 'text-fg'}`}>{orgOpenAlerts}</div>
                 </div>
               </div>
             </motion.div>
