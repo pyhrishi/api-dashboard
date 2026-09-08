@@ -243,7 +243,11 @@ export type TelemetryEventName =
   | 'csp_viewed'
   | 'csp_mode_changed'
   | 'csp_test_fired'
-  | 'csp_feed_refreshed';
+  | 'csp_feed_refreshed'
+  // growth — PLG funnel overview (Phase 0–7)
+  | 'funnel_viewed'
+  | 'funnel_stage_inspected'
+  | 'funnel_phase_filtered';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
