@@ -247,7 +247,12 @@ export type TelemetryEventName =
   // growth — PLG funnel overview (Phase 0–7)
   | 'funnel_viewed'
   | 'funnel_stage_inspected'
-  | 'funnel_phase_filtered';
+  | 'funnel_phase_filtered'
+  // growth — Phase 0 TOFU landing (mock sandbox + catalogue)
+  | 'lp_viewed'
+  | 'catalogue_api_opened'
+  | 'sandbox_fired_gated'
+  | 'signup_gate_shown';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

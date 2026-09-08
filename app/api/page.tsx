@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HeroLiveDemo } from '@/components/HeroLiveDemo';
+import { ApiSandboxSection } from '@/components/landing/ApiSandboxSection';
+import { track } from '@/lib/telemetry';
 import { IntegrationTerminal } from '@/components/IntegrationTerminal';
 import { CapabilitiesShowcase } from '@/components/CapabilitiesShowcase';
 import { ShieldCheck, Users, Building2, SearchCheck, Check, ArrowRight, Zap, Network, Database, Cloud, FileCode, Workflow, ArrowRightLeft, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -16,6 +18,8 @@ export default function ApiLandingPage() {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const router = useRouter();
   const { isAuthenticated, user } = useStore();
+
+  useEffect(() => { track('lp_viewed', {}); }, []);
 
   const pricingTiers = [
     { name: "Starter", limit: "10,000", price: "99" },
@@ -144,6 +148,9 @@ export default function ApiLandingPage() {
             </div>
           </div>
         </section>
+
+        {/* PHASE-0 TOFU: mock-sandbox conversion gate (M1) */}
+        <ApiSandboxSection />
 
         {/* STORYTELLING: BEFORE VS AFTER USE CASE */}
         <section className="py-48 relative overflow-hidden">
