@@ -391,6 +391,29 @@ export interface AnomalyAlert {
   channels: ('email' | 'webhook')[];
 }
 
+/** Risk-based trial activation (shared auth). Sign-up is phone-free; the gate runs at activation. */
+export type TrialActivationStatus = 'pending' | 'active';
+export type TrialActivationMethod = 'clean' | 'otp' | 'override' | 'exempt';
+export interface TrialActivation {
+  status: TrialActivationStatus;
+  accountId: string | null;
+  evaluationId: string | null;
+  /** Open (or last) phone challenge — lets a closed modal resume where it left off. */
+  challengeId: string | null;
+  method: TrialActivationMethod | null;
+  channel: 'sms' | 'whatsapp' | 'voice' | null;
+  /** Risk conditions that tripped at activation (ids from lib/auth/trial-gate). */
+  conditions: string[];
+  phoneMasked: string | null;
+  creditsGranted: number;
+  activatedAt: string | null;
+}
+/** Free credits granted when the trial activates. */
+export const TRIAL_CREDITS = 10000;
+export function defaultTrialActivation(): TrialActivation {
+  return { status: 'pending', accountId: null, evaluationId: null, challengeId: null, method: null, channel: null, conditions: [], phoneMasked: null, creditsGranted: 0, activatedAt: null };
+}
+
 export interface PrivacySettings {
   autoRedactPII: boolean;
   customKeys: string[];
@@ -741,6 +764,8 @@ interface AppState extends FirstCallState, TenantState {
   pocContacts: POCContact[];
   teamMembers: TeamMember[];
   is2faEnabled: boolean;
+  trialActivation: TrialActivation;
+  setTrialActivation: (patch: Partial<TrialActivation>) => void;
   activeSessions: ActiveSession[];
   sessionPolicy: SessionPolicy;
   auditLogs: AuditLog[];
@@ -999,6 +1024,7 @@ export const useStore = create<AppState>()(
         { id: 'usr_3', email: 'finance@zintlr.com', role: 'billing', status: 'pending', joinedAt: new Date().toISOString() }
       ],
       is2faEnabled: false,
+      trialActivation: defaultTrialActivation(),
       activeSessions: [
         { id: 'sess_1', device: 'MacBook Pro', browser: 'Chrome', location: 'Bengaluru, IN', ip: '192.168.1.1', lastActive: new Date().toISOString(), isCurrent: true, createdAt: new Date(Date.now() - 3 * 86400000).toISOString(), type: 'console' },
         { id: 'sess_2', device: 'iPhone 14 Pro', browser: 'Safari', location: 'Bengaluru, IN', ip: '172.16.254.1', lastActive: new Date(Date.now() - 3600000).toISOString(), isCurrent: false, createdAt: new Date(Date.now() - 12 * 86400000).toISOString(), type: 'console' },
@@ -1834,6 +1860,8 @@ export const useStore = create<AppState>()(
           environment: 'sandbox',
           // Mark first 2 onboarding steps complete
           completedOnboardingSteps: ['signup', 'apiKey'],
+          // A new account starts un-activated: the risk gate runs at trial activation, never at sign-up.
+          trialActivation: defaultTrialActivation(),
         };
       }),
 
@@ -2029,6 +2057,7 @@ export const useStore = create<AppState>()(
       }),
 
       enable2fa: () => set({ is2faEnabled: true }),
+      setTrialActivation: (patch) => set((state) => ({ trialActivation: { ...state.trialActivation, ...patch } })),
       disable2fa: () => set({ is2faEnabled: false }),
       revokeSession: (id) => set((state) => ({
         // Never revoke the session you're using now.
@@ -3109,6 +3138,7 @@ export const useStore = create<AppState>()(
         webhooks: state.webhooks,
         teamMembers: state.teamMembers,
         is2faEnabled: state.is2faEnabled,
+        trialActivation: state.trialActivation,
         activeSessions: state.activeSessions,
         sessionPolicy: state.sessionPolicy,
         auditLogs: state.auditLogs,
