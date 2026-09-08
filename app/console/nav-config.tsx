@@ -7,7 +7,7 @@ import {
   Award, RefreshCw, AlarmClock, MessageSquareWarning, Combine, History, Globe, Navigation,
   TrendingUp, Zap, Server, FileText, Bug, ShieldCheck, ShieldAlert, Ruler, LockKeyhole, Lock,
   EyeOff, MonitorSmartphone, CreditCard, Handshake, Database, Lightbulb, BookOpen, GitBranch,
-  Map, LifeBuoy, Scale, Funnel, Wallet, HeartHandshake, RotateCcw, FileLock2, ShieldQuestion,
+  Map, LifeBuoy, Scale, Funnel, Wallet, HeartHandshake, RotateCcw, FileLock2, ShieldQuestion, Calculator,
 } from 'lucide-react';
 
 /**
@@ -177,6 +177,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'business', label: 'Business & Billing', icon: <CreditCard className={cls} />,
     items: [
       { name: 'Billing', href: '/console/billing', icon: <CreditCard className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Cost Calculator', href: '/console/pricing', icon: <Calculator className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Partners', href: '/console/partners', icon: <Handshake className={cls} />, roles: ['admin'] },
       { name: 'Data Sharing', href: '/console/data-sharing', icon: <Database className={cls} />, roles: ['admin'] },
     ],

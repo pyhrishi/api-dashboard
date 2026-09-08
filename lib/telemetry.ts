@@ -348,7 +348,15 @@ export type TelemetryEventName =
   | 'otp_override'
   | 'trial_activated'
   | 'trial_gate_policy_updated'
-  | 'trial_gate_simulated';
+  | 'trial_gate_simulated'
+  // monetization — Pricing & Cost Calculator (radical usage transparency)
+  | 'pricing_calculator_viewed'
+  | 'pricing_mix_edited'
+  | 'pricing_prefilled_from_usage'
+  | 'pricing_tier_compared'
+  | 'pricing_cycle_changed'
+  | 'pricing_forecast_run'
+  | 'pricing_plan_applied';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

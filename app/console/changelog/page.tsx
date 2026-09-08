@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v5.7', date: 'September 2026', headline: 'Cost Calculator — model your spend before you ship',
+    changes: [
+      { kind: 'feature', text: 'A new Cost Calculator (Business & Billing → Cost Calculator) models your monthly spend against a real call-mix — pick endpoints from the live catalogue, set calls/month, and see credits, the volume discount reached, effective $/call, and the exact total the gateway would bill. It pre-fills from your recent live usage, recommends the cheapest plan for your mix (with the savings called out), warns when a hard cap would refuse calls (402), and projects 12-month spend at a growth rate you set.' },
+      { kind: 'improvement', text: 'Pricing now has one source of truth (lib/pricing.ts): the subscription tiers, the volume-discount bands, and the per-call rounding all live in one place — the billing page and the gateway import it, so what the calculator shows is exactly what you are billed. Previously the marketing slider, the billing page, and the gateway each carried their own numbers.' },
+    ],
+  },
+  {
     version: 'v5.6', date: 'September 2026', headline: 'Re-up & churn — dunning desk',
     changes: [
       { kind: 'feature', text: 'A new Re-up & Churn console closes the lifecycle: top-ups are surfaced as the healthy retention/LTV signal, and accounts stuck at a zero balance enter a dunning sequence — a 48-hour payment retry, then a key-revocation warning, then suspension — computed from days since depletion.' },
