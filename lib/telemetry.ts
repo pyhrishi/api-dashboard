@@ -289,7 +289,45 @@ export type TelemetryEventName =
   | 'otp_override'
   | 'trial_activated'
   | 'trial_gate_policy_updated'
-  | 'trial_gate_simulated';
+  | 'trial_gate_simulated'
+  // lifecycle nudges & journey orchestration (Section F: C0-a … C7-b + missing triggers)
+  // — generic nudge lifecycle (every in-product nudge emits these)
+  | 'nudge_shown'
+  | 'nudge_clicked'
+  | 'nudge_dismissed'
+  | 'nudge_snoozed'
+  | 'nudge_converted'
+  | 'reengagement_sent'
+  // — Phase 0 pre-account (TOFU)
+  | 'landing_viewed'
+  | 'sandbox_fired'
+  | 'signup_started'
+  // — Phase 1 account & trial-activation gate
+  | 'email_verification_sent'
+  | 'email_verified'
+  // — Phase 2 trial provisioning & first key
+  | 'trial_granted'
+  | 'first_key_created'
+  // — Phase 3 activation & consumption
+  | 'usage_threshold_hit'
+  // — Phase 4 conversion decision window
+  | 'decision_window_entered'
+  // — Phase 5 conversion outcome / lead classification
+  | 'sales_qualified'
+  | 'sales_ready'
+  | 'hot_lead'
+  | 'dead_lead'
+  | 'lead_score_changed'
+  // — Phase 6/7 paid wallet health & churn signals
+  | 'wallet_health_evaluated'
+  | 'wallet_low'
+  | 'wallet_depleted'
+  | 'wallet_zero'
+  | 'dunning_started'
+  | 'inactivity_detected'
+  // — missing-triggers table (key lifecycle)
+  | 'key_expiry_warned'
+  | 'key_expired';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
@@ -318,7 +356,9 @@ export function track(name: TelemetryEventName, props: TelemetryProps = {}): voi
       role: state.user?.role ?? null,
     };
     state.recordTelemetryEvent(record);
-    forwardToPostHog(record, state.user?.email ?? record.orgId ?? 'anonymous');
+    const distinctId = state.user?.email ?? record.orgId ?? 'anonymous';
+    forwardToPostHog(record, distinctId);
+    forwardToMixpanel(record, distinctId);
   } catch {
     // Telemetry must never break the product.
   }
@@ -352,3 +392,44 @@ function forwardToPostHog(record: TelemetryEventRecord, distinctId: string): voi
 
 /** True when events will also be forwarded externally. Useful for the Growth dashboard's status pill. */
 export const isPostHogEnabled = Boolean(POSTHOG_KEY);
+
+// ─── Optional Mixpanel adapter (no SDK dependency) ────────────────────────────
+// The lifecycle-nudge journey (Section F) is instrumented with Mixpanel event names;
+// this forwards every tracked event to Mixpanel's ingestion API when a token is set,
+// alongside PostHog. No-op without the token, so the prototype stays deterministic.
+
+const MIXPANEL_TOKEN = process.env.NEXT_PUBLIC_MIXPANEL_TOKEN;
+const MIXPANEL_HOST = (process.env.NEXT_PUBLIC_MIXPANEL_HOST || 'https://api.mixpanel.com').replace(/\/$/, '');
+
+/** Fire-and-forget forward to Mixpanel's track endpoint when a token is configured. */
+function forwardToMixpanel(record: TelemetryEventRecord, distinctId: string): void {
+  if (!MIXPANEL_TOKEN) return;
+  const payload = [{
+    event: record.name,
+    properties: {
+      ...record.props,
+      token: MIXPANEL_TOKEN,
+      distinct_id: distinctId,
+      // Mixpanel de-dupes on $insert_id and expects epoch-ms `time`.
+      $insert_id: record.id,
+      time: new Date(record.timestamp).getTime(),
+      environment: record.environment,
+      org_id: record.orgId,
+      role: record.role,
+      $lib: 'zinbit-console',
+    },
+  }];
+  const body = JSON.stringify(payload);
+  try {
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      navigator.sendBeacon(`${MIXPANEL_HOST}/track`, new Blob([body], { type: 'application/json' }));
+    } else {
+      void fetch(`${MIXPANEL_HOST}/track`, { method: 'POST', body, headers: { 'Content-Type': 'application/json' }, keepalive: true });
+    }
+  } catch {
+    // ignore — analytics is best-effort
+  }
+}
+
+/** True when events will also be forwarded to Mixpanel (Section F lifecycle instrumentation). */
+export const isMixpanelEnabled = Boolean(MIXPANEL_TOKEN);
