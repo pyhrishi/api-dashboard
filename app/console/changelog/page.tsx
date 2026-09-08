@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.98', date: 'September 2026', headline: 'Trial provisioning — free credits for Public APIs',
+    changes: [
+      { kind: 'feature', text: 'Trial credits are now real and enforced at the gateway: every account gets free credits that apply to Public APIs only and are spent before any paid balance. Premium endpoints (bulk enrichment, streaming, bulk export, AI search) draw on your paid balance instead. Billed responses carry X-Credits-Bucket (free/paid/mixed) and X-Free-Credits-Remaining, and GET /v1/credits returns your two-bucket ledger.' },
+      { kind: 'feature', text: 'A new Trial & Credits console shows your free vs paid balance, how much of the trial you’ve used, exactly which endpoints your free credits cover, and a live "fire a call" demo that shows which bucket each call draws from — the same ledger the gateway bills against.' },
+    ],
+  },
+  {
     version: 'v4.97', date: 'September 2026', headline: 'Trial activation — onboarding, risk gate & OTP',
     changes: [
       { kind: 'feature', text: 'A new Trial Activation flow (Operations → Trial Activation) walks a new account from profile to first key: pick your role and use-case (Product Managers get a one-click key; everyone gets a catalogue tuned to their use-case), then claim your free trial. Low-risk signups get 5,000 credits instantly; flagged ones verify a phone with a 6-digit code over an SMS → WhatsApp → call fallback (with a skip option). Public-API credits are spent before any paid balance.' },
