@@ -7,7 +7,7 @@ import {
   Award, RefreshCw, AlarmClock, MessageSquareWarning, Combine, History, Globe, Navigation,
   TrendingUp, Zap, Server, FileText, Bug, ShieldCheck, ShieldAlert, Ruler, LockKeyhole, Lock,
   EyeOff, MonitorSmartphone, CreditCard, Handshake, Database, Lightbulb, BookOpen, GitBranch,
-  Map, LifeBuoy, Scale, Funnel,
+  Map, LifeBuoy, Scale, Funnel, Wallet,
 } from 'lucide-react';
 
 /**
@@ -156,6 +156,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { name: 'Funnel', href: '/console/funnel', icon: <Funnel className={cls} />, roles: ['admin', 'billing'] },
       { name: 'Instrumentation', href: '/console/instrumentation', icon: <Radar className={cls} />, roles: ['admin', 'billing'] },
       { name: 'Trial Activation', href: '/console/activate', icon: <Rocket className={cls} />, roles: ['admin', 'developer', 'billing'] },
+      { name: 'Trial & Credits', href: '/console/trial-credits', icon: <Wallet className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Logs', href: '/console/logs', icon: <FileText className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Request Inspector', href: '/console/debug', icon: <Bug className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Circuit Breakers', href: '/console/circuits', icon: <Zap className={cls} />, roles: ['admin', 'developer'] },

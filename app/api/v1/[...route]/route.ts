@@ -20,7 +20,8 @@ import { upstreamForEndpoint, UPSTREAMS, endpointsForUpstream } from '@/lib/gate
 import { getDeliveryStats, replayDelivery } from '@/lib/gateway/webhookDelivery';
 import { buildDebugEcho } from '@/lib/gateway/debugEcho';
 import { planPartial, computePartial } from '@/lib/gateway/partialResult';
-import { deductCredits, calculateVolumeDiscount, getApiKeyRecord } from '@/lib/gateway/billing';
+import { deductCredits, calculateVolumeDiscount, getApiKeyRecord, getLedger } from '@/lib/gateway/billing';
+import { isPublicApi, trialUsedPct, TRIAL_FREE_CREDITS } from '@/lib/trial-credits';
 import { detectPrivacyFramework, enforceOptOutPropagation } from '@/lib/gateway/privacy';
 import { maskForKey, getMaskingPolicy, updateMaskingPolicy } from '@/lib/gateway/piiMasking';
 import { policyStrength, maskPayload, SAMPLE_RECORD } from '@/lib/pii-masking';
@@ -362,7 +363,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     if (inputs.length > MAX_STREAM_INPUTS) {
       return NextResponse.json({ success: false, error: { code: 'STREAM_TOO_LARGE', message: `A stream accepts at most ${MAX_STREAM_INPUTS} inputs.` } }, { status: 413, headers: responseHeaders });
     }
-    const charge = deductCredits(apiKey, inputs.length);
+    const charge = deductCredits(apiKey, inputs.length, { isPublic: false }); // streaming is premium (paid-only)
     if (!charge.success) {
       return NextResponse.json({ success: false, error: { code: 'PAYMENT_REQUIRED', message: charge.error ?? 'Insufficient credits for this stream.' } }, { status: 402, headers: responseHeaders });
     }
@@ -717,6 +718,27 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
       { status: 200, headers: responseHeaders },
     );
   }
+  // Trial credit ledger (F-M3) — GET returns the two-bucket balance (free trial +
+  // paid), free-trial % used, and the Public-only / free-before-paid rules. Free meta.
+  if (path === '/v1/credits') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    const ledger = getLedger(apiKey || undefined) ?? { free: 0, paid: 0 };
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          free: ledger.free,
+          paid: ledger.paid,
+          granted: TRIAL_FREE_CREDITS,
+          freeUsedPct: trialUsedPct(ledger.free),
+          rules: { freeAppliesTo: 'public_apis_only', order: 'free_before_paid' },
+        },
+        metadata: { requestId, timestamp: Date.now() },
+      },
+      { status: 200, headers: responseHeaders },
+    );
+  }
+
   // Field-level PII masking policy (F-313) — GET returns the org's effective masking
   // policy + a masked sample (so a caller sees exactly what live responses redact);
   // PATCH syncs a policy from the console so a custom policy reaches the edge. The
@@ -816,7 +838,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     }
 
     // Real export: bill per row-block, then stream/serialize.
-    const charge = deductCredits(apiKey, plan.cost);
+    const charge = deductCredits(apiKey, plan.cost, { isPublic: false }); // bulk export is premium (paid-only)
     if (!charge.success) {
       return NextResponse.json(
         { success: false, error: { code: 'PAYMENT_REQUIRED', message: charge.error ?? `Insufficient credits for this export (${plan.cost}).` } },
@@ -1320,9 +1342,12 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     partialCompleteness = planPartial(endpoint.id, (u) => getCircuitState(u) === 'OPEN').completeness;
     const finalCreditCost = Math.max(1, Math.round(sparseCost * partialCompleteness));
 
-    const billingResult = deductCredits(apiKey, finalCreditCost);
+    const billingResult = deductCredits(apiKey, finalCreditCost, { isPublic: isPublicApi(endpoint.path) });
     appliedCreditCost = finalCreditCost;
     remainingCredits = billingResult.remaining;
+    // Trial provisioning (F-M3): surface which bucket paid + free remaining.
+    if (billingResult.bucket) responseHeaders['X-Credits-Bucket'] = billingResult.bucket;
+    if (billingResult.freeRemaining !== undefined) responseHeaders['X-Free-Credits-Remaining'] = String(billingResult.freeRemaining);
     appliedDiscount = discountPct;
     
     if (!billingResult.success) {
