@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.99', date: 'September 2026', headline: 'Activation & trial-consumption milestones',
+    changes: [
+      { kind: 'feature', text: 'Trial & Credits now tracks activation: the time from your first key to your first successful call against a <10-minute target (your first call makes you Sales Qualified), plus a consumption ladder with milestones at 10 / 25 / 50 / 75 / 100 percent of your free trial — 50% is the Sales-Ready signal.' },
+      { kind: 'feature', text: 'Each milestone raises an intensifying, contextual upgrade nudge (halfway → "upgrade to keep momentum"; 75% → "top up before you run out"; 100% → "add a paid balance to continue"), driven by the real gateway ledger. A preview control lets you see each milestone’s nudge.' },
+    ],
+  },
+  {
     version: 'v4.98', date: 'September 2026', headline: 'Trial provisioning — free credits for Public APIs',
     changes: [
       { kind: 'feature', text: 'Trial credits are now real and enforced at the gateway: every account gets free credits that apply to Public APIs only and are spent before any paid balance. Premium endpoints (bulk enrichment, streaming, bulk export, AI search) draw on your paid balance instead. Billed responses carry X-Credits-Bucket (free/paid/mixed) and X-Free-Credits-Remaining, and GET /v1/credits returns your two-bucket ledger.' },

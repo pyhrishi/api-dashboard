@@ -58,8 +58,10 @@ Console pages: loading skeletons, coherent empty/populated states, Framer Motion
 ## 10b. Built since — M3 (Phase 2: trial provisioning)
 `lib/trial-credits.ts` (SSOT: `isPublicApi` + `chargeTrial` free-before-paid / Public-only + `trialUsedPct`), `billing.ts` two-bucket ledger (`freeCredits` + paid; live keys provisioned with 5,000 free), `deductCredits(key, cost, {isPublic})` enforcing both rules with `X-Credits-Bucket` / `X-Free-Credits-Remaining` headers (CORS-exposed), `GET /v1/credits` ledger endpoint + catalog entry, and `/console/trial-credits` (live ledger, rules, live fire demo, eligibility grid). First-key is done in M2. Live-verified: Public → free, premium → paid. **Remaining for M4:** first-fire <10-min activation timing + the 10/25/50/75/100% consumption milestones wired to the funnel.
 
+## 10c. Built since — M4 (Phase 3: activation & consumption)
+`lib/activation.ts` (SSOT: `ACTIVATION_TARGET_MS` <10m, `MILESTONES` 10/25/50/75/100 + `MILESTONE_META` with 50% = sales_ready, reached/new/current helpers, time-to-first-call, dedicated `useActivation` store firing each milestone once) + the "Activation & consumption" card on `/console/trial-credits` (first-fire timer vs target, consumption ladder with markers, current-milestone nudge + upgrade CTA, preview control). Milestone crossings emit `activation_first_fire` / `trial_milestone_reached` from the live ledger.
+
 ## 10. Deferred — the rest of the program
-- **M4 (Phase 3):** first-fire <10min activation timing + 10/25/50/75/100% consumption milestones.
 - **M5 (Phase 4–5):** conversion window, lead classification (Dead/Funnel-Driven/Hot), win-back — the CSM cockpit.
 - **M6–M7 (Phase 6–7):** wallet-health burn buckets + auto-reload; re-up + dunning (48h retry → revocation warning).
 - **M8:** merge to `main` (reconcile telemetry/roadmap/changelog/nav with concurrent sessions; consume session 66's `growth-kpis` where it fits), coherence + ship-check, deploy.
