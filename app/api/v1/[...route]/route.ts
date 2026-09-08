@@ -13,6 +13,7 @@ import { getCircuitState, recordSuccess, recordFailure, getCircuitSnapshot, forc
 import { getCoalescingStats, runCoalescingDrill } from '@/lib/gateway/coalescing';
 import { getEncryptionPosture, runRotationDrill, attachEncryptionHeaders, updateEncryptionSettings, verifyAttestation } from '@/lib/gateway/encryption';
 import { guardPayload, attachPayloadLimitHeaders, dryRunPayload, getPayloadLimitsSnapshot, updatePayloadOverrides } from '@/lib/gateway/payloadLimits';
+import { auditKeyStorage, describeKeyAtRest, verifyHash, attachKeyFingerprintHeader } from '@/lib/gateway/keyHashing';
 import { planExport, serializeExport } from '@/lib/gateway/bulkExport';
 import { checkEndpointScope, registerKeyScopes, unregisterKeyScopes, getScopeRegistrySnapshot } from '@/lib/gateway/scopes';
 import { isKeyBlocked, blockKey, unblockKey, getBlock, getKillSwitchSnapshot, type RevocationReason } from '@/lib/gateway/keyBlock';
@@ -27,6 +28,7 @@ import { policyStrength, maskPayload, SAMPLE_RECORD } from '@/lib/pii-masking';
 import { enforceSOC2Controls, attachISO27001Headers, enforceDDoSProtection, enforceMSAControls, enforceDPAControls, enforceFraudDetection } from '@/lib/gateway/security';
 import { inspectPayload } from '@/lib/gateway/waf';
 import { Logger } from '@/lib/gateway/logger';
+import { getLogRedactionReport, updateLogRedactionPolicy, dryRunRedaction, attachLogRedactionHeader } from '@/lib/gateway/logRedaction';
 import { provisionDataShare, listDataShares, revokeDataShare, type DataShareDataset } from '@/lib/gateway/dataSharing';
 import { createAsyncJob, getAsyncJob, listAsyncJobs, cancelAsyncJob } from '@/lib/gateway/asyncJobs';
 import { resolveStreamRow, normalizeStreamInputs, kindForEndpoint, MAX_STREAM_INPUTS, STREAM_ROW_DELAY_MS } from '@/lib/gateway/streamEnrich';
@@ -127,6 +129,9 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   const serverNodeId = `${selectedRegion}-${selectedNode}`;
 
   const responseHeaders: Record<string, string> = {
+    // PII redaction in internal logs (F-322): every response says how many values were
+    // stripped from its internal log lines; later log calls overwrite this default.
+    'X-Log-Redaction': '0',
     'X-RateLimit-Limit': limit,
     'X-RateLimit-Remaining': remaining,
     'X-RateLimit-Reset': reset,
@@ -210,12 +215,14 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   const rawBodyForLimits = request.method === 'GET' || request.method === 'HEAD' ? '' : await request.clone().text().catch(() => '');
   const payloadGuard = guardPayload(apiKey || undefined, request.method, request.url, rawBodyForLimits);
   attachPayloadLimitHeaders(responseHeaders, payloadGuard.effective.limits);
+  // Keys hashed at rest (F-321): the identity this request was keyed by, on every response.
+  attachKeyFingerprintHeader(responseHeaders, apiKey || undefined);
   if (!payloadGuard.ok) {
     const v = payloadGuard.violation;
     // Rejections are real gateway responses: log them like every other terminal
     // status so RCA/triage see them. (The middleware already spent a rate-limit
     // token on this request — same as a WAF 406.)
-    logRequest(requestId, request.method, limitsPath, v.status, Date.now() - startTime);
+    attachLogRedactionHeader(responseHeaders, logRequest(requestId, request.method, limitsPath, v.status, Date.now() - startTime, apiKey || undefined).findings);
     return NextResponse.json(
       {
         success: false,
@@ -702,6 +709,92 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   // key (envelope re-wrap) and moves the schedule. GET /v1/encryption/verify checks
   // a digest + signature pair. Free meta endpoint; handled before route resolution +
   // billing. The X-Encryption-* headers are already attached above.
+  // API keys hashed at rest (F-321) — GET attests how every gateway registry keys
+  // its entries (digest, never plaintext) and what is held for the presented key;
+  // POST /verify answers "is this digest my key?" and accepts a digest only. Free.
+  if (path === '/v1/keys/hashing' || path === '/v1/keys/hashing/verify') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (path === '/v1/keys/hashing' && request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: { audit: auditKeyStorage(), key: describeKeyAtRest(apiKey) }, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (path === '/v1/keys/hashing/verify' && request.method === 'POST') {
+      const body = (await request.json().catch(() => null)) as { hash?: unknown } | null;
+      const outcome = verifyHash(apiKey, typeof body?.hash === 'string' ? body.hash : '');
+      if (!outcome.valid) {
+        return NextResponse.json(
+          { success: false, error: { code: 'VALIDATION_ERROR', message: outcome.message } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      return NextResponse.json(
+        { success: true, data: outcome, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/keys/hashing (attestation) or POST /v1/keys/hashing/verify { hash } (digest only).' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
+  // PII redaction in internal logs (F-322) — GET reports the org's log-redaction
+  // policy, live metrics, the last lines exactly as written, and a canary self-test;
+  // PATCH syncs a (floor-clamped) policy from the console; POST /test dry-runs a
+  // payload through the engine without logging it. Free meta endpoints.
+  if (path === '/v1/logs/redaction' || path === '/v1/logs/redaction/test') {
+    responseHeaders['X-Credits-Cost'] = '0';
+    if (path === '/v1/logs/redaction/test') {
+      if (request.method !== 'POST') {
+        return NextResponse.json(
+          { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'POST the payload to dry-run to /v1/logs/redaction/test — JSON or plain text.' } },
+          { status: 405, headers: responseHeaders },
+        );
+      }
+      const raw = await request.text().catch(() => '');
+      let payload: unknown = raw;
+      try { payload = JSON.parse(raw); } catch { /* plain text is redacted as a string */ }
+      if (raw.length > 16_384) {
+        return NextResponse.json(
+          { success: false, error: { code: 'VALIDATION_ERROR', message: 'Dry-run payloads are capped at 16 KB.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      const dry = dryRunRedaction(apiKey || undefined, payload);
+      attachLogRedactionHeader(responseHeaders, dry.total);
+      return NextResponse.json(
+        { success: true, data: dry, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'GET') {
+      return NextResponse.json(
+        { success: true, data: getLogRedactionReport(apiKey || undefined), metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    if (request.method === 'PATCH') {
+      const body: unknown = await request.json().catch(() => null);
+      if (!body || typeof body !== 'object') {
+        return NextResponse.json(
+          { success: false, error: { code: 'VALIDATION_ERROR', message: 'Send a JSON object: { "strategies": { "email": "token" | "partial" | "drop", … }, "customKeys": [..], "allowKeys": [..], "retentionDays": 7 | 30 | 90 }. Floors are enforced; redaction cannot be disabled.' } },
+          { status: 400, headers: responseHeaders },
+        );
+      }
+      const result = updateLogRedactionPolicy(apiKey || undefined, body);
+      return NextResponse.json(
+        { success: true, data: result, metadata: { requestId, timestamp: Date.now() } },
+        { status: 200, headers: responseHeaders },
+      );
+    }
+    return NextResponse.json(
+      { success: false, error: { code: 'METHOD_NOT_ALLOWED', message: 'Use GET /v1/logs/redaction (report), PATCH /v1/logs/redaction (sync policy) or POST /v1/logs/redaction/test (dry run).' } },
+      { status: 405, headers: responseHeaders },
+    );
+  }
+
   if (path === '/v1/encryption/verify') {
     responseHeaders['X-Credits-Cost'] = '0';
     const attestation = request.nextUrl.searchParams.get('attestation') ?? '';
@@ -1015,7 +1108,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
 
   if (!endpoint || endpoint.method !== request.method) {
     const duration = Date.now() - startTime;
-    logRequest(requestId, request.method, path, 404, duration);
+    attachLogRedactionHeader(responseHeaders, logRequest(requestId, request.method, path, 404, duration, apiKey || undefined).findings);
     
     return NextResponse.json(
       {
@@ -1040,7 +1133,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   const scopeCheck = checkEndpointScope(apiKey, endpoint);
   if (!scopeCheck.allowed) {
     const duration = Date.now() - startTime;
-    logRequest(requestId, request.method, path, 403, duration);
+    attachLogRedactionHeader(responseHeaders, logRequest(requestId, request.method, path, 403, duration, apiKey || undefined).findings);
     responseHeaders['X-Required-Scope'] = scopeCheck.requiredScope ?? '';
     return NextResponse.json(
       {
@@ -1094,19 +1187,24 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     );
   }
 
-  // Log incoming request with PII auto-redaction
-  Logger.info('API Request Initiated', {
+  // Log the incoming request — the logger redacts PII/secrets with the org policy
+  // before the line is written (F-322); the key is attributed, then fingerprinted.
+  let logRedactions = Logger.info('API Request Initiated', {
+    requestId,
+    apiKey,
     method: request.method,
     url: request.url,
     ip: clientIp,
     parameters
-  });
+  }).findings;
+  attachLogRedactionHeader(responseHeaders, logRedactions);
 
   // 1.5 API Abuse & Fraud Detection (Impossible Travel / Geo-Velocity)
   if (apiKey) {
     const fraudContext = enforceFraudDetection(apiKey, selectedRegion);
     if (!fraudContext.allowed) {
-      Logger.warn(`Fraud Detected: ${fraudContext.error}`, { apiKey, clientIp, selectedRegion });
+      logRedactions += Logger.warn(`Fraud Detected: ${fraudContext.error}`, { requestId, apiKey, clientIp, selectedRegion }).findings;
+      attachLogRedactionHeader(responseHeaders, logRedactions);
       return NextResponse.json({
         success: false,
         error: {
@@ -1327,7 +1425,7 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
     
     if (!billingResult.success) {
       const duration = Date.now() - startTime;
-      logRequest(requestId, request.method, path, 402, duration);
+      attachLogRedactionHeader(responseHeaders, logRedactions + logRequest(requestId, request.method, path, 402, duration, apiKey || undefined).findings);
       
       return NextResponse.json(
         {
@@ -1486,7 +1584,8 @@ async function handleRequest(request: NextRequest, { params }: { params: { route
   }
 
   const duration = Date.now() - startTime;
-  logRequest(requestId, request.method, path, result.status, duration);
+  logRedactions += logRequest(requestId, request.method, path, result.status, duration, apiKey || undefined).findings;
+  attachLogRedactionHeader(responseHeaders, logRedactions);
 
   // Helper function to send compressed or uncompressed response
   const sendResponse = (payloadObj: unknown, statusCode: number) => {

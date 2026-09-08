@@ -1838,6 +1838,60 @@ export const ENDPOINTS: Endpoint[] = [
   },
 
   {
+    id: 'key-hashing',
+    name: 'Key hashing attestation',
+    description: "Prove your API keys are hashed at rest (F-321). The gateway never stores a plaintext key: every registry that references a key — billing, IP allowlists, geo-velocity tracking, scopes, the kill switch, rate-limit buckets, idempotency entries, partner attribution — is keyed by the key's SHA-256 digest. GET returns a live audit of every registry (how it is keyed, how many entries, plaintext copies — always 0) plus the record held for the presented key (digest, sha256:<16 hex> fingerprint, prefix, last 4, which registries reference it) — never the key. POST /v1/keys/hashing/verify { hash } answers whether a digest (or sha256: fingerprint) is your key, in constant time; it rejects a plaintext key with 400 so the secret never crosses the wire twice. Every gateway response carries X-Key-Fingerprint, identical to the fingerprint the console computes in your browser. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/keys/hashing',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'key-hashing-to-console',
+        title: 'Open the Key Hashing console',
+        description: 'See each key’s stored identity, hash a key locally without it leaving the browser, and compare with the gateway attestation.',
+        category: 'sdks',
+        link: '/console/key-hashing',
+      },
+      {
+        id: 'key-hashing-to-kill-switch',
+        title: 'Kill a leaked key',
+        description: 'Lost control of a key? Revoke it everywhere in one click — the kill switch is keyed by the same digest.',
+        category: 'sdks',
+        link: '/console/kill-switch',
+      },
+    ],
+  },
+
+  {
+    id: 'log-redaction',
+    name: 'Internal log redaction',
+    description: "Prove the gateway's own logs never carry your customers' PII or your secrets (F-322). Every internal line (stdout → SIEM) is redacted by the org's policy before it is serialized: emails, phones, IPs, names and addresses become deterministic per-org correlation tokens ([email:tk_9f3a1c…] — the same value is the same token across lines, so incidents stay traceable without the PII), government IDs, payment cards and birth dates are dropped, and API keys / bearer tokens / JWTs are written as their sha256: key fingerprint (the same identity Key Hashing uses). Request IDs are never redacted. GET returns the org policy and strength, live metrics (lines written, values stripped, by type), the last 40 lines exactly as written, a canary self-test (every detector, zero leaks) and the posture facts. PATCH syncs a policy ({ strategies: { email: 'token'|'partial'|'drop', … }, customKeys, allowKeys, retentionDays: 7|30|90 }; floors are enforced — there is no off switch). POST /v1/logs/redaction/test dry-runs any payload and returns the redacted result + findings without logging it. Every gateway response carries X-Log-Redaction: <n> — values stripped from that request's internal log lines. Free, keyless-billed.",
+    method: 'GET',
+    path: '/v1/logs/redaction',
+    creditCost: 0,
+    isRecommendedForFirstCall: false,
+    parameters: [],
+    nextStepRecommendations: [
+      {
+        id: 'log-redaction-to-console',
+        title: 'Open the Log Redaction console',
+        description: 'Paste any payload into the Redaction Tester, watch the live internal log tail, tune the policy, and copy the attestation for your security reviewer.',
+        category: 'sdks',
+        link: '/console/log-redaction',
+      },
+      {
+        id: 'log-redaction-to-masking',
+        title: 'Field-level PII masking',
+        description: 'The same PII catalog governs what live-key responses reveal — one definition of PII across responses and logs.',
+        category: 'sdks',
+        link: '/console/pii-masking',
+      },
+    ],
+  },
+
+  {
     id: 'payload-limits',
     name: 'Payload limits',
     description: "Read the request-size and structure limits the gateway enforces on your plan (F-314) — maximum body bytes, JSON nesting depth, array length, total keys, string length, and URL length — plus your org's recent rejections. Every request is measured before any handler parses it; an oversized or over-nested body is refused with 413 PAYLOAD_TOO_LARGE, 414 URI_TOO_LONG, or 422 PAYLOAD_TOO_DEEP / PAYLOAD_ARRAY_TOO_LONG / PAYLOAD_TOO_MANY_KEYS / PAYLOAD_STRING_TOO_LONG, and the error body names the dimension, the measured value, the limit, and the fix (including a chunking plan). POST /v1/limits/payload/check is a free dry run: send the body you intend to send and get the verdict without executing anything. PATCH tightens a limit for your org ({ maxBodyBytes, maxDepth, maxArrayLength, maxKeys, maxStringLength, maxUrlLength }; null clears; the plan ceiling is the hard maximum). Ingest endpoints carry their own profile on every plan so the escape hatch stays open (POST /v1/jobs accepts up to 10,000 inputs / 4 MB; /v1/enrich/stream 500 inputs). Every gateway response carries X-Payload-Limit-Bytes and X-Payload-Limit-Depth. The gateway is the source of truth for overrides; the console mirrors it. Free, keyless-billed.",

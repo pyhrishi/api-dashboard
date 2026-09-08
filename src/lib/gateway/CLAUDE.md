@@ -23,6 +23,7 @@ auth, rate-limiting, billing, caching, and compliance genuinely run.
 
 `auth.ts` `rateLimiter.ts` `router.ts` `billing.ts` `waf.ts` `security.ts` (SOC2/fraud/DDoS/MSA/DPA)
 `privacy.ts` (masking + opt-out) `cache.ts` (TTL + idempotency) `circuitBreaker.ts` `logger.ts`
+`logRedaction.ts` (F-322 — the ONLY path to stdout: every `Logger.*`/`logRequest` line is PII/secret-redacted by the org policy from `@/lib/log-redaction` before it is serialized; per-org tail + metrics + canary self-test via `/v1/logs/redaction`; `X-Log-Redaction` header) — log through `Logger`, never `console.log`
 `partnerRevenue.ts` (tiers/commission/payouts — surfaced by `/console/partners`)
 `dataSharing.ts` (Snowflake/BigQuery zero-copy DDL — surfaced by `/console/data-sharing`)
 `capacityForecast.ts` (OLS regression forecast — `/infra/*` routes).

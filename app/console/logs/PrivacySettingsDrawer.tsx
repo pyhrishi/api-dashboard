@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, Plus, Key, EyeOff, ShieldAlert } from 'lucide-react';
+import { X, Shield, Plus, Key, EyeOff, ShieldAlert, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
@@ -162,6 +163,10 @@ export function PrivacySettingsDrawer({ isOpen, onClose }: PrivacySettingsDrawer
             <div className="p-6 border-t border-border-subtle bg-[#121212]">
               <p className="text-[10px] text-fg-subtle flex items-center gap-2 justify-center">
                 <Shield className="w-3 h-3" /> Redaction occurs on the client UI level.
+              </p>
+              <p className="text-[10px] text-fg-subtle flex items-center gap-1 justify-center mt-2">
+                The gateway’s own internal logs are redacted by your org policy — these keys are included.
+                <Link href="/console/log-redaction" className="text-teal hover:underline font-bold inline-flex items-center gap-1">Log Redaction <ArrowRight className="w-3 h-3" /></Link>
               </p>
             </div>
           </motion.div>
