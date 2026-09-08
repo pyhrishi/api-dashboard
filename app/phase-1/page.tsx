@@ -93,7 +93,7 @@ export default function Phase1LaunchCenter() {
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/phase-1/console/overview" className="group inline-flex items-center gap-2.5 px-5 py-3 rounded-xl bg-teal text-white font-semibold text-sm shadow-lg shadow-teal/25 hover:shadow-teal/40 hover:-translate-y-0.5 transition-all">
+            <Link href="/phase-1/console/home" className="group inline-flex items-center gap-2.5 px-5 py-3 rounded-xl bg-teal text-white font-semibold text-sm shadow-lg shadow-teal/25 hover:shadow-teal/40 hover:-translate-y-0.5 transition-all">
               <KeyRound className="w-4 h-4" /> Open Phase 1 Console <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </Link>
             <Link href="/phase-1/admin/overview" className="group inline-flex items-center gap-2.5 px-5 py-3 rounded-xl bg-surface-2 border border-border text-fg font-semibold text-sm hover:border-teal/40 hover:-translate-y-0.5 transition-all">
@@ -133,7 +133,7 @@ export default function Phase1LaunchCenter() {
 
         {/* Two surfaces */}
         <div className="mt-8 grid md:grid-cols-2 gap-4">
-          <Link href="/phase-1/console/overview" className="group bg-surface-2 border border-border rounded-2xl p-6 hover:border-teal/40 transition-all">
+          <Link href="/phase-1/console/home" className="group bg-surface-2 border border-border rounded-2xl p-6 hover:border-teal/40 transition-all">
             <div className="flex items-center justify-between mb-4">
               <div className="text-xs font-mono uppercase tracking-wider text-teal">Developer surface</div>
               <ArrowRight className="w-4 h-4 text-fg-subtle group-hover:text-teal group-hover:translate-x-0.5 transition-all" />

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  LayoutDashboard, Key, Siren, Compass, Sparkles, FlaskConical,
+  LayoutDashboard, Home, Key, Siren, Compass, Sparkles, FlaskConical,
   GitMerge, Network, Users, ListChecks, Download, Webhook, Boxes, Timer, Rocket, Gauge,
   Target, Radar, MessageSquareWarning, Award, ShieldCheck, EyeOff, Navigation,
   MonitorSmartphone, Activity, FileText, Bug, Server, CreditCard, Calculator, BookOpen,
@@ -39,6 +39,7 @@ const ALL: ConsoleRole[] = ['admin', 'developer', 'billing'];
 const DEV: ConsoleRole[] = ['admin', 'developer'];
 
 export const navPinnedTop: NavItem[] = [
+  { name: 'Home', href: '/phase-1/console/home', icon: <Home className={cls} />, roles: ALL },
   { name: 'Overview', href: '/phase-1/console/overview', icon: <LayoutDashboard className={cls} />, roles: ALL },
 ];
 
