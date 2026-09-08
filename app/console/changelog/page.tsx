@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v4.97', date: 'September 2026', headline: 'Trial activation — onboarding, risk gate & OTP',
+    changes: [
+      { kind: 'feature', text: 'A new Trial Activation flow (Operations → Trial Activation) walks a new account from profile to first key: pick your role and use-case (Product Managers get a one-click key; everyone gets a catalogue tuned to their use-case), then claim your free trial. Low-risk signups get 5,000 credits instantly; flagged ones verify a phone with a 6-digit code over an SMS → WhatsApp → call fallback (with a skip option). Public-API credits are spent before any paid balance.' },
+      { kind: 'feature', text: 'Product Managers have their first API key generated automatically on activation; everyone else is one click away, then routed straight to their first call. The whole gate is deterministic and unit-tested; the risk criteria are provisional pending the final trust policy.' },
+    ],
+  },
+  {
     version: 'v4.96', date: 'September 2026', headline: 'PLG growth funnel — foundation & landing (TOFU)',
     changes: [
       { kind: 'feature', text: 'A new Growth Funnel board (Operations → Funnel) visualizes the full product-led lifecycle — 8 phases from anonymous landing visitor through trial, activation, conversion, wallet health, and churn — with cohort counts per phase, your account’s live position, and lead classification (Sales Qualified / Sales Ready / Funnel-Driven / Hot / Dead). Every stage is derived from real product signals by a single funnel model, so the board, the in-product nudges, and billing stay in lock-step.' },
