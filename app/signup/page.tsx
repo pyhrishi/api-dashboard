@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import { track } from '@/lib/telemetry';
 import { authHeaderValue } from '@/lib/api-config';
+import { SignupExitIntent } from '@/components/preauth/SignupExitIntent';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -19,7 +20,8 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => { track('signup_page_viewed', {}); }, []);
+  // C0-b: landing on the signup gate is the top of the account funnel.
+  useEffect(() => { track('signup_page_viewed', {}); track('signup_started', { source: 'signup_page' }); }, []);
   const [statusText, setStatusText] = useState('');
   const [error, setError] = useState('');
   const [referralCode, setReferralCode] = useState('');
@@ -74,6 +76,27 @@ export default function SignupPage() {
     router.push('/console/activate?new=true'); // C1-a → C1-b: funnel new signups into the trial-activation flow
   };
 
+  // C0-b SSO — one-click signup that cuts friction (several geos are email-averse).
+  // The provider returns a verified identity; the prototype uses a realistic demo one.
+  const SSO_IDENTITY: Record<'github' | 'google', { email: string; company: string }> = {
+    github: { email: 'octocat@github.com', company: 'Open Source Inc.' },
+    google: { email: 'founder@gmail.com', company: 'Startup Labs' },
+  };
+  const handleSso = async (provider: 'github' | 'google') => {
+    if (isSubmitting) return;
+    setError('');
+    track('signup_started', { method: 'sso', provider });
+    setIsSubmitting(true);
+    setStatusText(`Connecting to ${provider === 'github' ? 'GitHub' : 'Google'}…`);
+    await new Promise((r) => setTimeout(r, 700));
+    setStatusText('Provisioning Sandbox Environment…');
+    await new Promise((r) => setTimeout(r, 600));
+    const id = SSO_IDENTITY[provider];
+    signup(id.email, id.company);
+    track('signup_completed', { method: provider, hasCompany: true, emailVerified: true });
+    router.push('/console/activate?new=true');
+  };
+
   return (
     <div className="min-h-screen bg-ink flex flex-col justify-center relative overflow-hidden font-sans selection:bg-teal selection:text-ink">
       
@@ -88,7 +111,9 @@ export default function SignupPage() {
         </Link>
       </div>
 
-      <motion.div 
+      <SignupExitIntent disabled={isSubmitting} onCapture={(em) => setEmail(em)} />
+
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
@@ -101,13 +126,26 @@ export default function SignupPage() {
         </div>
 
         <div className="glass rounded-3xl p-8 border-gradient shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          <button 
-            type="button"
-            disabled={isSubmitting}
-            className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed mb-6"
-          >
-            Continue with GitHub
-          </button>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <button
+              type="button"
+              onClick={() => handleSso('github')}
+              disabled={isSubmitting}
+              aria-label="Continue with GitHub"
+              className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50"
+            >
+              <span className="font-mono font-bold">GH</span> GitHub
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSso('google')}
+              disabled={isSubmitting}
+              aria-label="Continue with Google"
+              className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50"
+            >
+              <span className="font-bold text-[#4285F4]">G</span> Google
+            </button>
+          </div>
 
           <div className="relative flex items-center py-4 mb-2">
             <div className="flex-grow border-t border-white/10"></div>
