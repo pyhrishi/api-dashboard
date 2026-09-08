@@ -252,7 +252,12 @@ export type TelemetryEventName =
   | 'lp_viewed'
   | 'catalogue_api_opened'
   | 'sandbox_fired_gated'
-  | 'signup_gate_shown';
+  | 'signup_gate_shown'
+  // growth — Phase 0 intent / dwell pop-ups
+  | 'dwell_popup_shown'
+  | 'exit_intent_popup_shown'
+  | 'intent_popup_cta_clicked'
+  | 'intent_popup_dismissed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
