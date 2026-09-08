@@ -1,21 +1,32 @@
-import { PrivacySettings } from './store';
+/**
+ * Console-side redaction for exported / displayed request logs (Logs page, JsonViewer).
+ *
+ * Detection is delegated to the F-322 log-redaction SSOT (`lib/log-redaction.ts`) so
+ * the console, the gateway's internal logger and the tests share ONE set of PII
+ * patterns. The output format here (`[REDACTED: j***@acme.com]`, `[REDACTED BY KEY]`)
+ * is the console's own display contract and is unchanged.
+ */
 
-export const PII_PATTERNS = {
-  creditCard: /(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\d{3})\d{11})/,
-  ssn: /^(?!666|000|9\d{2})\d{3}-(?!00)\d{2}-(?!0{4})\d{4}$/,
-  phone: /^\+?[1-9]\d{1,14}$/, // Simplified E.164
-  email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-};
+import { PrivacySettings } from './store';
+import { redactString, defaultLogPolicy, type LogPiiType } from './log-redaction';
 
 export type PIIType = 'creditCard' | 'ssn' | 'phone' | 'email';
 
+const DETECT_POLICY = defaultLogPolicy();
+const TYPE_MAP: Partial<Record<LogPiiType, PIIType>> = { credit_card: 'creditCard', government_id: 'ssn', phone: 'phone', email: 'email' };
+
+/**
+ * Classify a whole value as one PII kind (or null). Uses the SSOT detectors: the
+ * value must be consumed entirely by a single detector to count as PII.
+ */
 export function checkIsPii(value: string): PIIType | null {
-  if (typeof value !== 'string') return null;
-  if (PII_PATTERNS.creditCard.test(value)) return 'creditCard';
-  if (PII_PATTERNS.ssn.test(value)) return 'ssn';
-  if (PII_PATTERNS.email.test(value)) return 'email';
-  if (PII_PATTERNS.phone.test(value)) return 'phone';
-  return null;
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const { text, findings } = redactString(value.trim(), DETECT_POLICY, 'console');
+  if (findings.length !== 1) return null;
+  const mapped = TYPE_MAP[findings[0].type];
+  if (!mapped) return null;
+  // The detector must have matched the entire value, not a fragment of a longer string.
+  return text === findings[0].after ? mapped : null;
 }
 
 export function applySmartMask(value: string, type: PIIType | 'key'): string {

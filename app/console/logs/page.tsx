@@ -39,8 +39,10 @@ export default function LogsPage() {
   useEffect(() => {
     const ep = searchParams?.get('endpoint');
     const st = searchParams?.get('status');
+    const q = searchParams?.get('search');
     if (ep) setSelectedEndpoint(ep);
     if (st) setStatusFilter(st);
+    if (q) setSearch(q);
   }, [searchParams]);
 
   // Advanced Features State

@@ -14,13 +14,15 @@ export interface KpiTileProps {
   trend?: number;
   /** Set when a *lower* number is better (latency, errors) so colors invert. */
   lowerIsBetter?: boolean;
+  /** Suffix rendered after the trend number — `%` by default; use ` pp` for percentage-point deltas. */
+  trendUnit?: string;
   hint?: string;
   loading?: boolean;
   className?: string;
 }
 
 /** A single KPI card: label, big value, optional trend + hint. */
-export function KpiTile({ label, value, icon, trend, lowerIsBetter = false, hint, loading = false, className }: KpiTileProps) {
+export function KpiTile({ label, value, icon, trend, lowerIsBetter = false, trendUnit = '%', hint, loading = false, className }: KpiTileProps) {
   const good = trend !== undefined && (lowerIsBetter ? trend < 0 : trend > 0);
   const bad = trend !== undefined && trend !== 0 && !good;
 
@@ -47,7 +49,7 @@ export function KpiTile({ label, value, icon, trend, lowerIsBetter = false, hint
               !good && !bad && 'text-fg-muted bg-glass border-border-subtle'
             )}>
               {trend > 0 ? <TrendingUp className="w-3 h-3" /> : trend < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-              {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
+              {trend > 0 ? '+' : ''}{trend.toFixed(1)}{trendUnit}
             </div>
           )}
         </div>

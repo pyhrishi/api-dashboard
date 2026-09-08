@@ -48,6 +48,8 @@ export const EXPOSED_RESPONSE_HEADERS = [
   'X-Payload-Limit-Bytes', 'X-Payload-Limit-Depth',
   'X-PII-Masked', 'X-Privacy-Framework',
   'X-Credits-Bucket', 'X-Free-Credits-Remaining',
+  'X-Key-Fingerprint',
+  'X-Log-Redaction',
 ];
 
 const ORIGIN_RE = /^https?:\/\/[a-zA-Z0-9.-]+(:\d{1,5})?$/;

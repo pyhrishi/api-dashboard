@@ -1,5 +1,5 @@
 // Mocked in-memory billing store (Hashes Only)
-import { createHash } from 'crypto';
+import { hashApiKey, type RegistryDescriptor } from '@/lib/key-hashing';
 import { chargeTrial, TRIAL_FREE_CREDITS } from '@/lib/trial-credits';
 
 export type BillingPlan = 'prepaid' | 'postpaid' | 'metered';
@@ -35,8 +35,17 @@ const apiKeys: Record<string, ApiKeyRecord> = {
   'c79bbf062a8f1c7f999a0f296b913a725a0757ef0e564bbcb2a7222a2570afdc': { hash: 'c79bbf062a8f1c7f999a0f296b913a725a0757ef0e564bbcb2a7222a2570afdc', plan: 'metered', credits: 0, usage: 100, status: 'ACTIVE', msaStatus: 'ACTIVE', dpaStatus: 'REQUIRED' }
 };
 
-function hashKey(key: string): string {
-  return createHash('sha256').update(key).digest('hex');
+// Keys are hashed at rest (F-321): the one SSOT digest, shared with the console.
+const hashKey = hashApiKey;
+
+/** For the key-hashing audit: what this registry holds and how it is keyed. */
+export function billingStorageDescriptor(): RegistryDescriptor {
+  return { id: 'billing', label: 'Billing records', holds: 'plan, credits, usage, status, MSA/DPA state', keyedBy: 'sha256', entries: Object.keys(apiKeys).length, runtime: 'node' };
+}
+
+/** True when a record exists for this key's digest (no side effects — no lazy provisioning). */
+export function hasBillingRecordFor(hash: string): boolean {
+  return Boolean(apiKeys[hash]);
 }
 
 /**

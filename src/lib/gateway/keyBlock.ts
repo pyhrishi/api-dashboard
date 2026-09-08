@@ -1,3 +1,4 @@
+import { hashApiKey, type RegistryDescriptor } from '@/lib/key-hashing';
 /**
  * Compromised-key kill switch (F-119) — the gateway block registry, enforced everywhere.
  *
@@ -38,7 +39,9 @@ interface BlockEvent {
   action: 'killed' | 'restored';
 }
 
-const blocks = new Map<string, BlockRecord>();
+// Keyed by the SHA-256 digest of the key (F-321) — never the plaintext; the masked
+// display form is captured at block time.
+const blocks = new Map<string, BlockRecord & { display: string }>();
 const events: BlockEvent[] = [];
 let totalBlockedAttempts = 0;
 const EVENTS_CAP = 30;
@@ -54,7 +57,7 @@ function ensureSeed(): void {
   seeded = true;
   const now = Date.now();
   // The demo compromised key is dead out of the box (matches the billing seed).
-  blocks.set('sk_test_compromised', { reason: 'compromised', blockedAt: now - 26 * 3600_000, by: 'security@zintlr.com', blockedAttempts: 4 });
+  blocks.set(hashApiKey('sk_test_compromised'), { reason: 'compromised', blockedAt: now - 26 * 3600_000, by: 'security@zintlr.com', blockedAttempts: 4, display: maskKey('sk_test_compromised') });
   totalBlockedAttempts += 4;
   events.push({ key: maskKey('sk_test_compromised'), reason: 'compromised', by: 'security@zintlr.com', at: now - 26 * 3600_000, action: 'killed' });
 }
@@ -63,7 +66,8 @@ function ensureSeed(): void {
 export function blockKey(key: string, reason: RevocationReason = 'manual', by = 'console'): void {
   ensureSeed();
   if (!key) return;
-  blocks.set(key, { reason, blockedAt: Date.now(), by, blockedAttempts: blocks.get(key)?.blockedAttempts ?? 0 });
+  const h = hashApiKey(key);
+  blocks.set(h, { reason, blockedAt: Date.now(), by, blockedAttempts: blocks.get(h)?.blockedAttempts ?? 0, display: maskKey(key) });
   events.unshift({ key: maskKey(key), reason, by, at: Date.now(), action: 'killed' });
   if (events.length > EVENTS_CAP) events.length = EVENTS_CAP;
 }
@@ -71,9 +75,10 @@ export function blockKey(key: string, reason: RevocationReason = 'manual', by = 
 /** Restore (un-kill) a key — a false alarm. */
 export function unblockKey(key: string, by = 'console'): void {
   ensureSeed();
-  const rec = blocks.get(key);
+  const h = hashApiKey(key);
+  const rec = blocks.get(h);
   if (!rec) return;
-  blocks.delete(key);
+  blocks.delete(h);
   events.unshift({ key: maskKey(key), reason: rec.reason, by, at: Date.now(), action: 'restored' });
   if (events.length > EVENTS_CAP) events.length = EVENTS_CAP;
 }
@@ -81,7 +86,7 @@ export function unblockKey(key: string, by = 'console'): void {
 /** True when a key is killed. Records a blocked attempt (call it at enforcement points). */
 export function isKeyBlocked(key: string): boolean {
   ensureSeed();
-  const rec = blocks.get(key);
+  const rec = blocks.get(hashApiKey(key));
   if (!rec) return false;
   rec.blockedAttempts += 1;
   totalBlockedAttempts += 1;
@@ -91,7 +96,23 @@ export function isKeyBlocked(key: string): boolean {
 /** The block record for a key (no side effects), or null. */
 export function getBlock(key: string): BlockRecord | null {
   ensureSeed();
-  return blocks.get(key) ?? null;
+  const rec = blocks.get(hashApiKey(key));
+  if (!rec) return null;
+  const { display: _display, ...record } = rec;
+  void _display;
+  return record;
+}
+
+/** True when this digest is killed (no side effects). */
+export function isHashBlocked(hash: string): boolean {
+  ensureSeed();
+  return blocks.has(hash);
+}
+
+/** For the key-hashing audit: what this registry holds and how it is keyed. */
+export function killSwitchStorageDescriptor(): RegistryDescriptor {
+  ensureSeed();
+  return { id: 'kill-switch', label: 'Kill switch', holds: 'revocation reason, time, actor, blocked attempts', keyedBy: 'sha256', entries: blocks.size, runtime: 'node' };
 }
 
 export interface BlockedKeyView {
@@ -112,8 +133,8 @@ export interface KillSwitchSnapshot {
 export function getKillSwitchSnapshot(): KillSwitchSnapshot {
   ensureSeed();
   const keys: BlockedKeyView[] = [];
-  blocks.forEach((rec, key) => {
-    keys.push({ key: maskKey(key), reason: rec.reason, blockedAt: rec.blockedAt, by: rec.by, blockedAttempts: rec.blockedAttempts });
+  blocks.forEach((rec) => {
+    keys.push({ key: rec.display, reason: rec.reason, blockedAt: rec.blockedAt, by: rec.by, blockedAttempts: rec.blockedAttempts });
   });
   keys.sort((a, b) => b.blockedAt - a.blockedAt);
   return {

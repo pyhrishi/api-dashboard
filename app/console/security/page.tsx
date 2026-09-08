@@ -1,9 +1,11 @@
 'use client';
 
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { useStore, MockKey } from '@/lib/store';
 import { useEncryptionSettings, buildPosture, daysUntilRotation, orgHandleForKey } from '@/lib/encryption';
-import { ShieldAlert, ShieldCheck, AlertTriangle, Key, Activity, Settings2, Trash2, Shield, Lock, Zap, ArrowRight, FileKey } from 'lucide-react';
+import { useLogRedactionPolicy, logPolicyStrength, strengthLabel, selfTest, effectiveLogPolicy } from '@/lib/log-redaction';
+import { ShieldAlert, ShieldCheck, AlertTriangle, Key, Activity, Settings2, Trash2, Shield, Lock, Zap, ArrowRight, FileKey, FileLock2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/Toast';
@@ -54,6 +56,15 @@ export default function SecurityHubPage() {
   const { rotationDays, lastRotatedAt, fieldEncryption } = useEncryptionSettings();
   const encKey = activeEnvKeys[0]?.key ?? activeKeys[0]?.key;
   const encPosture = buildPosture(orgHandleForKey(encKey), { rotationDays, lastRotatedAt, fieldEncryption }, Date.now());
+  // Internal log redaction (F-322): the org policy + a canary self-test from the same engine the gateway runs.
+  const logStrategies = useLogRedactionPolicy((st) => st.strategies);
+  const logCustomKeys = useLogRedactionPolicy((st) => st.customKeys);
+  const logAllowKeys = useLogRedactionPolicy((st) => st.allowKeys);
+  const logRetention = useLogRedactionPolicy((st) => st.retentionDays);
+  const privacyKeys = useStore((st) => st.privacySettings.customKeys);
+  const logPolicy = useMemo(() => effectiveLogPolicy({ strategies: logStrategies, customKeys: logCustomKeys, allowKeys: logAllowKeys, retentionDays: logRetention }, privacyKeys), [logStrategies, logCustomKeys, logAllowKeys, logRetention, privacyKeys]);
+  const logStrength = logPolicyStrength(logPolicy);
+  const logSelfTest = useMemo(() => selfTest(logPolicy, orgHandleForKey(encKey)), [logPolicy, encKey]);
   const nextKey = encPosture.keys.reduce((min, k) => (k.nextRotationAt < min.nextRotationAt ? k : min), encPosture.keys[0]);
   const nextRotationDays = daysUntilRotation(nextKey, Date.now());
 
@@ -241,6 +252,37 @@ export default function SecurityHubPage() {
           </div>
           <div className="px-6 pb-5 text-xs font-bold text-fg-muted group-hover:text-teal transition-colors inline-flex items-center gap-1">
             Inspect posture, rotate keys, pull a signed attestation <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+        <Link href="/console/log-redaction" className="group glass-inner rounded-2xl border border-border hover:border-teal/40 shadow-xl overflow-hidden block transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50">
+          <div className="p-6 border-b border-border flex items-center justify-between bg-surface/50">
+            <h2 className="text-lg font-bold text-fg flex items-center gap-2">
+              <FileLock2 className="w-5 h-5 text-teal" />
+              Internal logs
+            </h2>
+            <span className={cn(
+              'text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full',
+              logSelfTest.passed ? 'bg-semantic-success/10 text-semantic-success' : 'bg-semantic-error/10 text-semantic-error',
+            )}>
+              {logSelfTest.passed ? '0 leaks' : `${logSelfTest.leaks} leaks`}
+            </span>
+          </div>
+          <div className="p-6 grid grid-cols-3 gap-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-fg-muted">Policy</div>
+              <div className="text-sm font-bold text-fg mt-1">{strengthLabel(logStrength)} · {logStrength}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-fg-muted">Detectors</div>
+              <div className="text-sm font-bold text-fg mt-1">{logSelfTest.checks.length} PII types</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-fg-muted">Retention</div>
+              <div className="text-sm font-bold text-fg mt-1">{logRetention} days</div>
+            </div>
+          </div>
+          <div className="px-6 pb-5 text-xs font-bold text-fg-muted group-hover:text-teal transition-colors inline-flex items-center gap-1">
+            PII stripped from every internal log line — test it, watch the tail, tune the policy <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </Link>
 

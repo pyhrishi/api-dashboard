@@ -302,7 +302,53 @@ export type TelemetryEventName =
   | 'dunning_payment_retried'
   | 'dunning_warning_sent'
   | 'dunning_access_revoked'
-  | 'dunning_sales_flagged';
+  | 'dunning_sales_flagged'
+  // security — API keys hashed at rest (F-321)
+  | 'key_hashing_viewed'
+  | 'key_hash_inspected'
+  | 'key_hash_verified'
+  | 'key_hashing_attested'
+  // security — PII redaction in internal logs (F-322)
+  | 'log_redaction_viewed'
+  | 'log_redaction_tested'
+  | 'log_redaction_policy_updated'
+  | 'log_redaction_sample_sent'
+  | 'log_redaction_attested'
+  | 'log_redaction_attestation_copied'
+  // PLG KPI framework — the measurement layer behind /console/growth (F-390 / F-195 / F-530)
+  | 'destructive_action_confirmed'
+  | 'credits_recharge_failed'
+  | 'docs_search_performed'
+  | 'growth_kpis_viewed'
+  | 'growth_kpi_scope_changed'
+  | 'growth_scenario_changed'
+  | 'growth_alert_inspected'
+  | 'growth_pm_report_copied'
+  // PLG KPI framework — alert center, delivery & weekly PM digest (F-194 / F-526 / F-553)
+  | 'alert_center_viewed'
+  | 'growth_alert_fired'
+  | 'growth_alert_acknowledged'
+  | 'growth_alert_resolved'
+  | 'alert_threshold_changed'
+  | 'alert_routing_updated'
+  | 'alert_test_sent'
+  | 'notification_bell_opened'
+  | 'pm_digest_settings_updated'
+  | 'pm_digest_sent'
+  // auth — risk-based phone OTP at trial activation (F-503)
+  | 'trial_gate_viewed'
+  | 'trial_risk_evaluated'
+  | 'otp_challenge_shown'
+  | 'otp_phone_rejected'
+  | 'otp_sent'
+  | 'otp_fallback'
+  | 'otp_verified'
+  | 'otp_failed'
+  | 'otp_abandoned'
+  | 'otp_override'
+  | 'trial_activated'
+  | 'trial_gate_policy_updated'
+  | 'trial_gate_simulated';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

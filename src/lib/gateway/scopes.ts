@@ -11,12 +11,16 @@
  */
 
 import { scopeForEndpoint, keyHasScope, isUnrestricted } from '@/lib/scopes';
+import { hashApiKey, type RegistryDescriptor } from '@/lib/key-hashing';
 
 interface ScopeEntry {
   scopes: string[];
   registeredAt: number;
+  /** Masked display form captured at registration — the plaintext is not kept. */
+  display: string;
 }
 
+// Keyed by the SHA-256 digest of the key (F-321) — never the plaintext.
 const registry = new Map<string, ScopeEntry>();
 let denials = 0;
 let checksPerformed = 0;
@@ -28,26 +32,38 @@ function ensureSeed(): void {
   // Illustrative registered keys so the console reads as continuous. Real console
   // keys register themselves on load; these show enforcement out of the box.
   const now = Date.now();
-  registry.set('sk_live_readonly_demo', { scopes: ['identity:read', 'corporate:read'], registeredAt: now - 6 * 3600_000 });
-  registry.set('sk_test_search_demo', { scopes: ['search:execute'], registeredAt: now - 2 * 3600_000 });
+  registry.set(hashApiKey('sk_live_readonly_demo'), { scopes: ['identity:read', 'corporate:read'], registeredAt: now - 6 * 3600_000, display: maskKey('sk_live_readonly_demo') });
+  registry.set(hashApiKey('sk_test_search_demo'), { scopes: ['search:execute'], registeredAt: now - 2 * 3600_000, display: maskKey('sk_test_search_demo') });
 }
 
 /** Register (or replace) the scopes bound to a key. Empty/`*` ⇒ unrestricted. */
 export function registerKeyScopes(key: string, scopes: string[]): void {
   ensureSeed();
-  registry.set(key, { scopes: Array.isArray(scopes) ? scopes : [], registeredAt: Date.now() });
+  registry.set(hashApiKey(key), { scopes: Array.isArray(scopes) ? scopes : [], registeredAt: Date.now(), display: maskKey(key) });
 }
 
 /** Remove a key from the registry (revoked). */
 export function unregisterKeyScopes(key: string): void {
   ensureSeed();
-  registry.delete(key);
+  registry.delete(hashApiKey(key));
 }
 
 /** The scopes bound to a key — `['*']` (unrestricted) when the key isn't registered. */
 export function getKeyScopes(key: string): string[] {
   ensureSeed();
-  return registry.get(key)?.scopes ?? ['*'];
+  return registry.get(hashApiKey(key))?.scopes ?? ['*'];
+}
+
+/** True when scopes are registered for this digest. */
+export function hasScopesFor(hash: string): boolean {
+  ensureSeed();
+  return registry.has(hash);
+}
+
+/** For the key-hashing audit: what this registry holds and how it is keyed. */
+export function scopesStorageDescriptor(): RegistryDescriptor {
+  ensureSeed();
+  return { id: 'scopes', label: 'Scope registry', holds: 'granted scopes per key', keyedBy: 'sha256', entries: registry.size, runtime: 'node' };
 }
 
 export interface ScopeCheck {
@@ -92,8 +108,8 @@ export interface ScopeRegistrySnapshot {
 export function getScopeRegistrySnapshot(): ScopeRegistrySnapshot {
   ensureSeed();
   const keys: RegisteredKeyView[] = [];
-  registry.forEach((entry, key) => {
-    keys.push({ key: maskKey(key), scopes: entry.scopes, restricted: !isUnrestricted(entry.scopes), registeredAt: entry.registeredAt });
+  registry.forEach((entry) => {
+    keys.push({ key: entry.display, scopes: entry.scopes, restricted: !isUnrestricted(entry.scopes), registeredAt: entry.registeredAt });
   });
   keys.sort((a, b) => b.registeredAt - a.registeredAt);
   return {

@@ -97,6 +97,7 @@ export default function SignupPage() {
         <div className="text-center mb-8">
           <h1 className="text-3xl font-display font-extrabold text-white mb-3">Create your account</h1>
           <p className="text-white/60">Start building with 400M+ B2B identities.</p>
+          <p className="text-white/40 text-xs mt-2">No phone number needed to start — just your work email.</p>
         </div>
 
         <div className="glass rounded-3xl p-8 border-gradient shadow-[0_20px_50px_rgba(0,0,0,0.5)]">

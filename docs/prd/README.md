@@ -32,5 +32,9 @@ Every PRD calls out **prototype-simulated vs production-required** gaps (in-memo
 | PRD | Area | Status | Prototype route(s) |
 |---|---|---|---|
 | [Partner Revenue-Share](./partners-revenue-share.md) | Partners | Draft | `/console/partners`, `/api/v1/partner/*` |
+| [PII redaction in internal logs](./pii-redaction-in-internal-logs.md) | Security & Compliance | Built | `/console/log-redaction`, `GET|PATCH /v1/logs/redaction`, `POST /v1/logs/redaction/test`, `X-Log-Redaction` header |
+| [PLG KPI framework](./growth-kpi-framework.md) | Growth & Measurement | Built | `/console/growth` (funnel, time-to-activate, bands, DAU/WAU, heatmap, cohorts, health, alerts), `/console/alerts` (Alert Center: incidents, thresholds, routing, delivery ledger, weekly PM digest), header bell, Overview growth pulse, fire points in Explorer, ConfirmAction, RechargeModal, `/docs` search |
+| [Risk-based phone OTP at trial activation](./auth-risk-based-phone-otp.md) | Auth (shared across Zintlr) | Built (prototype) | activation banner on every console route, `/console/trial-gate`, `/api/auth/*` (evaluate, phone challenge/resend/verify/override, policy, events), phone-free `/signup` |
+| [Admin Panel — B2B2B operations](./admin-panel-b2b2b-operations.md) | Internal operations (separate app) | Built (prototype) | `zinbit-admin` app (sibling repo, :3200): overview, funnel & triggers, customers, tokens, ledger, wallets, access requests, audit · console consumer `/console/preview-session` + preview banner |
 
 _Add a row here whenever you create a PRD._

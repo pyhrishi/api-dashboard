@@ -11,6 +11,8 @@ const config = {
     '^@/(.*)$': ['<rootDir>/$1', '<rootDir>/src/$1'],
   },
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
+  // Peer git worktrees live under .claude/worktrees and must not be swept into this run.
+  testPathIgnorePatterns: ['/node_modules/', '/.claude/', '/.next'],
 };
 
 module.exports = createJestConfig(config);

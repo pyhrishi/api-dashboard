@@ -12,6 +12,7 @@ import {
   updateEncryptionSettings, signAttestation, verifyAttestation, ATTESTATION_KID, ENCRYPTION_EXPOSED_HEADERS,
 } from '@/lib/gateway/encryption';
 import { attachISO27001Headers } from '@/lib/gateway/security';
+import { hashApiKey } from '@/lib/key-hashing';
 import { EXPOSED_RESPONSE_HEADERS } from '@/lib/gateway/cors';
 
 const NOW = 1_760_000_000_000; // fixed reference "now"
@@ -148,7 +149,9 @@ describe('console ↔ gateway coherence (hardening pass)', () => {
   beforeEach(() => __resetEncryption());
 
   it('orgHandleForKey is the one handle both sides use', () => {
-    expect(orgHandleForKey('sk_live_abcdef12')).toBe('org_abcdef12');
+    // Derived from the key's SHA-256 digest (F-321) — never a plaintext fragment.
+    expect(orgHandleForKey('sk_live_abcdef12')).toBe(`org_${hashApiKey('sk_live_abcdef12').slice(0, 8)}`);
+    expect(orgHandleForKey('sk_live_abcdef12')).not.toContain('abcdef12');
     expect(orgHandleForKey(undefined)).toBe('org_demo');
     expect(orgHandleForKey('')).toBe('org_demo');
     expect(getEncryptionPosture('sk_live_abcdef12', NOW).orgId).toBe(orgHandleForKey('sk_live_abcdef12'));

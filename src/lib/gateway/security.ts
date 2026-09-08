@@ -17,11 +17,22 @@ const ipAllowlist = new Map<string, string[]>([
 ]);
 
 // Helper to hash key again if we only have the plaintext one at this stage
-import { createHash } from 'crypto';
 import { hstsHeaderValue } from '@/lib/encryption';
+import { hashApiKey, isSha256Hex, type RegistryDescriptor } from '@/lib/key-hashing';
+// Keys are hashed at rest (F-321): the allowlist is keyed by the SSOT digest.
 function hashKey(key: string): string {
-  if (key.length === 64) return key; // already hashed roughly
-  return createHash('sha256').update(key).digest('hex');
+  if (isSha256Hex(key)) return key; // already a digest
+  return hashApiKey(key);
+}
+
+/** For the key-hashing audit: what this registry holds and how it is keyed. */
+export function ipAllowlistStorageDescriptor(): RegistryDescriptor {
+  return { id: 'ip-allowlist', label: 'IP allowlists', holds: 'permitted client IPs per key', keyedBy: 'sha256', entries: ipAllowlist.size, runtime: 'node' };
+}
+
+/** True when an IP allowlist is bound to this digest. */
+export function hasIpAllowlistFor(hash: string): boolean {
+  return ipAllowlist.has(hash);
 }
 
 export function attachISO27001Headers(headers: HeadersInit) {
@@ -44,14 +55,26 @@ interface FraudRecord {
   lastTimestamp: number;
   suspiciousActivityScore: number;
 }
+// Keyed by the SHA-256 digest of the key (F-321) — never the plaintext.
 const fraudTracker = new Map<string, FraudRecord>();
+
+/** For the key-hashing audit: what this registry holds and how it is keyed. */
+export function fraudTrackerStorageDescriptor(): RegistryDescriptor {
+  return { id: 'fraud-tracker', label: 'Geo-velocity tracker', holds: 'last region, last seen, suspicion score per key', keyedBy: 'sha256', entries: fraudTracker.size, runtime: 'node' };
+}
+
+/** True when the geo-velocity tracker has seen this digest. */
+export function hasFraudRecordFor(hash: string): boolean {
+  return fraudTracker.has(hash);
+}
 
 export function enforceFraudDetection(apiKey: string, currentRegion: string): SecurityResult {
   const now = Date.now();
-  const record = fraudTracker.get(apiKey);
+  const trackerId = hashApiKey(apiKey);
+  const record = fraudTracker.get(trackerId);
 
   if (!record) {
-    fraudTracker.set(apiKey, {
+    fraudTracker.set(trackerId, {
       lastRegion: currentRegion,
       lastTimestamp: now,
       suspiciousActivityScore: 0
@@ -79,7 +102,7 @@ export function enforceFraudDetection(apiKey: string, currentRegion: string): Se
   // Update tracking
   record.lastRegion = currentRegion;
   record.lastTimestamp = now;
-  fraudTracker.set(apiKey, record);
+  fraudTracker.set(trackerId, record);
 
   return { allowed: true };
 }

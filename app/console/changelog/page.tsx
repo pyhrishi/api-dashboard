@@ -18,52 +18,89 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
-    version: 'v5.2', date: 'September 2026', headline: 'Re-up & churn — dunning desk',
+    version: 'v5.6', date: 'September 2026', headline: 'Re-up & churn — dunning desk',
     changes: [
       { kind: 'feature', text: 'A new Re-up & Churn console closes the lifecycle: top-ups are surfaced as the healthy retention/LTV signal, and accounts stuck at a zero balance enter a dunning sequence — a 48-hour payment retry, then a key-revocation warning, then suspension — computed from days since depletion.' },
       { kind: 'feature', text: 'Each dunning account shows a stage-appropriate action (retry payment / send warning / revoke access), and previously high-value accounts are flagged for sales outreach instead of a silent lapse. Actions persist for the session.' },
     ],
   },
   {
-    version: 'v5.1', date: 'September 2026', headline: 'Wallet health — burn buckets & auto-reload',
+    version: 'v5.5', date: 'September 2026', headline: 'Wallet health — burn buckets & auto-reload',
     changes: [
       { kind: 'feature', text: 'A new Wallet Health console watches how paying accounts burn their balance against time and sorts them into balanced (healthy — monitor), slow (feature-discovery nudge — happy vs. stalling), and fast (heavy user — low-balance alerts + auto-reload). Your own wallet card shows the live paid balance, a low-balance alert, and an auto-reload setting (when balance ≤ X, add N credits).' },
       { kind: 'feature', text: 'Fast-burn accounts get a one-click "alert + offer auto-reload" so heavy users never deplete mid-production; slow-burn accounts get a feature-discovery nudge. Runway (days left at the current burn) is shown per account.' },
     ],
   },
   {
-    version: 'v5.0', date: 'September 2026', headline: 'Lifecycle CSM cockpit — conversion window & win-back',
+    version: 'v5.4', date: 'September 2026', headline: 'Lifecycle CSM cockpit — conversion window & win-back',
     changes: [
       { kind: 'feature', text: 'A new Lifecycle (CSM) console is the daily conversion desk: a "monitor daily" watchlist of accounts in the decision window (≥80% of trial used, or ≤2 days from expiry) with a one-click upgrade prompt, a lead board classifying every account (Hot / Sales Ready / Funnel-Driven / SQL / Prospect / Dead), and a win-back queue for lapsed trials. High-spend Hot leads are auto-routed to an AE.' },
       { kind: 'feature', text: 'Leads are classified from real funnel signals by the shared model, so the cockpit, the funnel board, and billing agree. Conversion-window membership correctly excludes already-lapsed trials (those move to win-back), and CSM actions (prompt sent, win-back started) persist for the session.' },
     ],
   },
   {
-    version: 'v4.99', date: 'September 2026', headline: 'Activation & trial-consumption milestones',
+    version: 'v5.3', date: 'September 2026', headline: 'Activation & trial-consumption milestones',
     changes: [
       { kind: 'feature', text: 'Trial & Credits now tracks activation: the time from your first key to your first successful call against a <10-minute target (your first call makes you Sales Qualified), plus a consumption ladder with milestones at 10 / 25 / 50 / 75 / 100 percent of your free trial — 50% is the Sales-Ready signal.' },
       { kind: 'feature', text: 'Each milestone raises an intensifying, contextual upgrade nudge (halfway → "upgrade to keep momentum"; 75% → "top up before you run out"; 100% → "add a paid balance to continue"), driven by the real gateway ledger. A preview control lets you see each milestone’s nudge.' },
     ],
   },
   {
-    version: 'v4.98', date: 'September 2026', headline: 'Trial provisioning — free credits for Public APIs',
+    version: 'v5.2', date: 'September 2026', headline: 'Trial provisioning — free credits for Public APIs',
     changes: [
       { kind: 'feature', text: 'Trial credits are now real and enforced at the gateway: every account gets free credits that apply to Public APIs only and are spent before any paid balance. Premium endpoints (bulk enrichment, streaming, bulk export, AI search) draw on your paid balance instead. Billed responses carry X-Credits-Bucket (free/paid/mixed) and X-Free-Credits-Remaining, and GET /v1/credits returns your two-bucket ledger.' },
       { kind: 'feature', text: 'A new Trial & Credits console shows your free vs paid balance, how much of the trial you’ve used, exactly which endpoints your free credits cover, and a live "fire a call" demo that shows which bucket each call draws from — the same ledger the gateway bills against.' },
     ],
   },
   {
-    version: 'v4.97', date: 'September 2026', headline: 'Trial activation — onboarding, risk gate & OTP',
+    version: 'v5.1', date: 'September 2026', headline: 'Trial activation — onboarding, risk gate & OTP',
     changes: [
       { kind: 'feature', text: 'A new Trial Activation flow (Operations → Trial Activation) walks a new account from profile to first key: pick your role and use-case (Product Managers get a one-click key; everyone gets a catalogue tuned to their use-case), then claim your free trial. Low-risk signups get 5,000 credits instantly; flagged ones verify a phone with a 6-digit code over an SMS → WhatsApp → call fallback (with a skip option). Public-API credits are spent before any paid balance.' },
       { kind: 'feature', text: 'Product Managers have their first API key generated automatically on activation; everyone else is one click away, then routed straight to their first call. The whole gate is deterministic and unit-tested; the risk criteria are provisional pending the final trust policy.' },
     ],
   },
   {
-    version: 'v4.96', date: 'September 2026', headline: 'PLG growth funnel — foundation & landing (TOFU)',
+    version: 'v5.0', date: 'September 2026', headline: 'PLG growth funnel — foundation & landing (TOFU)',
     changes: [
       { kind: 'feature', text: 'A new Growth Funnel board (Operations → Funnel) visualizes the full product-led lifecycle — 8 phases from anonymous landing visitor through trial, activation, conversion, wallet health, and churn — with cohort counts per phase, your account’s live position, and lead classification (Sales Qualified / Sales Ready / Funnel-Driven / Hot / Dead). Every stage is derived from real product signals by a single funnel model, so the board, the in-product nudges, and billing stay in lock-step.' },
       { kind: 'feature', text: 'The API landing page becomes a conversion engine: a live catalogue of all 48 enrichment endpoints (purpose, request schema, sample response, per-call price), a mock sandbox whose “Fire” serves no data pre-auth and raises the sign-up gate, and tailored intent/dwell pop-ups. A new Instrumentation console shows the day-one analytics sinks (Clarity, GA, Mixpanel, RB2B), event routing, and the de-anonymized visitor feed — with EU/India consent gating via a privacy banner.' },
+    ],
+  },
+  {
+    version: 'v4.99', date: 'September 2026', headline: 'Alert Center, multi-channel delivery and the weekly PM digest',
+    changes: [
+      { kind: 'feature', text: 'Growth alerts now reach people. A rule that trips opens an incident for its owner — one per rule, per week, per organization — and routes it through the owner’s channels: in-app (the header bell and the new Alert Center), email, Slack and webhook. Every attempt is recorded in a delivery ledger with an honest outcome, so a missing recipient shows up as a failed delivery rather than a silent success. Incidents are acknowledged with a note, resolved by hand, or auto-resolved when the number recovers; the median time to acknowledge is a KPI in its own right. Scenario rehearsals on the Growth dashboard walk the same path with clearly tagged incidents.' },
+      { kind: 'feature', text: 'Admins tune each rule’s threshold inside guard-rails — tighten or relax, never switch off — and configure routing per owner with a one-click test alert. The weekly PM digest renders the whole KPI framework as a report on a cadence you choose (weekday and UTC hour, or daily), to recipients and a Slack channel, runs automatically when due, and keeps every report it sent. Say ⌘K “alert” or “digest” to jump straight there.' },
+      { kind: 'improvement', text: 'Open growth alerts are visible from anywhere: a count on the Alert Center nav entry, the header bell, a Growth pulse strip on the Overview with this week’s activation rate and median time-to-activate, and an alert count on every organization card.' },
+    ],
+  },
+  {
+    version: 'v4.98', date: 'September 2026', headline: 'Phone-free sign-up, risk-based OTP at trial activation',
+    changes: [
+      { kind: 'feature', text: 'Sign-up never asks for a phone number — just your work email. The check moved to trial activation and only happens when something about the sign-up needs a second look: a free-mail or non-ICP domain, low domain reputation, a domain we can’t map to a company, a very small company, an active account already on the same domain, or another account from the same IP. A clean sign-up activates instantly with 10,000 free credits. When a check is needed you see exactly why, verify a mobile number in about a minute, and are never asked again.' },
+      { kind: 'feature', text: 'Temporary and virtual numbers are declined before any code is sent (reserved ranges, VoIP blocks, receive-SMS patterns, reused numbers); codes go by SMS first and fall back to WhatsApp or a voice call when SMS fails or takes too long. It is one implementation in the shared Zintlr auth service: a new Trial Gate console for admins shows the policy (two conditions are locked on for every product), a sign-up simulator, the temp-phone verifier, every challenge with its line type, sends and fallbacks, audited support overrides, delivery stats and the live auth event stream.' },
+    ],
+  },
+  {
+    version: 'v4.97', date: 'September 2026', headline: 'PLG KPI framework on the Growth dashboard',
+    changes: [
+      { kind: 'feature', text: 'Growth now measures the product the way the business does. The activation funnel runs TOFU → MOFU → BOFU (signed up → created a key → activated on a first successful call → trial fully used → paid) with the drop-off percentage at every stage and the biggest leak called out. Time-to-activate is reported as min, median, average, p90 and max against the 10-minute target, alongside time to first key. Developers are ranked into 10% usage bands so you can see how much of the traffic the power users carry, trial consumption and free → paid conversion (customers or money in the wallet) close the loop, and engagement shows DAU/WAU stickiness plus an endpoint × hour utilization heatmap. Advanced views add revenue per developer cohort by signup month and two health metrics: support tickets per active developer and the destructive-action incident rate.' },
+      { kind: 'feature', text: 'Four alerting thresholds are evaluated on the same data, each with an owner: activation rate dropping more than 10 points week-over-week pages Product, phone-OTP completion under 60% pages Product (sourced from the shared auth service, where the trial gate lives), wallet top-up failures over 5% page Eng, and a documentation-search no-results rate over 20% pages the Docs owner. Switch between your workspace and a clearly labelled sample cohort, pick a scenario to watch the alerts fire deterministically, and copy the whole framework as a weekly PM report in one click.' },
+      { kind: 'improvement', text: 'The measurement now has real sources: a first successful Run in the Endpoint Explorer counts as activation (not only the wizard), every two-click confirmation records a destructive action, the recharge modal has saved payment methods including an expired card that reproduces a genuine gateway decline, and the API reference has search (⌘K) that reports what readers could not find.' },
+    ],
+  },
+  {
+    version: 'v4.96', date: 'September 2026', headline: 'PII redaction in internal logs',
+    changes: [
+      { kind: 'feature', text: 'The gateway’s own logs never carry your customers’ PII or your secrets. Every internal line — stdout and the SIEM feed — is redacted by your org’s policy before it is serialized, so no unredacted copy ever exists. Emails, phones, IPs, names and addresses become deterministic per-org correlation tokens (the same email is the same [email:tk_…] across every line, so an incident stays traceable without the PII), government IDs, payment cards and birth dates are dropped, and API keys, bearer tokens and JWTs are written as the same sha256: fingerprint the key registries use. Request IDs are never touched. There is no off switch, and floors can’t be relaxed — for sandbox and live alike.' },
+      { kind: 'feature', text: 'A new Log Redaction console proves it rather than claiming it: a Redaction Tester runs the exact gateway engine in your browser on anything you paste (before/after, every finding, and a dry run at the gateway that must match byte for byte), a live tail shows the last internal lines exactly as written — send a sample request and watch it land with the same request ID you see in Logs — an admin policy editor (strategy per PII type with floors, always-redacted keys including your Logs privacy keys, allowlisted non-PII keys, retention), and a canary self-test attestation across every detector with zero leaks that you can copy for your security reviewer. GET /v1/logs/redaction, PATCH to sync, POST …/test to dry-run; every response carries X-Log-Redaction.' },
+    ],
+  },
+  {
+    version: 'v4.94', date: 'September 2026', headline: 'API keys hashed at rest',
+    changes: [
+      { kind: 'feature', text: 'Your API keys now exist in plaintext in exactly one place: with you. Every gateway registry that references a key — billing, IP allowlists, geo-velocity tracking, scopes, the kill switch, rate-limit buckets, idempotency entries, partner attribution — is keyed by the key’s SHA-256 digest, and org handles and the one-time-reveal fingerprint derive from that same digest, so nothing at rest contains a fragment of the secret. Every response carries X-Key-Fingerprint, the identity the request was keyed by.' },
+      { kind: 'feature', text: 'A new Key Hashing console shows each key’s stored identity (the same sha256: fingerprint now shown beside every key in API Keys), a hash inspector that hashes a pasted key locally so the secret never leaves your browser and tells you which key it is, and a live attestation from GET /v1/keys/hashing listing every registry, how it is keyed, and zero plaintext copies — with a match badge when the gateway’s fingerprint equals the one your browser computed. POST /v1/keys/hashing/verify checks a digest (never a key) in constant time.' },
     ],
   },
   {

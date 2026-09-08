@@ -7,7 +7,7 @@ const TONE: Record<BadgeTone, string> = {
   success: 'bg-semantic-success/10 text-semantic-success border-semantic-success/20',
   warning: 'bg-semantic-warning/10 text-semantic-warning border-semantic-warning/20',
   error: 'bg-semantic-error/10 text-semantic-error border-semantic-error/20',
-  info: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
+  info: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
   teal: 'bg-teal/15 text-teal border-teal/30',
   neutral: 'bg-glass text-fg-muted border-border',
 };

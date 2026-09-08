@@ -3,6 +3,7 @@
  * Tracks partner referrals, calculates tiered commissions, and manages payouts.
  * Supports: Resellers, Referral Affiliates, White-Label OEM Partners, Technology Partners.
  */
+import { hashApiKey, type RegistryDescriptor } from '@/lib/key-hashing';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,7 +123,18 @@ const TIER_THRESHOLDS: Record<PartnerTier, number> = {
 
 const partnerRegistry = new Map<string, PartnerRecord>();
 const referralIndex = new Map<string, string>(); // referralCode -> partnerId
-const apiKeyPartnerIndex = new Map<string, string>(); // referredApiKey -> partnerId
+// referred key (SHA-256 digest — F-321, never the plaintext) -> partnerId
+const apiKeyPartnerIndex = new Map<string, string>();
+
+/** For the key-hashing audit: what this registry holds and how it is keyed. */
+export function partnerIndexStorageDescriptor(): RegistryDescriptor {
+  return { id: 'partner-attribution', label: 'Partner attribution', holds: 'referring partner per key', keyedBy: 'sha256', entries: apiKeyPartnerIndex.size, runtime: 'node' };
+}
+
+/** True when this digest is attributed to a partner. */
+export function hasPartnerAttributionFor(hash: string): boolean {
+  return apiKeyPartnerIndex.has(hash);
+}
 const revenueEvents: RevenueEvent[] = [];
 const payoutLedger = new Map<string, PayoutRecord[]>(); // partnerId -> payouts
 
@@ -272,7 +284,7 @@ export function attributeReferral(
   if (!partnerId) {
     return { success: false };
   }
-  apiKeyPartnerIndex.set(apiKey, partnerId);
+  apiKeyPartnerIndex.set(hashApiKey(apiKey), partnerId);
   return { success: true, partnerId, partnerName: partnerRegistry.get(partnerId)?.name };
 }
 
@@ -285,7 +297,7 @@ export function recordRevenueEvent(
   grossRevenue: number,
   creditsConsumed: number = 0
 ): RevenueEvent | null {
-  const partnerId = apiKeyPartnerIndex.get(apiKey);
+  const partnerId = apiKeyPartnerIndex.get(hashApiKey(apiKey));
   if (!partnerId) return null;
 
   const partner = partnerRegistry.get(partnerId);

@@ -83,7 +83,7 @@ function grantState() {
 
 export const useTrialActivation = create<TrialActivationState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       role: null,
       useCase: null,
       profileComplete: false,

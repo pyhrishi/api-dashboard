@@ -14,6 +14,7 @@
  */
 
 import { sha256Hex } from '@/lib/sha256';
+import { hashApiKey, type RegistryDescriptor } from '@/lib/key-hashing';
 
 export interface IdempotencyRecord {
   /** The stored response payload replayed on a retry. */
@@ -42,7 +43,20 @@ const store = new Map<string, IdempotencyRecord>();
 let replaysServed = 0;
 let creditsSaved = 0;
 
-const composite = (apiKey: string, key: string) => `${apiKey}::${key}`;
+// Entries are keyed by the SHA-256 digest of the API key (F-321) — never the plaintext.
+const composite = (apiKey: string, key: string) => `${hashApiKey(apiKey)}::${key}`;
+
+/** For the key-hashing audit: what this registry holds and how it is keyed. */
+export function idempotencyStorageDescriptor(): RegistryDescriptor {
+  return { id: 'idempotency', label: 'Idempotency store', holds: 'stored responses per key + Idempotency-Key (24h)', keyedBy: 'sha256', entries: store.size, runtime: 'node' };
+}
+
+/** True when any idempotency entry belongs to this digest. */
+export function hasIdempotencyEntriesFor(hash: string): boolean {
+  let found = false;
+  store.forEach((_v, k) => { if (k.startsWith(`${hash}::`)) found = true; });
+  return found;
+}
 
 /** Stable fingerprint of a request — same method + path + body → same hash. */
 export function fingerprintRequest(method: string, path: string, body: unknown): string {
