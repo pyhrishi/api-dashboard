@@ -513,18 +513,14 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
             {/* In-app delivery channel for Growth alerts */}
             <NotificationBell />
 
-            {/* Stitch to the separate Zinbit Admin app (internal B2B2B ops) — admin-only, opens in a new tab. */}
-            {role === 'admin' && (
-              <a
-                href={process.env.NEXT_PUBLIC_ADMIN_URL || (process.env.NODE_ENV === 'production' ? 'https://zinbit-admin.vercel.app' : 'http://localhost:3200')}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open Zinbit Admin — internal B2B2B operations (separate app)"
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal bg-teal/10 hover:bg-teal/20 border border-teal/30 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" /> Admin
-              </a>
-            )}
+            {/* Stitch to the Zinbit Admin panel (internal B2B2B ops), now merged in-app at /admin. */}
+            <a
+              href="/admin/overview"
+              title="Open Zinbit Admin — internal B2B2B operations"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-teal bg-teal/10 hover:bg-teal/20 border border-teal/30 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal/50"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" /> Admin
+            </a>
 
             {/* Toggle Switch */}
             <div className="flex items-center space-x-1 bg-glass rounded-full p-1 border border-border shadow-inner">
