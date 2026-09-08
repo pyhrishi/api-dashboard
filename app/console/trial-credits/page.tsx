@@ -9,8 +9,13 @@ import { authHeaderValue } from '@/lib/api-config';
 import { track } from '@/lib/telemetry';
 import RoleGuard from '@/components/RoleGuard';
 import { useToast } from '@/components/Toast';
-import { PageHeader, KpiTile, GlassCard, Button, StatusBadge, Skeleton } from '@/components/ui';
+import { PageHeader, KpiTile, GlassCard, Button, StatusBadge, Skeleton, type BadgeTone } from '@/components/ui';
 import { isPublicApi } from '@/lib/trial-credits';
+import {
+  useActivation, MILESTONES, MILESTONE_META, newMilestones, currentMilestone,
+  timeToFirstCallMs, isActivatedFast, fmtDuration,
+} from '@/lib/activation';
+import { Rocket, Timer, TrendingUp } from 'lucide-react';
 
 interface Ledger { free: number; paid: number; granted: number; freeUsedPct: number; }
 
@@ -28,6 +33,25 @@ function TrialCreditsInner() {
   const [ledger, setLedger] = useState<Ledger | null>(null);
   const [lastCharge, setLastCharge] = useState<{ label: string; bucket: string; freeRemaining: string } | null>(null);
   const [firing, setFiring] = useState<string | null>(null);
+  const [previewPct, setPreviewPct] = useState<number | null>(null);
+
+  const activation = useActivation();
+  const firstKeyAt = useMemo(() => (activeKeys[0]?.createdAt ? Date.parse(activeKeys[0].createdAt) || null : null), [activeKeys]);
+
+  // Detect first fire + newly-crossed consumption milestones from the real ledger (M4).
+  useEffect(() => {
+    if (!ledger) return;
+    const used = ledger.freeUsedPct;
+    if (used > 0 && activation.firstFireAt === null) {
+      activation.recordFirstFire();
+      track('activation_first_fire', { usedPct: used });
+    }
+    const crossed = newMilestones(used, activation.milestonesFired);
+    if (crossed.length) {
+      activation.recordMilestones(crossed);
+      crossed.forEach((m) => track('trial_milestone_reached', { milestone: m, signal: MILESTONE_META[m].signal ?? null }));
+    }
+  }, [ledger, activation]);
 
   const load = useCallback(async () => {
     try {
@@ -83,6 +107,73 @@ function TrialCreditsInner() {
               <li className="flex items-center gap-2"><Check className="w-4 h-4 text-semantic-success shrink-0" /> Free credits are <span className="font-semibold text-fg">consumed before</span> any paid balance.</li>
             </ul>
           </GlassCard>
+
+          {/* Activation & consumption (M4) */}
+          {(() => {
+            const usedPct = previewPct ?? ledger.freeUsedPct;
+            const ttfc = timeToFirstCallMs(firstKeyAt, activation.firstFireAt);
+            const cur = currentMilestone(usedPct);
+            const meta = cur ? MILESTONE_META[cur] : null;
+            const nudgeTone: BadgeTone = meta?.tone ?? 'info';
+            return (
+              <GlassCard className="p-5 mt-5">
+                <div className="flex items-center gap-2 mb-3"><Rocket className="w-4 h-4 text-teal" /><h3 className="text-sm font-bold text-fg">Activation &amp; consumption</h3>{previewPct !== null && <StatusBadge tone="info">preview {previewPct}%</StatusBadge>}</div>
+
+                {/* First-fire timing */}
+                <div className="flex items-center gap-2 mb-4 text-[12px]">
+                  <Timer className="w-4 h-4 text-fg-subtle" />
+                  {activation.firstFireAt && ttfc !== null ? (
+                    <span className="text-fg-muted">First call in <span className="font-semibold text-fg">{fmtDuration(ttfc)}</span> from key</span>
+                  ) : (
+                    <span className="text-fg-muted">Not activated yet — fire your first call to become Sales Qualified</span>
+                  )}
+                  <StatusBadge tone={activation.firstFireAt && isActivatedFast(ttfc) ? 'success' : activation.firstFireAt ? 'warning' : 'info'}>
+                    {activation.firstFireAt ? (isActivatedFast(ttfc) ? 'activated <10m' : 'activated') : 'target <10m'}
+                  </StatusBadge>
+                </div>
+
+                {/* Consumption ladder */}
+                <div className="relative h-3 rounded-full bg-surface-2 border border-border mb-6">
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${usedPct}%` }} transition={{ duration: 0.5 }}
+                    className="absolute inset-y-0 left-0 rounded-full bg-teal" />
+                  {MILESTONES.map((m) => (
+                    <div key={m} className="absolute -top-1 flex flex-col items-center" style={{ left: `${m}%`, transform: 'translateX(-50%)' }}>
+                      <div className={`w-0.5 h-5 ${usedPct >= m ? 'bg-teal' : 'bg-border'}`} />
+                      <span className={`mt-1 text-[9px] font-bold whitespace-nowrap ${usedPct >= m ? 'text-teal' : 'text-fg-subtle'}`}>
+                        {m}%{m === 50 ? ' · Sales Ready' : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Current milestone nudge */}
+                {meta ? (
+                  <div className={`rounded-xl border p-3 flex items-start gap-3 ${nudgeTone === 'error' ? 'border-semantic-error/30 bg-semantic-error/5' : nudgeTone === 'warning' ? 'border-semantic-warning/30 bg-semantic-warning/5' : 'border-teal/30 bg-teal/5'}`}>
+                    <TrendingUp className="w-4 h-4 text-teal shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2"><span className="text-[13px] font-bold text-fg">{meta.label}</span>{meta.signal === 'sales_ready' && <StatusBadge tone="warning">Sales Ready</StatusBadge>}</div>
+                      <p className="text-[12px] text-fg-muted mt-0.5">{meta.nudge}</p>
+                    </div>
+                    {cur && cur >= 50 && <Link href="/console/billing"><Button size="sm">Upgrade <ArrowRight className="w-4 h-4" /></Button></Link>}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-fg-subtle">No consumption milestones reached yet — nudges appear as you spend your trial.</p>
+                )}
+
+                {/* Preview control (demo) */}
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <span className="text-[11px] text-fg-subtle">Preview a milestone:</span>
+                  {MILESTONES.map((m) => (
+                    <button key={m} onClick={() => { setPreviewPct(m); track('trial_milestone_previewed', { milestone: m }); }}
+                      className={`text-[11px] font-bold rounded-full px-2.5 py-1 border transition-colors ${previewPct === m ? 'border-teal/50 bg-teal/10 text-teal' : 'border-border bg-surface-2 text-fg-muted hover:border-teal/30'}`}>
+                      {m}%
+                    </button>
+                  ))}
+                  {previewPct !== null && <button onClick={() => setPreviewPct(null)} className="text-[11px] font-bold text-fg-subtle hover:text-fg">show live</button>}
+                </div>
+              </GlassCard>
+            );
+          })()}
 
           {/* Live demonstration */}
           <GlassCard className="p-5 mt-5">
