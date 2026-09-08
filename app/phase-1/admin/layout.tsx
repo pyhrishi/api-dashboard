@@ -21,6 +21,7 @@ import {
 import { useStore, ROLE_LABEL } from '@/lib/admin/store';
 import { track } from '@/lib/admin/telemetry';
 import { ThemeToggle } from '@/components/admin/ThemeToggle';
+import { Phase1LinkInterceptor } from '../_components/Phase1LinkInterceptor';
 import { StatusBadge, Skeleton, Drawer } from '@/components/admin/ui';
 import type { AdminRole } from '@/lib/admin/types';
 
@@ -83,6 +84,7 @@ export default function Phase1AdminLayout({ children }: { children: ReactNode })
 
   return (
     <div className="min-h-screen flex bg-surface">
+      <Phase1LinkInterceptor />
       {/* Desktop sidebar */}
       <aside className="w-60 shrink-0 border-r border-border bg-surface-2 hidden md:flex flex-col">
         <div className="h-14 px-4 flex items-center gap-2 border-b border-border">
@@ -101,7 +103,7 @@ export default function Phase1AdminLayout({ children }: { children: ReactNode })
           ))}
           <div className="mt-2 pt-3 border-t border-border">
             <div className="px-3 pb-1 text-[10px] font-mono font-semibold uppercase tracking-[0.14em] text-fg-subtle">Deferred to Phase 2+</div>
-            <Link href="/admin/overview" className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-bold text-fg-subtle hover:text-fg hover:bg-glass transition-colors">
+            <Link href="/admin/overview" data-phase1-exit className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-bold text-fg-subtle hover:text-fg hover:bg-glass transition-colors">
               <ExternalLink className="w-4 h-4" /> Full admin · 17 pages
             </Link>
           </div>
@@ -157,7 +159,7 @@ export default function Phase1AdminLayout({ children }: { children: ReactNode })
               ))}
             </div>
           ))}
-          <Link href="/admin/overview" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[14px] font-bold text-fg-subtle hover:text-fg hover:bg-glass"><ExternalLink className="w-4 h-4" /> Full admin · 17 pages</Link>
+          <Link href="/admin/overview" data-phase1-exit className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[14px] font-bold text-fg-subtle hover:text-fg hover:bg-glass"><ExternalLink className="w-4 h-4" /> Full admin · 17 pages</Link>
           <Link href="/phase-1" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[14px] font-bold text-fg-muted hover:text-teal hover:bg-glass"><ArrowLeft className="w-4 h-4" /> Launch Center</Link>
           <div className="pt-3"><ThemeToggle variant="compact" className="w-full" /></div>
         </nav>

@@ -22,6 +22,7 @@ import { TrialActivationGate } from '@/components/TrialActivationGate';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { Portal } from '@/components/Portal';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Phase1LinkInterceptor } from '../_components/Phase1LinkInterceptor';
 import { track } from '@/lib/telemetry';
 
 export default function Phase1ConsoleLayout({ children }: { children: React.ReactNode }) {
@@ -162,6 +163,7 @@ export default function Phase1ConsoleLayout({ children }: { children: React.Reac
 
   return (
     <div className="fixed inset-0 z-50 flex bg-surface overflow-hidden font-sans selection:bg-teal selection:text-surface">
+      <Phase1LinkInterceptor />
       {activeOrg?.brandColor && (
         <style suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `:root { --color-brand: ${activeOrg.brandColor}; --color-brand-ice: color-mix(in srgb, ${activeOrg.brandColor} 40%, white); --color-brand-deep: color-mix(in srgb, ${activeOrg.brandColor} 60%, black); }` }} />
       )}
