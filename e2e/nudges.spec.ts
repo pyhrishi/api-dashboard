@@ -65,4 +65,27 @@ test.describe('Nudge orchestrator — smoke', () => {
     await expect(banner).toBeVisible({ timeout: 15_000 });
     await expect(banner.getByText(/% of your trial/)).toBeVisible(); // context injected the live usage
   });
+
+  test('the watcher dispatches re-engagement for a stalled nudge under simulated time (Step 4)', async ({ page }) => {
+    await page.goto('/console/overview');
+    await page.waitForTimeout(1000); // let the store + nudge state hydrate
+    // Advance the simulated clock past the activation nudge's 24h re-engagement window.
+    await page.evaluate(() => {
+      try {
+        const key = 'zinbit-nudge-state';
+        const cur = JSON.parse(localStorage.getItem(key) || '{"state":{},"version":0}');
+        cur.state = cur.state || {};
+        cur.state.simulatedOffsetMs = 30 * 3600000;
+        localStorage.setItem(key, JSON.stringify(cur));
+      } catch { /* ignore */ }
+    });
+    await page.reload();
+    // The background watcher plans an email delivery and records it in the nudge ledger.
+    await expect.poll(async () => page.evaluate(() => {
+      try {
+        const n = JSON.parse(localStorage.getItem('zinbit-nudge-state') || '{}');
+        return (n.state?.deliveries || []).filter((d: { channel: string }) => d.channel === 'email').length;
+      } catch { return 0; }
+    }), { timeout: 15_000 }).toBeGreaterThan(0);
+  });
 });

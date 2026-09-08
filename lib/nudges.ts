@@ -18,6 +18,7 @@ import {
   type LifecycleAccount, type LifecycleStage, type TriggerId, type TransitionId, type FunnelTag, type Priority, type LeadClass,
 } from '@/lib/lifecycle';
 import type { TelemetryEventName } from '@/lib/telemetry';
+import type { NudgeDelivery } from '@/lib/nudge-delivery';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -199,6 +200,12 @@ export interface NudgeStateData {
   /** Authoritative, persisted trial start (Step 3) so the decision window counts down
    *  stably across sessions. Null until the adapter seeds it once from derived state. */
   trialStartedAt: number | null;
+  /** Re-engagement delivery ledger + per-nudge touch counters (Step 4). */
+  deliveries: NudgeDelivery[];
+  reengagementTouches: Record<string, number>;
+  /** Deterministic simulated-time offset (ms) so time-based triggers can be exercised
+   *  in the prototype; the /console/journey cockpit advances it (Step 5). */
+  simulatedOffsetMs: number;
 }
 
 export interface NudgeStateActions {
@@ -212,11 +219,16 @@ export interface NudgeStateActions {
   setProfile: (patch: Partial<NudgeProfile>) => void;
   /** Seed the persisted trial start once (no-op if already set). */
   seedTrialStart: (at: number) => void;
+  /** Append re-engagement deliveries and bump the touch counters (Step 4). */
+  recordReengagement: (deliveries: NudgeDelivery[]) => void;
+  /** Set / advance the simulated-time offset used by the trigger watcher. */
+  setSimulatedOffset: (ms: number) => void;
+  advanceSimulated: (ms: number) => void;
   resetNudges: () => void;
 }
 
 export const emptyProfile = (): NudgeProfile => ({ role: null, useCase: null, captured: false, skipped: false });
-const emptyState = (): NudgeStateData => ({ records: {}, unsubscribed: false, leadScore: 0, leadClass: 'anonymous', lastStage: null, stageHistory: [], profile: emptyProfile(), trialStartedAt: null });
+const emptyState = (): NudgeStateData => ({ records: {}, unsubscribed: false, leadScore: 0, leadClass: 'anonymous', lastStage: null, stageHistory: [], profile: emptyProfile(), trialStartedAt: null, deliveries: [], reengagementTouches: {}, simulatedOffsetMs: 0 });
 
 function touch(records: Record<string, NudgeRecord>, id: string, status: NudgeStatus, now: number): Record<string, NudgeRecord> {
   const prev = records[id];
@@ -253,6 +265,14 @@ export const useNudgeState = create<NudgeStateData & NudgeStateActions>()(
       setLead: (score, klass) => set((s) => (s.leadScore === score && s.leadClass === klass ? {} : { leadScore: score, leadClass: klass })),
       setProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
       seedTrialStart: (at) => set((s) => (s.trialStartedAt === null ? { trialStartedAt: at } : {})),
+      recordReengagement: (deliveries) => set((s) => {
+        if (deliveries.length === 0) return {};
+        const touches = { ...s.reengagementTouches };
+        deliveries.forEach((d) => { touches[d.nudgeId] = Math.max(touches[d.nudgeId] ?? 0, d.touch); });
+        return { deliveries: [...deliveries, ...s.deliveries].slice(0, 300), reengagementTouches: touches };
+      }),
+      setSimulatedOffset: (ms) => set({ simulatedOffsetMs: Math.max(0, ms) }),
+      advanceSimulated: (ms) => set((s) => ({ simulatedOffsetMs: Math.max(0, s.simulatedOffsetMs + ms) })),
       resetNudges: () => set(emptyState()),
     }),
     { name: 'zinbit-nudge-state', storage: createJSONStorage(() => localStorage) },

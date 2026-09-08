@@ -16,6 +16,7 @@ import { MfaEnforcementBanner } from '@/components/MfaEnforcementBanner';
 import { NotificationBell } from '@/components/NotificationBell';
 import { GrowthAlertsWatcher } from '@/components/GrowthAlertsWatcher';
 import { NudgeOrchestrator } from '@/components/nudges/NudgeOrchestrator';
+import { NudgeWatcher } from '@/components/nudges/NudgeWatcher';
 import { useAlertCenter, openIncidents } from '@/lib/growth-alerts';
 import { TrialActivationGate } from '@/components/TrialActivationGate';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
@@ -567,6 +568,7 @@ export default function ConsoleLayout({ children }: { children: React.ReactNode 
             <ProtectedRoute allowedRoles={allNavItems.find(item => pathname.startsWith(item.href) && item.href !== '/console')?.roles as ('admin' | 'developer' | 'billing')[] | undefined || ['admin', 'developer', 'billing']}>
               <GrowthAlertsWatcher />
               <NudgeOrchestrator />
+              <NudgeWatcher />
               <MfaEnforcementBanner />
               <TrialActivationGate />
               <ImpersonationBanner />

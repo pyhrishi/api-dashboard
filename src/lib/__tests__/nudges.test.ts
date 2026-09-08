@@ -20,7 +20,7 @@ function acct(over: Partial<LifecycleAccount> = {}): LifecycleAccount {
     ...over,
   };
 }
-const emptyState = (): NudgeStateData => ({ records: {}, unsubscribed: false, leadScore: 0, leadClass: 'anonymous', lastStage: null, stageHistory: [], profile: { role: null, useCase: null, captured: false, skipped: false }, trialStartedAt: null });
+const emptyState = (): NudgeStateData => ({ records: {}, unsubscribed: false, leadScore: 0, leadClass: 'anonymous', lastStage: null, stageHistory: [], profile: { role: null, useCase: null, captured: false, skipped: false }, trialStartedAt: null, deliveries: [], reengagementTouches: {}, simulatedOffsetMs: 0 });
 const balanceForPct = (pct: number) => Math.round(TRIAL_CREDITS * (1 - pct / 100));
 
 describe('catalog integrity', () => {
