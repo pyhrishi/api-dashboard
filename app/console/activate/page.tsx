@@ -8,6 +8,7 @@ import {
   RefreshCw, Target, AlertTriangle, Copy, SkipForward,
 } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { authHeaderValue } from '@/lib/api-config';
 import { track } from '@/lib/telemetry';
 import RoleGuard from '@/components/RoleGuard';
 import { useToast } from '@/components/Toast';
@@ -31,8 +32,21 @@ function ActivateInner() {
   const [otp, setOtp] = useState('');
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [ledgerFree, setLedgerFree] = useState<number | null>(null);
 
   useEffect(() => { track('activation_viewed', {}); }, []);
+
+  // Once the trial is granted, read the REAL gateway ledger so the grant reflects
+  // actual provisioning (C2-a), not just the client record.
+  useEffect(() => {
+    if (ta.trialStatus !== 'granted') return;
+    const liveKey = activeKeys.find((k) => k.key.startsWith('sk_live_'))?.key ?? (issuedKey?.startsWith('sk_live_') ? issuedKey : 'sk_live_trial_demo');
+    let cancelled = false;
+    fetch('/api/v1/credits', { headers: { Authorization: authHeaderValue(liveKey) }, cache: 'no-store' })
+      .then((r) => r.json()).then((b) => { if (!cancelled) setLedgerFree(b?.data?.free ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [ta.trialStatus, activeKeys, issuedKey]);
 
   // PM auto-key: one-click provisioning the moment the trial is granted.
   useEffect(() => {
@@ -196,8 +210,8 @@ function ActivateInner() {
         {step === 4 && (
           <motion.div key="s4" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <GlassCard className="p-5 mt-4 border-semantic-success/30 bg-semantic-success/5">
-              <div className="flex items-center gap-2"><span className="text-semantic-success"><Check className="w-5 h-5" /></span><h3 className="text-sm font-bold text-fg">Trial active — {ta.trialCredits.toLocaleString()} free credits</h3></div>
-              <p className="text-[12px] text-fg-muted mt-0.5">Public-API credits, spent before any paid balance. {ta.isPM ? 'As a PM, we generated your first key automatically.' : 'Generate your first key to make a call.'}</p>
+              <div className="flex items-center gap-2 flex-wrap"><span className="text-semantic-success"><Check className="w-5 h-5" /></span><h3 className="text-sm font-bold text-fg">Trial active — {(ledgerFree ?? ta.trialCredits).toLocaleString()} free credits</h3><StatusBadge tone="success">provisioned</StatusBadge></div>
+              <p className="text-[12px] text-fg-muted mt-0.5">Public-API credits, spent before any paid balance. {ta.isPM ? 'As a PM, we generated your first key automatically.' : 'Generate your first key to make a call.'} <Link href="/console/trial-credits" className="text-teal font-bold hover:underline">View your credits →</Link></p>
             </GlassCard>
 
             <GlassCard className="p-5 mt-4">
