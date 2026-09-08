@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowRight, Loader2 } from 'lucide-react';
@@ -18,6 +18,8 @@ export default function SignupPage() {
   const [company, setCompany] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => { track('signup_page_viewed', {}); }, []);
   const [statusText, setStatusText] = useState('');
   const [error, setError] = useState('');
   const [referralCode, setReferralCode] = useState('');

@@ -262,7 +262,14 @@ export type TelemetryEventName =
   | 'intent_popup_dismissed'
   // growth — instrumentation & de-anon (Phase 0)
   | 'instrumentation_viewed'
-  | 'deanon_visitor_inspected';
+  | 'deanon_visitor_inspected'
+  // growth — consent (Phase 0, EU/India gating)
+  | 'consent_banner_shown'
+  | 'consent_granted'
+  | 'consent_rejected'
+  // growth — C0-b auth-surface reached
+  | 'signup_page_viewed'
+  | 'login_page_viewed';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

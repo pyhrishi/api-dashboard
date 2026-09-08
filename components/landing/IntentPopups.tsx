@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Rocket, ArrowRight, Zap, Tag } from 'lucide-react';
 import { track, type TelemetryEventName } from '@/lib/telemetry';
+import { marketingAllowed } from '@/lib/consent';
 
 export type IntentKind = 'dwell' | 'exit' | 'premium' | 'pricing';
 
@@ -79,6 +80,7 @@ export function IntentPopups() {
   const [active, setActive] = useState<IntentKind | null>(null);
 
   const show = useCallback((kind: IntentKind) => {
+    if (!marketingAllowed()) return; // respect a rejected consent choice
     const seen = readSeen();
     if (seen.includes(kind) || seen.length >= MAX_POPUPS) return;
     writeSeen([...seen, kind]);

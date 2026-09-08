@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { HeroLiveDemo } from '@/components/HeroLiveDemo';
 import { ApiSandboxSection } from '@/components/landing/ApiSandboxSection';
 import { IntentPopups, emitLandingIntent } from '@/components/landing/IntentPopups';
+import { ConsentBanner } from '@/components/landing/ConsentBanner';
 import { track } from '@/lib/telemetry';
 import { IntegrationTerminal } from '@/components/IntegrationTerminal';
 import { CapabilitiesShowcase } from '@/components/CapabilitiesShowcase';
@@ -503,6 +504,7 @@ export default function ApiLandingPage() {
       
       <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => { emitLandingIntent('pricing'); setIsPricingModalOpen(false); }} />
       <IntentPopups />
+      <ConsentBanner />
     </div>
     </>
   );
