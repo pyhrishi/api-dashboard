@@ -17,6 +17,9 @@ import { Lock, Zap, ArrowRight, Play, Sparkles, Users, Building2, Fingerprint } 
 import { LANDING_CATEGORIES, catalogByCategory, catalogCount, type LandingCategory, type LandingApiItem } from '@/lib/landing-catalog';
 import { API_HOST } from '@/lib/api-config';
 import { track } from '@/lib/telemetry';
+import { emitLandingIntent } from '@/components/landing/IntentPopups';
+
+const PREMIUM_CREDITS = 4; // opening a higher-credit endpoint signals high intent
 
 const CAT_ICON: Record<LandingCategory, React.ReactNode> = {
   people: <Users className="w-4 h-4" />, company: <Building2 className="w-4 h-4" />, identity: <Fingerprint className="w-4 h-4" />,
@@ -36,7 +39,13 @@ export function ApiSandboxSection() {
   );
   const field = selected.params[0] ?? { name: 'query', example: 'ceo@example.com', required: true };
 
-  const selectEndpoint = (id: string) => { setSelectedId(id); setGated(false); track('catalogue_api_opened', { endpoint: id }); };
+  const selectEndpoint = (id: string) => {
+    setSelectedId(id);
+    setGated(false);
+    track('catalogue_api_opened', { endpoint: id });
+    const item = [...catalogByCategory('people'), ...catalogByCategory('company'), ...catalogByCategory('identity')].find((e) => e.id === id);
+    if (item && item.price >= PREMIUM_CREDITS) emitLandingIntent('premium', { endpoint: id });
+  };
   const fire = () => { setGated(true); track('sandbox_fired_gated', { endpoint: selected.id }); track('signup_gate_shown', { source: 'sandbox', endpoint: selected.id }); };
 
   return (

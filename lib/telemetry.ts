@@ -256,6 +256,8 @@ export type TelemetryEventName =
   // growth — Phase 0 intent / dwell pop-ups
   | 'dwell_popup_shown'
   | 'exit_intent_popup_shown'
+  | 'intent_popup_premium_shown'
+  | 'intent_popup_pricing_shown'
   | 'intent_popup_cta_clicked'
   | 'intent_popup_dismissed'
   // growth — instrumentation & de-anon (Phase 0)

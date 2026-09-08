@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { HeroLiveDemo } from '@/components/HeroLiveDemo';
 import { ApiSandboxSection } from '@/components/landing/ApiSandboxSection';
-import { IntentPopups } from '@/components/landing/IntentPopups';
+import { IntentPopups, emitLandingIntent } from '@/components/landing/IntentPopups';
 import { track } from '@/lib/telemetry';
 import { IntegrationTerminal } from '@/components/IntegrationTerminal';
 import { CapabilitiesShowcase } from '@/components/CapabilitiesShowcase';
@@ -44,7 +44,7 @@ export default function ApiLandingPage() {
   return (
     <>
       <div className="bg-mist dark:bg-ink min-h-screen text-ink dark:text-white font-sans overflow-hidden selection:bg-teal selection:text-ink">
-      <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
+      <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => { emitLandingIntent('pricing'); setIsPricingModalOpen(false); }} />
       
       {/* Background Grids & Ambient Blurs */}
       <div className="grid-light dark:grid-dark absolute inset-0 opacity-40 pointer-events-none" />
@@ -501,7 +501,7 @@ export default function ApiLandingPage() {
         </div>
       </footer>
       
-      <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} />
+      <PricingSliderModal isOpen={isPricingModalOpen} onClose={() => { emitLandingIntent('pricing'); setIsPricingModalOpen(false); }} />
       <IntentPopups />
     </div>
     </>

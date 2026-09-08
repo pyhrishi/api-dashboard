@@ -1,21 +1,32 @@
 'use client';
 
 /**
- * Phase-0 intent + dwell pop-ups (M1.2). Distinct, tailored offers keyed to the
- * signal observed:
- *   - dwell: the visitor lingered past a threshold → gentle "still exploring?" nudge.
- *   - exit-intent: the pointer left toward the top (desktop) → stronger "before you go".
- * Each shows at most once per session (sessionStorage), is dismissible, and emits a
- * distinct telemetry event. Marketing design system.
+ * Phase-0 intent + dwell pop-ups (M1.2 + M1.4b). Distinct, tailored offers keyed to
+ * the signal observed:
+ *   - dwell: lingered past a threshold.
+ *   - exit: pointer left toward the top (desktop exit-intent).
+ *   - premium: opened a premium (higher-credit) endpoint in the sandbox.
+ *   - pricing: engaged a pricing CTA.
+ *   - docs: opened the documentation.
+ * Each kind shows at most once per session and the total is capped so we never nag;
+ * every kind emits its own telemetry. Other components fire action intents via
+ * `emitLandingIntent(kind)`. Marketing design system.
  */
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Rocket, ArrowRight } from 'lucide-react';
-import { track } from '@/lib/telemetry';
+import { X, Sparkles, Rocket, ArrowRight, Zap, Tag } from 'lucide-react';
+import { track, type TelemetryEventName } from '@/lib/telemetry';
 
-type PopupKind = 'dwell' | 'exit';
+export type IntentKind = 'dwell' | 'exit' | 'premium' | 'pricing';
+
+const INTENT_EVENT = 'zinbit:intent';
+/** Fire a tailored intent pop-up from anywhere on the landing. */
+export function emitLandingIntent(kind: IntentKind, detail: Record<string, unknown> = {}) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(INTENT_EVENT, { detail: { kind, ...detail } }));
+}
 
 interface PopupCopy {
   icon: React.ReactNode;
@@ -23,43 +34,56 @@ interface PopupCopy {
   title: string;
   body: string;
   cta: string;
+  event: TelemetryEventName;
 }
 
-const COPY: Record<PopupKind, PopupCopy> = {
+const COPY: Record<IntentKind, PopupCopy> = {
   dwell: {
-    icon: <Sparkles className="w-5 h-5" />,
-    eyebrow: 'Still exploring?',
+    icon: <Sparkles className="w-5 h-5" />, eyebrow: 'Still exploring?',
     title: 'Fire a real call in under 10 minutes',
     body: 'Create a free account, grab a key, and get 5,000 credits to run any endpoint against the real gateway — no card required.',
-    cta: 'Start free',
+    cta: 'Start free', event: 'dwell_popup_shown',
   },
   exit: {
-    icon: <Rocket className="w-5 h-5" />,
-    eyebrow: 'Before you go',
+    icon: <Rocket className="w-5 h-5" />, eyebrow: 'Before you go',
     title: 'Take the sandbox with you',
     body: 'Your first key is one click away. Test with synthetic data for free, switch to live when you’re ready — you only spend credits on real calls.',
-    cta: 'Create free account',
+    cta: 'Create free account', event: 'exit_intent_popup_shown',
+  },
+  premium: {
+    icon: <Zap className="w-5 h-5" />, eyebrow: 'Premium endpoint',
+    title: 'Run our highest-value data live',
+    body: 'This endpoint returns our richest data. Your 5,000 free credits cover plenty of calls — spin up a key and try it for real.',
+    cta: 'Try it free', event: 'intent_popup_premium_shown',
+  },
+  pricing: {
+    icon: <Tag className="w-5 h-5" />, eyebrow: 'Sizing it up?',
+    title: 'You only pay for real calls',
+    body: 'No seats, no minimums — credits are spent per successful call, and sandbox/test calls are always free. Start free and scale when you do.',
+    cta: 'Start free', event: 'intent_popup_pricing_shown',
   },
 };
 
 const DWELL_MS = 25_000;
-const SEEN_KEY = 'zinbit-lp-popup-seen';
+const MAX_POPUPS = 2;
+const SEEN_KEY = 'zinbit-lp-popups';
 
-function seen(): boolean {
-  try { return sessionStorage.getItem(SEEN_KEY) === '1'; } catch { return false; }
+function readSeen(): string[] {
+  try { return JSON.parse(sessionStorage.getItem(SEEN_KEY) || '[]') as string[]; } catch { return []; }
 }
-function markSeen(): void {
-  try { sessionStorage.setItem(SEEN_KEY, '1'); } catch { /* storage blocked */ }
+function writeSeen(kinds: string[]): void {
+  try { sessionStorage.setItem(SEEN_KEY, JSON.stringify(kinds)); } catch { /* storage blocked */ }
 }
 
 export function IntentPopups() {
-  const [active, setActive] = useState<PopupKind | null>(null);
+  const [active, setActive] = useState<IntentKind | null>(null);
 
-  const show = useCallback((kind: PopupKind) => {
-    if (seen()) return;
-    markSeen();
+  const show = useCallback((kind: IntentKind) => {
+    const seen = readSeen();
+    if (seen.includes(kind) || seen.length >= MAX_POPUPS) return;
+    writeSeen([...seen, kind]);
     setActive(kind);
-    track(kind === 'dwell' ? 'dwell_popup_shown' : 'exit_intent_popup_shown', {});
+    track(COPY[kind].event, {});
   }, []);
 
   // Dwell timer.
@@ -73,6 +97,16 @@ export function IntentPopups() {
     const onLeave = (e: MouseEvent) => { if (e.clientY <= 0) show('exit'); };
     document.addEventListener('mouseout', onLeave);
     return () => document.removeEventListener('mouseout', onLeave);
+  }, [show]);
+
+  // Action intents fired by other landing components.
+  useEffect(() => {
+    const onIntent = (e: Event) => {
+      const kind = (e as CustomEvent).detail?.kind as IntentKind | undefined;
+      if (kind && kind in COPY) show(kind);
+    };
+    window.addEventListener(INTENT_EVENT, onIntent);
+    return () => window.removeEventListener(INTENT_EVENT, onIntent);
   }, [show]);
 
   const dismiss = () => { track('intent_popup_dismissed', { kind: active ?? '' }); setActive(null); };
