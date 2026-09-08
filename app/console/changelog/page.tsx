@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v5.0', date: 'September 2026', headline: 'Lifecycle CSM cockpit — conversion window & win-back',
+    changes: [
+      { kind: 'feature', text: 'A new Lifecycle (CSM) console is the daily conversion desk: a "monitor daily" watchlist of accounts in the decision window (≥80% of trial used, or ≤2 days from expiry) with a one-click upgrade prompt, a lead board classifying every account (Hot / Sales Ready / Funnel-Driven / SQL / Prospect / Dead), and a win-back queue for lapsed trials. High-spend Hot leads are auto-routed to an AE.' },
+      { kind: 'feature', text: 'Leads are classified from real funnel signals by the shared model, so the cockpit, the funnel board, and billing agree. Conversion-window membership correctly excludes already-lapsed trials (those move to win-back), and CSM actions (prompt sent, win-back started) persist for the session.' },
+    ],
+  },
+  {
     version: 'v4.99', date: 'September 2026', headline: 'Activation & trial-consumption milestones',
     changes: [
       { kind: 'feature', text: 'Trial & Credits now tracks activation: the time from your first key to your first successful call against a <10-minute target (your first call makes you Sales Qualified), plus a consumption ladder with milestones at 10 / 25 / 50 / 75 / 100 percent of your free trial — 50% is the Sales-Ready signal.' },

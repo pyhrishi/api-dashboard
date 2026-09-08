@@ -61,7 +61,10 @@ Console pages: loading skeletons, coherent empty/populated states, Framer Motion
 ## 10c. Built since — M4 (Phase 3: activation & consumption)
 `lib/activation.ts` (SSOT: `ACTIVATION_TARGET_MS` <10m, `MILESTONES` 10/25/50/75/100 + `MILESTONE_META` with 50% = sales_ready, reached/new/current helpers, time-to-first-call, dedicated `useActivation` store firing each milestone once) + the "Activation & consumption" card on `/console/trial-credits` (first-fire timer vs target, consumption ladder with markers, current-milestone nudge + upgrade CTA, preview control). Milestone crossings emit `activation_first_fire` / `trial_milestone_reached` from the live ledger.
 
+## 10d. Built since — M5 (Phase 4–5: CSM lifecycle cockpit)
+`/console/lifecycle` + `lib/lifecycle-ops.ts` (persisted prompt/win-back ops). Cohort enriched (`inWindow`/`daysToExpiry`/`spendPerDay`/`aeAssigned`, `AE_SPEND_THRESHOLD`); `conversionWindowOpen` excludes already-expired trials (dead → win-back). Cockpit: conversion-window daily watchlist (send upgrade prompt), lead board by class (AE-badged Hot), win-back queue (start win-back). Telemetry lifecycle_viewed / conversion_prompt_sent / winback_started. Also fixed a signed-shift index bug (`h>>n`→`h>>>n`) that produced "@ undefined" names.
+
 ## 10. Deferred — the rest of the program
-- **M5 (Phase 4–5):** conversion window, lead classification (Dead/Funnel-Driven/Hot), win-back — the CSM cockpit.
+- **M5 (Phase 4–5): DONE (see 10d).** conversion window, lead classification (Dead/Funnel-Driven/Hot), win-back — the CSM cockpit.
 - **M6–M7 (Phase 6–7):** wallet-health burn buckets + auto-reload; re-up + dunning (48h retry → revocation warning).
 - **M8:** merge to `main` (reconcile telemetry/roadmap/changelog/nav with concurrent sessions; consume session 66's `growth-kpis` where it fits), coherence + ship-check, deploy.
