@@ -258,6 +258,9 @@ export interface CohortAccount {
   daysToExpiry: number | null;
   spendPerDay: number;
   aeAssigned: boolean;
+  /** Wallet-health fields (M6): burn bucket + runway days (paid accounts only). */
+  burnBucket: BurnBucket | null;
+  runwayDays: number | null;
 }
 
 /** High-spend threshold (credits/day) that routes a Hot lead to an AE. */
@@ -321,6 +324,8 @@ export function generateCohort(seed: string, n: number, now: number): CohortAcco
       daysToExpiry: input.trialExpiresAt != null ? Math.round((input.trialExpiresAt - now) / DAY) : null,
       spendPerDay,
       aeAssigned: leadClass === 'hot' && spendPerDay >= AE_SPEND_THRESHOLD,
+      burnBucket: paid ? walletBurnBucket(input, now) : null,
+      runwayDays: paid && spendPerDay > 0 ? Math.round(walletBalance / spendPerDay) : null,
     });
   }
   return out;

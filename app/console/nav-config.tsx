@@ -158,6 +158,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { name: 'Trial Activation', href: '/console/activate', icon: <Rocket className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Trial & Credits', href: '/console/trial-credits', icon: <Wallet className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Lifecycle (CSM)', href: '/console/lifecycle', icon: <HeartHandshake className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Wallet Health', href: '/console/wallet-health', icon: <Gauge className={cls} />, roles: ['admin', 'billing'] },
       { name: 'Logs', href: '/console/logs', icon: <FileText className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Request Inspector', href: '/console/debug', icon: <Bug className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Circuit Breakers', href: '/console/circuits', icon: <Zap className={cls} />, roles: ['admin', 'developer'] },

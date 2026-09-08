@@ -291,7 +291,12 @@ export type TelemetryEventName =
   | 'lifecycle_viewed'
   | 'conversion_prompt_sent'
   | 'winback_started'
-  | 'lead_inspected';
+  | 'lead_inspected'
+  // growth — Phase 6 paid wallet health (M6)
+  | 'wallet_health_viewed'
+  | 'auto_reload_configured'
+  | 'low_balance_alert_actioned'
+  | 'feature_discovery_nudged';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
