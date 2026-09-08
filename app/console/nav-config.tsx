@@ -7,7 +7,7 @@ import {
   Award, RefreshCw, AlarmClock, MessageSquareWarning, Combine, History, Globe, Navigation,
   TrendingUp, Zap, Server, FileText, Bug, ShieldCheck, ShieldAlert, Ruler, LockKeyhole, Lock,
   EyeOff, MonitorSmartphone, CreditCard, Handshake, Database, Lightbulb, BookOpen, GitBranch,
-  Map, LifeBuoy, Scale, Funnel, Wallet, HeartHandshake,
+  Map, LifeBuoy, Scale, Funnel, Wallet, HeartHandshake, RotateCcw,
 } from 'lucide-react';
 
 /**
@@ -159,6 +159,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { name: 'Trial & Credits', href: '/console/trial-credits', icon: <Wallet className={cls} />, roles: ['admin', 'developer', 'billing'] },
       { name: 'Lifecycle (CSM)', href: '/console/lifecycle', icon: <HeartHandshake className={cls} />, roles: ['admin', 'billing'] },
       { name: 'Wallet Health', href: '/console/wallet-health', icon: <Gauge className={cls} />, roles: ['admin', 'billing'] },
+      { name: 'Re-up & Churn', href: '/console/churn', icon: <RotateCcw className={cls} />, roles: ['admin', 'billing'] },
       { name: 'Logs', href: '/console/logs', icon: <FileText className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Request Inspector', href: '/console/debug', icon: <Bug className={cls} />, roles: ['admin', 'developer'] },
       { name: 'Circuit Breakers', href: '/console/circuits', icon: <Zap className={cls} />, roles: ['admin', 'developer'] },

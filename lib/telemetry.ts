@@ -296,7 +296,13 @@ export type TelemetryEventName =
   | 'wallet_health_viewed'
   | 'auto_reload_configured'
   | 'low_balance_alert_actioned'
-  | 'feature_discovery_nudged';
+  | 'feature_discovery_nudged'
+  // growth — Phase 7 re-up / churn / dunning (M7)
+  | 'churn_desk_viewed'
+  | 'dunning_payment_retried'
+  | 'dunning_warning_sent'
+  | 'dunning_access_revoked'
+  | 'dunning_sales_flagged';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 

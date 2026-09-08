@@ -261,6 +261,10 @@ export interface CohortAccount {
   /** Wallet-health fields (M6): burn bucket + runway days (paid accounts only). */
   burnBucket: BurnBucket | null;
   runwayDays: number | null;
+  /** Churn/dunning fields (M7): days since the balance hit zero + prior value. */
+  reUpped: boolean;
+  depletedDaysAgo: number | null;
+  highValue: boolean;
 }
 
 /** High-spend threshold (credits/day) that routes a Hot lead to an AE. */
@@ -292,8 +296,14 @@ export function generateCohort(seed: string, n: number, now: number): CohortAcco
     // cohort that didn't convert is actually expired.
     const trialExpiresAt = expiredOutcome && !converts ? now - DAY : now + 7 * DAY;
     const paid = depth >= 6 || converts;
+    // At depth 7 the retention/churn split: ~55% re-up (healthy), ~45% deplete to zero
+    // (dunning). Split on a wide modulo of an independent hash — parity (%2) of FNV is
+    // biased, so use %100. Everyone else paid keeps a positive balance.
+    const reupRoll = fnv(`${seed}:reup:${i}`) % 100;
+    const reUppedFlag = depth === 7 && reupRoll < 55;
+    const zeroBalance = depth === 7 && reupRoll >= 55;
     const spendPerDay = paid ? ((fnv(`${seed}:spd:${i}`) % 200) + 10) : 0;
-    const walletBalance = paid ? (fnv(`${seed}:bal:${i}`) % 5000) : 0;
+    const walletBalance = !paid ? 0 : zeroBalance ? 0 : (fnv(`${seed}:bal:${i}`) % 4900) + 100;
 
     const input: AccountFunnelInput = {
       signedUp: depth >= 1,
@@ -307,7 +317,7 @@ export function generateCohort(seed: string, n: number, now: number): CohortAcco
       walletBalance,
       walletOpenedAt: paid ? createdAt : null,
       spendPerDay,
-      reUpped: depth === 7,
+      reUpped: reUppedFlag,
     };
     const stage = currentStage(input, now);
     const leadClass = classifyLead(input, now);
@@ -326,6 +336,9 @@ export function generateCohort(seed: string, n: number, now: number): CohortAcco
       aeAssigned: leadClass === 'hot' && spendPerDay >= AE_SPEND_THRESHOLD,
       burnBucket: paid ? walletBurnBucket(input, now) : null,
       runwayDays: paid && spendPerDay > 0 ? Math.round(walletBalance / spendPerDay) : null,
+      reUpped: reUppedFlag,
+      depletedDaysAgo: zeroBalance ? (fnv(`${seed}:dep:${i}`) % 6) : null,
+      highValue: spendPerDay >= AE_SPEND_THRESHOLD,
     });
   }
   return out;
