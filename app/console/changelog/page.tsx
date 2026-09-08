@@ -18,6 +18,13 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v5.2', date: 'September 2026', headline: 'Re-up & churn — dunning desk',
+    changes: [
+      { kind: 'feature', text: 'A new Re-up & Churn console closes the lifecycle: top-ups are surfaced as the healthy retention/LTV signal, and accounts stuck at a zero balance enter a dunning sequence — a 48-hour payment retry, then a key-revocation warning, then suspension — computed from days since depletion.' },
+      { kind: 'feature', text: 'Each dunning account shows a stage-appropriate action (retry payment / send warning / revoke access), and previously high-value accounts are flagged for sales outreach instead of a silent lapse. Actions persist for the session.' },
+    ],
+  },
+  {
     version: 'v5.1', date: 'September 2026', headline: 'Wallet health — burn buckets & auto-reload',
     changes: [
       { kind: 'feature', text: 'A new Wallet Health console watches how paying accounts burn their balance against time and sorts them into balanced (healthy — monitor), slow (feature-discovery nudge — happy vs. stalling), and fast (heavy user — low-balance alerts + auto-reload). Your own wallet card shows the live paid balance, a low-balance alert, and an auto-reload setting (when balance ≤ X, add N credits).' },

@@ -67,7 +67,11 @@ Console pages: loading skeletons, coherent empty/populated states, Framer Motion
 ## 10e. Built since — M6 (Phase 6: paid wallet health)
 `/console/wallet-health` + `lib/wallet.ts` (BUCKET_ACTION per burn bucket, runwayDays/isLowBalance, persisted `useWallet` auto-reload config) + CohortAccount `burnBucket`/`runwayDays`. Balanced = monitor, slow = feature-discovery nudge, fast = low-balance alert + auto-reload. Your-wallet card reads the live paid ledger + low-balance alert + auto-reload (≤threshold → add N). Telemetry wallet_health_viewed / auto_reload_configured / low_balance_alert_actioned / feature_discovery_nudged.
 
+## 10f. Built since — M7 (Phase 7: re-up / churn / dunning)
+`/console/churn` + `lib/dunning.ts` (dunningStage: grace_retry <48h → revocation_warning <4d → revoked; needsSalesOutreach for high-value; persisted useDunningOps) + cohort C7 split (reUpped / depletedDaysAgo / highValue). Re-up retention banner + dunning queue with stage-appropriate actions (retry / warn / revoke) + Flag-to-sales. Telemetry churn_desk_viewed / dunning_*.
+
 ## 10. Deferred — the rest of the program
-- **M5 (Phase 4–5): DONE (see 10d).** **M6 (Phase 6): DONE (see 10e).** conversion window, lead classification (Dead/Funnel-Driven/Hot), win-back — the CSM cockpit.
+- **M5 DONE (10d) · M6 DONE (10e) · M7 DONE (10f).**
+- **M8:** merge the funnel branch onto origin/main (reconcile telemetry/roadmap/changelog/nav + billing with sessions 26/66; consume growth-kpis where it fits), coherence + ship-check, deploy. conversion window, lead classification (Dead/Funnel-Driven/Hot), win-back — the CSM cockpit.
 - **M6–M7 (Phase 6–7):** wallet-health burn buckets + auto-reload; re-up + dunning (48h retry → revocation warning).
 - **M8:** merge to `main` (reconcile telemetry/roadmap/changelog/nav with concurrent sessions; consume session 66's `growth-kpis` where it fits), coherence + ship-check, deploy.
