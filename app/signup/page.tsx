@@ -71,7 +71,7 @@ export default function SignupPage() {
     }
 
     // Redirect to keys
-    router.push('/console?new=true');
+    router.push('/console/activate?new=true'); // C1-a → C1-b: funnel new signups into the trial-activation flow
   };
 
   return (

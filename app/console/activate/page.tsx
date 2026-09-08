@@ -26,6 +26,8 @@ function ActivateInner() {
   const [pickRole, setPickRole] = useState<Role | null>(ta.role);
   const [pickUseCase, setPickUseCase] = useState<UseCase | null>(ta.useCase);
   const [simulateFlagged, setSimulateFlagged] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [issuedKey, setIssuedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -61,7 +63,12 @@ function ActivateInner() {
     const decision = ta.availTrial(email, simulateFlagged ? { disposableEmail: true } : undefined);
     track('trial_availed', { decision: decision.decision, score: decision.score });
     if (decision.decision === 'grant') { track('trial_granted_instant', {}); toast.success('Trial activated', `${TRIAL_CREDITS.toLocaleString()} free credits added.`); }
-    else { track('otp_requested', { channel: 'sms' }); }
+  };
+
+  const sendCode = () => {
+    setOtpSent(true);
+    track('otp_requested', { channel: ta.otpChannel ?? 'sms' });
+    toast.info(`Code sent via ${OTP_LABEL[ta.otpChannel ?? 'sms']}`, 'Enter the 6-digit code to continue.');
   };
 
   const verify = () => {
@@ -156,15 +163,31 @@ function ActivateInner() {
           <motion.div key="s3" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
             <GlassCard className="p-5 mt-4">
               <div className="flex items-center gap-2 mb-1"><Smartphone className="w-4 h-4 text-teal" /><h3 className="text-sm font-bold text-fg">Verify your phone</h3><StatusBadge tone="warning">flagged signup</StatusBadge></div>
-              <p className="text-[12px] text-fg-muted mb-1">We sent a 6-digit code via <span className="font-semibold text-fg">{OTP_LABEL[ta.otpChannel ?? 'sms']}</span>. {ta.risk?.reasons[0] ? `Reason: ${ta.risk.reasons[0]}.` : ''}</p>
-              <p className="text-[11px] text-fg-subtle mb-4">Prototype demo code: <code className="font-mono text-teal">{otpCode(email)}</code></p>
-              <div className="flex gap-2 flex-wrap">
-                <input value={otp} onChange={(e) => setOtp(e.target.value)} inputMode="numeric" maxLength={6} placeholder="••••••"
-                  className="w-40 rounded-xl border border-border bg-surface-2 px-3 py-2.5 font-mono text-[15px] tracking-[0.3em] text-fg outline-none focus:border-teal/50" />
-                <Button onClick={verify}><Check className="w-4 h-4" /> Verify</Button>
-                <Button variant="secondary" onClick={escalate}><RefreshCw className="w-4 h-4" /> Try {OTP_LABEL[ta.otpChannel === 'sms' ? 'whatsapp' : 'call']}</Button>
-                <Button variant="ghost" onClick={skip}><SkipForward className="w-4 h-4" /> Skip for now</Button>
-              </div>
+              <p className="text-[12px] text-fg-muted mb-4">{ta.risk?.reasons[0] ? `Reason: ${ta.risk.reasons[0]}. ` : ''}A quick phone check unlocks your free credits. You can skip and verify later.</p>
+
+              {!otpSent ? (
+                <div className="flex gap-2 flex-wrap items-center">
+                  <div className="rounded-xl border border-border bg-surface-2 px-3 py-2.5 flex items-center gap-2 min-w-[240px]">
+                    <span className="text-fg-subtle text-[13px]">📱</span>
+                    <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" placeholder="+1 555 000 0000"
+                      className="flex-1 bg-transparent outline-none text-[14px] text-fg placeholder:text-fg-subtle" />
+                  </div>
+                  <Button onClick={sendCode} disabled={phone.replace(/\D/g, '').length < 6}><Smartphone className="w-4 h-4" /> Send code via {OTP_LABEL[ta.otpChannel ?? 'sms']}</Button>
+                  <Button variant="ghost" onClick={skip}><SkipForward className="w-4 h-4" /> Skip for now</Button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[12px] text-fg-muted mb-1">Code sent via <span className="font-semibold text-fg">{OTP_LABEL[ta.otpChannel ?? 'sms']}</span> to <span className="font-mono text-fg">{phone}</span>.</p>
+                  <p className="text-[11px] text-fg-subtle mb-4">Prototype demo code: <code className="font-mono text-teal">{otpCode(email)}</code></p>
+                  <div className="flex gap-2 flex-wrap">
+                    <input value={otp} onChange={(e) => setOtp(e.target.value)} inputMode="numeric" maxLength={6} placeholder="••••••"
+                      className="w-40 rounded-xl border border-border bg-surface-2 px-3 py-2.5 font-mono text-[15px] tracking-[0.3em] text-fg outline-none focus:border-teal/50" />
+                    <Button onClick={verify}><Check className="w-4 h-4" /> Verify</Button>
+                    <Button variant="secondary" onClick={() => { escalate(); setOtpSent(false); }}><RefreshCw className="w-4 h-4" /> Try {OTP_LABEL[ta.otpChannel === 'sms' ? 'whatsapp' : 'call']}</Button>
+                    <Button variant="ghost" onClick={skip}><SkipForward className="w-4 h-4" /> Skip for now</Button>
+                  </div>
+                </>
+              )}
             </GlassCard>
           </motion.div>
         )}

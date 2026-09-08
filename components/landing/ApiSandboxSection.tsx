@@ -10,7 +10,7 @@
  * Marketing design system (bg-ink/text-ink/bg-teal/font-display), not console tokens.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Zap, ArrowRight, Play, Sparkles, Users, Building2, Fingerprint } from 'lucide-react';
@@ -18,6 +18,7 @@ import { LANDING_CATEGORIES, catalogByCategory, catalogCount, type LandingCatego
 import { API_HOST } from '@/lib/api-config';
 import { track } from '@/lib/telemetry';
 import { emitLandingIntent } from '@/components/landing/IntentPopups';
+import { useTrialActivation, preferredCategory } from '@/lib/trial-activation';
 
 const PREMIUM_CREDITS = 4; // opening a higher-credit endpoint signals high intent
 
@@ -31,6 +32,21 @@ export function ApiSandboxSection() {
   const [selectedId, setSelectedId] = useState<string>(people[0]?.id ?? '');
   const [value, setValue] = useState('');
   const [gated, setGated] = useState(false);
+
+  // Onboarding pre-filter: if the visitor told us their use-case, open the catalogue
+  // on the matching category (C1-b "pre-filters the catalogue"). Runs post-mount to
+  // avoid a hydration mismatch with the persisted store.
+  const profileComplete = useTrialActivation((s) => s.profileComplete);
+  const useCase = useTrialActivation((s) => s.useCase);
+  const [preFiltered, setPreFiltered] = useState<LandingCategory | null>(null);
+  useEffect(() => {
+    if (!profileComplete) return;
+    const cat = preferredCategory(useCase);
+    setCategory(cat);
+    setPreFiltered(cat);
+    const first = catalogByCategory(cat)[0];
+    if (first) setSelectedId(first.id);
+  }, [profileComplete, useCase]);
 
   const inCategory = useMemo(() => catalogByCategory(category), [category]);
   const selected: LandingApiItem = useMemo(
@@ -75,6 +91,11 @@ export function ApiSandboxSection() {
                 </button>
               ))}
             </div>
+            {preFiltered === category && (
+              <div className="flex items-center gap-1.5 px-2 py-1.5 mb-1 text-[10px] font-bold uppercase tracking-widest text-teal">
+                <Sparkles className="w-3 h-3" /> Recommended for you
+              </div>
+            )}
             <div className="space-y-1 max-h-[420px] overflow-y-auto pr-1">
               {inCategory.map((e) => (
                 <button key={e.id} onClick={() => selectEndpoint(e.id)}
