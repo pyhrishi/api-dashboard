@@ -150,6 +150,8 @@ export function trialPhase(usedPct: number): 0 | 10 | 25 | 50 | 75 | 100 {
 /** The conversion decision window: ≥80% consumed OR within ~2 days of expiry. */
 export function conversionWindowOpen(input: Pick<AccountFunnelInput, 'trialUsedPct' | 'trialExpiresAt' | 'paid'>, now: number): boolean {
   if (input.paid) return false;
+  // An already-expired trial is a dead lead (win-back), not an open conversion window.
+  if (input.trialExpiresAt != null && input.trialExpiresAt <= now) return false;
   if (input.trialUsedPct >= 80) return true;
   if (input.trialExpiresAt != null) return input.trialExpiresAt - now <= 2 * DAY;
   return false;
@@ -251,7 +253,15 @@ export interface CohortAccount {
   walletBalance: number;
   paid: boolean;
   createdAt: number;
+  /** CSM fields (M5): conversion-window membership + expiry + spend + AE routing. */
+  inWindow: boolean;
+  daysToExpiry: number | null;
+  spendPerDay: number;
+  aeAssigned: boolean;
 }
+
+/** High-spend threshold (credits/day) that routes a Hot lead to an AE. */
+export const AE_SPEND_THRESHOLD = 120;
 
 const FIRST_NAMES = ['Ava', 'Liam', 'Noah', 'Mia', 'Ethan', 'Zoe', 'Kai', 'Ivy', 'Leo', 'Nora', 'Ravi', 'Sana', 'Diego', 'Yuki', 'Omar', 'Elsa'];
 const COMPANIES = ['Northwind', 'Acme', 'Globex', 'Umbra', 'Initech', 'Hooli', 'Stark', 'Wayne', 'Zenith', 'Vertex', 'Lumen', 'Cortex'];
@@ -297,15 +307,20 @@ export function generateCohort(seed: string, n: number, now: number): CohortAcco
       reUpped: depth === 7,
     };
     const stage = currentStage(input, now);
+    const leadClass = classifyLead(input, now);
     out.push({
       id: `acct_${h.toString(36)}`,
-      name: `${FIRST_NAMES[h % FIRST_NAMES.length]} @ ${COMPANIES[(h >> 4) % COMPANIES.length]}`,
+      name: `${FIRST_NAMES[h % FIRST_NAMES.length]} @ ${COMPANIES[(h >>> 4) % COMPANIES.length]}`,
       stage,
-      leadClass: classifyLead(input, now),
+      leadClass,
       trialUsedPct: input.trialUsedPct,
       walletBalance,
       paid,
       createdAt,
+      inWindow: conversionWindowOpen(input, now),
+      daysToExpiry: input.trialExpiresAt != null ? Math.round((input.trialExpiresAt - now) / DAY) : null,
+      spendPerDay,
+      aeAssigned: leadClass === 'hot' && spendPerDay >= AE_SPEND_THRESHOLD,
     });
   }
   return out;

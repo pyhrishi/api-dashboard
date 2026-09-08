@@ -54,6 +54,9 @@ describe('conversionWindowOpen', () => {
   it('is closed for paid accounts', () => {
     expect(conversionWindowOpen({ trialUsedPct: 99, trialExpiresAt: NOW, paid: true }, NOW)).toBe(false);
   });
+  it('is closed once the trial has already expired (that is a dead lead, not a window)', () => {
+    expect(conversionWindowOpen({ trialUsedPct: 100, trialExpiresAt: NOW - DAY, paid: false }, NOW)).toBe(false);
+  });
 });
 
 describe('walletBurnBucket', () => {

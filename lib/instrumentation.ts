@@ -105,12 +105,12 @@ export function generateVisitorFeed(seed: string, n: number, now: number): DeAno
     out.push({
       id: `viz_${h.toString(36)}`,
       company: COMPANIES[h % COMPANIES.length],
-      person: identified ? NAMES[(h >> 3) % NAMES.length] : null,
-      role: ROLES[(h >> 5) % ROLES.length],
+      person: identified ? NAMES[(h >>> 3) % NAMES.length] : null,
+      role: ROLES[(h >>> 5) % ROLES.length],
       region: geo.region,
       country: geo.country,
       consent: geo.consent,
-      intent: INTENTS[(h >> 7) % INTENTS.length],
+      intent: INTENTS[(h >>> 7) % INTENTS.length],
       at: now - (h % (3 * DAY)),
     });
   }

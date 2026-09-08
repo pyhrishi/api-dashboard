@@ -286,7 +286,12 @@ export type TelemetryEventName =
   // growth — Phase 3 activation & consumption milestones (M4)
   | 'activation_first_fire'
   | 'trial_milestone_reached'
-  | 'trial_milestone_previewed';
+  | 'trial_milestone_previewed'
+  // growth — Phase 4–5 CSM cockpit: conversion window + lead ops (M5)
+  | 'lifecycle_viewed'
+  | 'conversion_prompt_sent'
+  | 'winback_started'
+  | 'lead_inspected';
 
 export type TelemetryProps = Record<string, string | number | boolean | null | undefined>;
 
